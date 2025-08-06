@@ -1,0 +1,11 @@
+/* Flexbox решение */
+.layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* Важно! Занимает всю высоту viewport */
+  }
+  
+  .layout-content {
+    flex: 1; /* Растягивает контент на всё доступное пространство */
+    padding: 20px 0; /* Отступы сверху/снизу */
+  }

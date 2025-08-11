@@ -8,7 +8,6 @@ export const Layout = () => {
       <main className="layout-content">
         <Outlet /> {/* Сюда подставляются страницы */}
       </main>
-      <Footer />
     </div>
   )
 }

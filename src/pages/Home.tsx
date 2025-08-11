@@ -1,10 +1,10 @@
 /* Home.tsx
-   Полнофункциональная страница-лендинг с:
-   - многослойным параллаксом (far/mid/near)
-   - "pinned" секциями (стадии) и скролл-контролируемыми timeline'ами
-   - staged reveal внутри секций
-   - прогресс-бар, reduced-motion, адаптивность
-   - удобная структура (подкомпоненты)
+   Full-featured landing page with:
+   - multi-layer parallax (far/mid/near)
+   - "pinned" sections (stages) and scroll-controlled timelines
+   - staged reveal inside sections
+   - progress bar, reduced-motion, responsiveness
+   - convenient structure (subcomponents)
 */
 
 import React, { useEffect, useRef, useCallback } from "react";
@@ -16,7 +16,7 @@ import "../components/CSS/Home.css";
 gsap.registerPlugin(ScrollTrigger);
 
 /* ----------------------
-   Конфигурация
+   Configuration
    ---------------------- */
 const CONFIG = {
   // parallax strengths (yPercent)
@@ -35,7 +35,7 @@ const CONFIG = {
 };
 
 /* ----------------------
-   Типы / помощники
+   Types / helpers
    ---------------------- */
 type PanelRef = HTMLDivElement | null;
 
@@ -44,7 +44,7 @@ function clamp(v: number, a = 0, b = 1) {
 }
 
 /* ----------------------
-   Подкомпоненты: Panel — одна секция
+   Subcomponent: Panel — single section
    ---------------------- */
 const Panel: React.FC<{
   className?: string;
@@ -82,17 +82,17 @@ const Home: React.FC = () => {
   useEffect(() => {
     const mm = gsap.matchMedia();
 
-    // Опишите интерфейс условий, которые вы передаёте в matchMedia
+    // Define the interface for conditions you pass to matchMedia
     type MMConditions = {
       isDesktop?: boolean;
       isMobile?: boolean;
       [key: string]: boolean | undefined;
     };
 
-    // Контекст, который приходит в колбэк
+    // Context that comes into the callback
     type MMContext = {
       conditions?: MMConditions;
-      // GSAP может добавлять другие поля — позволим any для них
+      // GSAP may add other fields — allow any for them
       [key: string]: any;
     };
 
@@ -102,7 +102,7 @@ const Home: React.FC = () => {
         isMobile: CONFIG.breakpoints.mobile,
       },
       (context: unknown) => {
-        // безопасно кастуем unknown → наш MMContext
+        // safely cast unknown → our MMContext
         const ctx = context as MMContext;
         const isDesktop = Boolean(ctx.conditions?.isDesktop);
         const isMobile = Boolean(ctx.conditions?.isMobile);
@@ -175,7 +175,7 @@ const Home: React.FC = () => {
           });
         }
 
-        // можно вернуть cleanup, но mm.revert() вызовем в основном cleanup
+        // we could return cleanup here, but mm.revert() will be called in the main cleanup
         return () => {
           /* nothing special here */
         };
@@ -183,10 +183,9 @@ const Home: React.FC = () => {
     );
 
     return () => {
-      mm.revert(); // очищает созданные ScrollTrigger/timelines внутри matchMedia
+      mm.revert(); // cleans up created ScrollTrigger/timelines inside matchMedia
     };
   }, []);
-
 
   /* ----------------------
      Discord login handler
@@ -197,7 +196,7 @@ const Home: React.FC = () => {
     const clientId = import.meta.env.VITE_DISCORD_CLIENT_ID || "";
     const redirectUri = import.meta.env.VITE_DISCORD_REDIRECT_URI || window.location.origin;
     if (!clientId) {
-      alert("Discord Client ID не сконфигурирован");
+      alert("Discord Client ID is not configured");
       return;
     }
     const url = new URL("https://discord.com/api/oauth2/authorize");
@@ -219,17 +218,12 @@ const Home: React.FC = () => {
       </div>
 
       {/* Background layers (images or gradients) */}
-      <div className="bg-layer bg--far" ref={farRef} aria-hidden style={{
-      }} />
-
-      <div className="bg-layer bg--mid" ref={midRef} aria-hidden style={{
-      }} />
-
-      <div className="bg-layer bg--near" ref={nearRef} aria-hidden style={{
-      }} />
+      <div className="bg-layer bg--far" ref={farRef} aria-hidden />
+      <div className="bg-layer bg--mid" ref={midRef} aria-hidden />
+      <div className="bg-layer bg--near" ref={nearRef} aria-hidden />
 
       {/* =======================
-          PANELS: 4 секции (Hero, Auth, Features, CTA)
+          PANELS: 4 sections (Hero, Auth, Features, CTA)
          ======================= */}
       {/* HERO */}
       <Panel className="panel--hero" panelRef={addPanelRef} id="hero">
@@ -242,16 +236,19 @@ const Home: React.FC = () => {
         </p>
         <div className="panel__body">
           <p className="lead">
-            Удобная и мощная панель управления для модерации Discord-сообществ:
-            от автоматических фильтров до детального аудита и интеграций.
+            A convenient and powerful control panel for moderating Discord communities:
+            from automatic filters to detailed audit and integrations.
           </p>
         </div>
         <div className="panel__cta">
           <button className="btn btn--primary" onClick={handleDiscordLogin}>
             <FaDiscord /> Login with Discord
           </button>
-          <button className="btn btn--ghost" onClick={() => window.scrollTo({ top: window.innerHeight, behavior: "smooth" })}>
-            Подробнее
+          <button
+            className="btn btn--ghost"
+            onClick={() => window.scrollTo({ top: window.innerHeight, behavior: "smooth" })}
+          >
+            Learn more
           </button>
         </div>
       </Panel>
@@ -259,22 +256,23 @@ const Home: React.FC = () => {
       {/* AUTH */}
       <Panel className="panel--auth" panelRef={addPanelRef} id="auth">
         <div className="panel__deco deco--card" aria-hidden />
-        <h2 className="panel__title">Быстрая и безопасная авторизация</h2>
-        <p className="panel__subtitle">OAuth2 вход через Discord с выбором прав и серверов.</p>
+
+        <div className="panel__header">
+          <h2 className="panel__title">Fast and Secure Authorization</h2>
+          <p className="panel__subtitle">
+            OAuth2 login via Discord with role and server selection.
+          </p>
+        </div>
 
         <div className="panel__body auth-card">
           <div className="auth-left">
-            <p className="hint">Надёжно • Прозрачно • Безопасно</p>
+            <p className="hint">Reliable • Transparent • Safe</p>
             <ul className="auth-features" aria-hidden>
-              <li>Однокликовый вход</li>
-              <li>Выбор серверов и ролей</li>
-              <li>Автоматическая привязка настроек</li>
+              <li>One-click login</li>
+              <li>Role and server selection</li>
+              <li>Automatic settings binding</li>
             </ul>
-            <div style={{ marginTop: 14 }}>
-              <button className="btn btn--primary" onClick={handleDiscordLogin}>
-                <FaDiscord /> Подключиться
-              </button>
-            </div>
+            <div style={{ marginTop: 14 }}></div>
           </div>
           <div className="auth-right">
             <div className="card-preview card">Preview — UI snapshot</div>
@@ -284,22 +282,26 @@ const Home: React.FC = () => {
 
       {/* FEATURES */}
       <Panel className="panel--features" panelRef={addPanelRef} id="features">
-        <h2 className="panel__title">Ключевые возможности</h2>
-        <p className="panel__subtitle">Мощная логика модерации, гибкие правила и аналитика.</p>
+        <h2 className="panel__title">Key Features</h2>
+        <p className="panel__subtitle">Powerful moderation logic, flexible rules, and analytics.</p>
 
         <div className="panel__body feature-grid" role="list">
           {[
-            "Автоматическая модерация",
-            "Настраиваемые правила",
-            "Дашборды и отчёты",
-            "Интеграции / Webhooks",
-            "Поддержка ролей и прав",
-            "Аудит и экспорт логов",
+            "Automatic moderation",
+            "Customizable rules",
+            "Dashboards and reports",
+            "Integrations / Webhooks",
+            "Role and permissions support",
+            "Audit and log export",
           ].map((t, i) => (
-            <div key={t} className="feature-card staged" style={{
-              transitionDelay: `${CONFIG.stagedDelayStep}ms`
-            }}
-              role="listitem">
+            <div
+              key={t}
+              className="feature-card staged"
+              style={{
+                transitionDelay: `${CONFIG.stagedDelayStep}ms`,
+              }}
+              role="listitem"
+            >
               {t}
             </div>
           ))}
@@ -308,13 +310,16 @@ const Home: React.FC = () => {
 
       {/* CTA */}
       <Panel className="panel--cta" panelRef={addPanelRef} id="cta">
-        <h2 className="panel__title">Готовы начать?</h2>
-        <p className="panel__subtitle">Попробуйте бесплатно — настройте и масштабируйте сообщество без лишней рутины.</p>
+        <h2 className="panel__title">Ready to get started?</h2>
+        <p className="panel__subtitle">
+          Try it for free — set up and scale your community without extra hassle.
+        </p>
         <div className="panel__cta">
-          <button className="btn btn--ghost" onClick={() => window.open("/docs", "_self")}>Документация</button>
+          <button className="btn btn--ghost" onClick={() => window.open("/docs", "_self")}>
+            Documentation
+          </button>
         </div>
-        <footer className="panel__footer">
-        </footer>
+        <footer className="panel__footer"></footer>
       </Panel>
     </div>
   );

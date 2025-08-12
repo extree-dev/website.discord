@@ -1,0 +1,247 @@
+/* Settings.css
+   Визуально совпадает с Dashboard.css / Sidebar.css
+   Использует те же CSS-переменные и правила визуального языка.
+*/
+
+:root {
+    --mp-bg: #111216;
+    --mp-surface: #16161a;
+    --mp-ink: #e6eef8;
+    --mp-muted: #aeb6c2;
+    --mp-accent: #4b7cff;
+    --mp-divider: rgba(255,255,255,0.04);
+    --mp-radius: 10px;
+  }
+  
+  /* Совместимость: если у тебя есть mp-layout/mp-main, стили отрисуют страницу корректно.
+     Если у тебя используется settings-fullscreen как main-класс — тоже будет выглядеть одинаково. */
+  
+  /* Основной контейнер (используется внутри mp-layout как main) */
+  .mp-main, .settings-fullscreen {
+    background: var(--mp-bg);
+    color: var(--mp-ink);
+    min-height: 100vh;
+    box-sizing: border-box;
+    padding: 28px 32px;
+    font-family: ABCGintoDiscord, sans-serif;
+  }
+  
+  /* Хедер (общее оформление как в dashboard) */
+  .mp-header, .settings-header {
+    border-bottom: 1px solid var(--mp-divider);
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+  }
+  
+  .mp-header__title, .settings-title {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--mp-ink);
+  }
+  
+  .mp-header__subtitle, .settings-subtitle {
+    font-size: 13px;
+    color: var(--mp-muted);
+    margin-top: 6px;
+  }
+  
+  /* Сетка карточек настроек — поведение как в dashboard: */
+  .settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    align-items: stretch; /* Растягивает все колонки до одной высоты */
+  }
+  
+  /* Карточка настроек — использует те же визуальные токены, что mp-card */
+  .settings-card {
+    background: var(--mp-surface);
+    border-radius: var(--mp-radius);
+    border: 1px solid var(--mp-divider);
+    padding: 18px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* Чтобы кнопки и элементы были внизу */
+    gap: 12px;
+    min-height: 160px; /* Можно регулировать под дизайн */
+  }
+  
+  .settings-card__title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--mp-ink);
+    margin: 0 0 6px 0;
+  }
+  
+  /* Ряд настроек, выравнивание как в dashboard таблицах */
+  .settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+  }
+  
+  .settings-row label {
+    color: var(--mp-muted);
+    font-size: 14px;
+    flex: 1;
+    margin-right: 12px;
+  }
+
+  
+  
+  /* Checkbox styling (simple, consistent) */
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--mp-accent); /* modern browsers */
+    cursor: pointer;
+  }
+  
+  /* Тоггл-кнопка темы — акцентный стиль */
+  /* Тоггл-кнопка темы */
+/* Универсальный стиль кнопки */
+.toggle-button,
+.save-button {
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease, opacity 0.12s ease;
+}
+
+/* ===== Тоггл-тема ===== */
+.toggle-button {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+/* Тёмная тема */
+[data-theme="dark"] .toggle-button {
+  background: var(--mp-surface);
+  color: var(--mp-ink);
+}
+[data-theme="dark"] .toggle-button:hover {
+  background: var(--mp-accent);
+  color: white;
+  box-shadow: 0 8px 20px rgba(75,124,255,0.25);
+}
+
+/* Светлая тема */
+[data-theme="light"] .toggle-button {
+  background: #16161a;
+  color: white;
+}
+[data-theme="light"] .toggle-button:hover {
+  background: var(--mp-accent);
+  color: white;
+  box-shadow: 0 8px 20px rgba(75,124,255,0.25);
+}
+
+/* ===== Кнопка сохранения ===== */
+.save-button {
+  padding: 10px 18px;
+  font-weight: 700;
+  border-radius: 10px;
+}
+
+/* Тёмная тема */
+[data-theme="dark"] .save-button {
+  background: var(--mp-accent);
+  color: white;
+  box-shadow: 0 8px 20px rgba(75,124,255,0.25);
+}
+[data-theme="dark"] .save-button:hover {
+  opacity: 0.95;
+  transform: translateY(-2px);
+}
+
+/* Светлая тема */
+[data-theme="light"] .save-button {
+  background: #1d1f23;
+  color: white;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+}
+[data-theme="light"] .save-button:hover {
+  background: var(--mp-accent);
+  color: white;
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+  
+
+  .toggle-button:hover { opacity: 0.95; transform: translateY(-1px); }
+
+  
+  
+  /* Цветовой пипет/выбор цвета */
+  .settings-row input[type="color"] {
+    width: 44px;
+    height: 36px;
+    padding: 2px;
+    border-radius: 8px;
+    border: 1px solid var(--mp-divider);
+  }
+  
+  /* Помещаем вспомогательные описания */
+  .settings-help {
+    color: var(--mp-muted);
+    font-size: 12px;
+  }
+  
+  /* Действия (сохранить и т.п.) */
+  .settings-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 6px;
+  }
+  
+  .save-button:hover { transform: translateY(-2px); opacity: 0.98; }
+  
+  /* Мелкие утилиты и выравнивание для широкой формы (например, 2-колонки внутри карты) */
+  .settings-grid .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  
+  /* Вспомогательные стили для таблиц/списков настроек */
+  .settings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  /* Мобильная адаптация */
+  @media (max-width: 900px) {
+    .mp-main, .settings-fullscreen {
+      padding: 16px;
+    }
+    .settings-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  /* Светлая тема (поддержка data-theme) */
+  [data-theme="light"] {
+    --mp-bg: #f7f8fa;
+    --mp-surface: #ffffff;
+    --mp-ink: #111216;
+    --mp-muted: #4a4a4a;
+    --mp-divider: rgba(0,0,0,0.08);
+    --mp-accent: #4b7cff;
+  }
+  
+  /* Некоторая совместимость с mp-card и mp-table (если ты используешь их в других местах) */
+  .mp-table th, .mp-table td { border-color: var(--mp-divider); color: var(--mp-ink); }
+  
+
+  
+
+
+  /* Конец Settings.css */
+  

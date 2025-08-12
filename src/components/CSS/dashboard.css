@@ -1,0 +1,135 @@
+/* Dashboard.css
+   Совпадает по стилю с Saidbar.css
+   Использует те же переменные и визуальный язык.
+*/
+
+:root {
+    --mp-bg: #111216;
+    --mp-surface: #16161a;
+    --mp-ink: #e6eef8;
+    --mp-muted: #aeb6c2;
+    --mp-accent: #4b7cff;
+    --mp-divider: rgba(255,255,255,0.04);
+    --mp-radius: 10px;
+  }
+  
+  .mp-layout {
+    display: flex;
+    background: var(--mp-bg);
+    min-height: 100vh;
+    color: var(--mp-ink);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  
+  /* Main content area */
+  .mp-main {
+    flex: 1;
+    padding: 20px 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    background: var(--mp-bg);
+  }
+  
+  /* Header */
+  .mp-header {
+    border-bottom: 1px solid var(--mp-divider);
+    padding-bottom: 14px;
+  }
+  
+  .mp-header__title {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--mp-ink);
+  }
+  
+  .mp-header__subtitle {
+    font-size: 14px;
+    color: var(--mp-muted);
+    margin-top: 4px;
+  }
+  
+  /* Stats cards */
+  .mp-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+  }
+  
+  .mp-card {
+    background: var(--mp-surface);
+    padding: 16px;
+    border-radius: var(--mp-radius);
+    border: 1px solid var(--mp-divider);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  
+  .mp-card__title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--mp-muted);
+  }
+  
+  .mp-card__value {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--mp-ink);
+  }
+  
+  /* Tables */
+  .mp-tables {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+  
+  .mp-table__block {
+    background: var(--mp-surface);
+    border-radius: var(--mp-radius);
+    border: 1px solid var(--mp-divider);
+    padding: 16px;
+  }
+  
+  .mp-table__title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  
+  .mp-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .mp-table th,
+  .mp-table td {
+    text-align: left;
+    padding: 10px 8px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--mp-divider);
+  }
+  
+  .mp-table th {
+    color: var(--mp-muted);
+    font-weight: 500;
+  }
+  
+  .mp-table td {
+    color: var(--mp-ink);
+  }
+  
+  .mp-table tbody tr:hover {
+    background: rgba(255,255,255,0.02);
+  }
+  
+  /* Responsive */
+  @media (max-width: 900px) {
+    .mp-main {
+      padding: 16px;
+    }
+  }
+  

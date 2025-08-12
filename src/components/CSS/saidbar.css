@@ -1,0 +1,344 @@
+/* Sidebar.css
+   Minimalist, strict and neutral design.
+   Adjust variables to change accent and spacing.
+*/
+
+:root{
+    --mp-bg: #111216;
+    --mp-surface: #16161a;
+    --mp-ink: #e6eef8;
+    --mp-muted: #aeb6c2;
+    --mp-accent: #4b7cff;
+    --mp-divider: rgba(255,255,255,0.04);
+    --mp-radius: 10px;
+  }
+  
+  /* Root container */
+  .mp-sidebar {
+    width: 260px;
+    min-width: 60px;
+    max-width: 320px;
+    background: linear-gradient(180deg, var(--mp-surface), rgba(0,0,0,0.02));
+    color: var(--mp-ink);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-radius: var(--mp-radius);
+    border: 1px solid var(--mp-divider);
+    box-shadow: 0 6px 20px rgba(1,6,12,0.5);
+    position: relative;
+    transition: width 150ms ease;
+    box-sizing: border-box;
+    font-family: ABCGintoDiscord, sans-serif;
+  }
+  
+  /* Collapsed state */
+  .mp-sidebar--collapsed {
+    width: 74px; /* icon-only width */
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  
+  /* Top: brand & collapse toggle */
+  .mp-sidebar__top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: space-between;
+    padding-right: 6px;
+  }
+  
+  .mp-brand {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  
+  .mp-brand__logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    background: rgba(255,255,255,0.04);
+  }
+  
+  .mp-brand__meta {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+  }
+  
+  .mp-brand__title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--mp-ink);
+    padding-left: 10px;
+  }
+  
+  .mp-brand__subtitle {
+    font-size: 12px;
+    color: var(--mp-muted);
+    padding-left: 10px;
+  }
+  
+  /* Collapse button */
+  .mp-collapse-btn {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(10px) saturate(200%);
+    -webkit-backdrop-filter: blur(10px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 50%;
+    color: var(--mp-muted);
+    cursor: pointer;
+    padding: 8px;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25),
+                0 0 12px rgba(255, 255, 255, 0.05);
+    transition:
+        background 0.3s ease,
+        color 0.3s ease,
+        transform 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+.mp-collapse-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--mp-accent);
+    transform: scale(1.08);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3),
+                0 0 14px rgba(255, 255, 255, 0.08);
+}
+
+.mp-collapse-btn svg {
+    transition: transform 0.3s ease;
+}
+
+.sidebar.collapsed .mp-collapse-btn svg {
+    transform: rotate(180deg);
+}
+
+/* -----------------------------
+  Fix: collapse button stays neat when sidebar collapsed
+   - Uses the actual class name mp-sidebar--collapsed
+   - Turns the top area into a stacked column on collapse
+   - Centers the collapse button above the nav icons
+   - Ensures the button is visually above nav (z-index)
+   - Rotates the chevron smoothly
+   - Keeps appearance glassy and modern
+  -----------------------------*/
+
+/* Important: target the real class that your component adds */
+.mp-sidebar.mp-sidebar--collapsed {
+    /* keep width/other styles as-is but ensure overflow visible so button not clipped */
+    overflow: visible;
+  }
+  
+  /* Make the top area stack vertically when collapsed */
+  .mp-sidebar.mp-sidebar--collapsed .mp-sidebar__top {
+    display: block;         /* remove flex layout */
+    padding-right: 0;
+    text-align: center;     /* center children horizontally */
+  }
+  
+  /* Hide any brand meta (if rendered by accident) — your JSX already hides it, but safe to include */
+  .mp-sidebar.mp-sidebar--collapsed .mp-brand__meta {
+    display: none;
+  }
+  
+  /* Collapse button styling when in collapsed state:
+     center it and make sure it's above icons */
+  .mp-sidebar .mp-collapse-btn {
+    position: relative; /* relative so transform/margin work reliably */
+    margin: 0 auto;     /* center horizontally inside top block */
+    left: 0;
+    transform: none;
+    z-index: 40;        /* above nav icons and badges */
+    /* keep previous visual glass style (you already have it) */
+  }
+  
+  /* Extra polish: slightly lift the button visually so it sits above the content */
+  .mp-sidebar.mp-sidebar--collapsed .mp-collapse-btn {
+    margin-top: 6px;
+    margin-bottom: 6px;
+    box-shadow:
+      0 6px 20px rgba(0,0,0,0.32),
+      0 0 10px rgba(255,255,255,0.03);
+  }
+  
+  /* Ensure nav doesn't overlap the button: add a little top spacing */
+  .mp-sidebar.mp-sidebar--collapsed .mp-nav {
+    margin-top: 6px;
+    padding-top: 2px;
+  }
+  
+  /* Rotate chevron when collapsed (use the actual class) */
+  .mp-sidebar.mp-sidebar--collapsed .mp-collapse-btn svg {
+    transform: rotate(180deg);
+  }
+  
+  /* Keep a smooth transition for svg */
+  .mp-collapse-btn svg {
+    transition: transform 220ms ease;
+  }
+  
+  /* Accessibility: ensure tooltip (floating) still positioned correctly */
+  .mp-sidebar.mp-sidebar--collapsed .mp-tooltip {
+    left: 78px; /* unchanged — adjust if you tweak collapsed width */
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  
+  /* If you used earlier selectors like .sidebar.collapsed, remove them to avoid conflicts. */
+  
+  
+  
+  /* Nav */
+  .mp-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 6px;
+  }
+  
+  .mp-nav__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-radius: 8px;
+    padding: 8px;
+    background: transparent;
+    border: none;
+    color: var(--mp-muted);
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+    position: relative;
+    box-sizing: border-box;
+  }
+  .mp-nav__item:hover {
+    background: rgba(71, 71, 71, 0.04);
+    color: var(--mp-ink);
+    transform: translateX(4px);
+  }
+  .mp-nav__item--active {
+    background: linear-gradient(90deg, rgba(75,124,255,0.12), rgba(75,124,255,0.06));
+    color: var(--mp-ink);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.01);
+  }
+  
+  /* Icon + label */
+  .mp-nav__icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; color: inherit; }
+  .mp-nav__label { font-size: 13px; font-weight: 500; color: inherit; }
+  .mp-nav__badge {
+    margin-left: auto;
+    background: rgba(255,255,255,0.04);
+    color: var(--mp-muted);
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+  }
+  
+  /* Disabled */
+  .mp-nav__item--disabled { opacity: 0.45; cursor: not-allowed; }
+  
+  /* Divider */
+  .mp-divider {
+    height: 1px;
+    background: var(--mp-divider);
+    margin: 4px 0;
+    border-radius: 2px;
+  }
+  
+  /* Utilities (secondary actions) */
+  .mp-utilities {
+    display: flex;
+    gap: 8px;
+    flex-direction: column;
+  }
+  
+  .mp-util {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--mp-muted);
+    border: none;
+    cursor: pointer;
+    transition: background 120ms ease;
+  }
+  .mp-util:hover { background: rgba(255,255,255,0.02); color: var(--mp-ink); }
+  .mp-util__label { font-size: 13px; }
+  
+  /* Footer profile & logout */
+  .mp-sidebar__foot {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: space-between;
+    padding-top: 8px;
+  }
+  
+  .mp-profile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .mp-profile__avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: block;
+    object-fit: cover;
+    border: 1px solid rgba(255,255,255,0.03);
+  }
+  .mp-profile__meta { display: flex; flex-direction: column; }
+  .mp-profile__name { font-weight: 600; font-size: 13px; color: var(--mp-ink); }
+  .mp-profile__sub { font-size: 12px; color: var(--mp-muted); }
+  
+  /* Logout */
+  .mp-logout {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    color: var(--mp-muted);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+  }
+  .mp-logout:hover { color: #ff8b8b; background: rgba(255,255,255,0.02); }
+  
+  /* Tooltip (floating label when collapsed) */
+  .mp-tooltip {
+    position: absolute;
+    left: 78px; /* just outside collapsed sidebar */
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(20,22,26,0.98);
+    color: white;
+    padding: 8px 10px;
+    border-radius: 6px;
+    box-shadow: 0 8px 20px rgba(6,8,20,0.6);
+    font-size: 13px;
+    z-index: 120;
+  }
+  
+  /* Responsive behaviour */
+  @media (max-width: 900px) {
+    .mp-sidebar { display: none; }
+  }
+  

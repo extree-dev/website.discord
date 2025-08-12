@@ -1,0 +1,188 @@
+/* LanguageSelect.css — glassmorphism iOS-like dropdown */
+
+/* базовые переменные (подставляются из глобальных) */
+:root {
+    --glass-radius: 14px;
+    --glass-padding: 10px 14px;
+    --accent: var(--mp-accent);
+  }
+  
+  /* контейнер (важно: inline-block чтобы не растягивать) */
+  .glass-dropdown {
+    position: relative;
+    display: inline-block;
+    width: 220px;
+    z-index: 10050; /* достаточно высокий */
+    user-select: none;
+    cursor: default;
+    font-family: ABCGintoDiscord, sans-serif;
+    font-size: 14px;
+    color: var(--mp-ink);
+  }
+  
+  /* --------- SELECTED (кнопка) --------- */
+  .glass-selected {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--glass-padding);
+    border-radius: var(--glass-radius);
+    border: 1px solid rgba(255,255,255,0.18);
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.03),
+      0 8px 18px rgba(0,0,0,0.45);
+    transition: transform .14s ease, box-shadow .18s ease, background .18s ease;
+    outline: none;
+  }
+  
+  .glass-selected:focus {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.05),
+      0 12px 28px rgba(0,0,0,0.45),
+      0 0 0 4px rgba(75,124,255,0.08);
+  }
+  
+  .glass-selected:hover {
+    transform: translateY(-2px);
+  }
+  
+  /* текст и стрелка */
+  .glass-selected__text {
+    display: block;
+    font-weight: 600;
+    color: var(--mp-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  /* arrow как svg background, менять цвет через data-theme overrides */
+  .arrow {
+    width: 14px;
+    height: 14px;
+    display: inline-block;
+    margin-left: 10px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 14px;
+    transition: transform .22s cubic-bezier(.2,.9,.3,1);
+    flex-shrink: 0;
+  }
+  .glass-dropdown.open .arrow {
+    transform: rotate(180deg);
+  }
+  
+  /* default arrow (light-colored for dark theme) */
+  .arrow {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 20 20' fill='%23e6eef8'><path d='M5.25 7.5l4.75 5 4.75-5H5.25z'/></svg>");
+  }
+  
+  /* --------- OPTIONS (выпадающий список) --------- */
+  .glass-options {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    width: 100%;
+    min-width: 180px;
+    padding: 10px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    box-shadow:
+      0 18px 40px rgba(0,0,0,0.45),
+      inset 0 1px 0 rgba(255,255,255,0.02);
+    list-style: none;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 10060;
+    pointer-events: auto; /* обязательно */
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* отдельный пункт: не используем внешние margin, используем gap у родителя */
+  .glass-options li {
+    padding: 10px 14px;
+    border-radius: 10px;
+    color: var(--mp-ink);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background .18s ease, transform .08s ease;
+    outline: none;
+  }
+  
+  /* hover effect — более мягкий светящийся блик */
+  .glass-options li:hover {
+    background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06));
+    transform: translateY(-1px);
+  }
+  
+  /* active item style (accent) */
+  .glass-options li.active {
+    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 80%, black 10%));
+    color: white;
+    box-shadow: 0 8px 18px rgba(75,124,255,0.12), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  
+  /* check mark on the right when selected */
+  .opt-check {
+    color: inherit;
+    opacity: 0.9;
+    font-weight: 700;
+    margin-left: 8px;
+  }
+  
+  /* keyboard focus visual */
+  .glass-options li:focus {
+    box-shadow: 0 0 0 4px rgba(75,124,255,0.08);
+    border-radius: 10px;
+  }
+  
+  /* ---- Theme overrides ---- */
+  /* Light theme: denser glass to keep readability */
+  [data-theme="light"] .glass-selected,
+  [data-theme="light"] .glass-options {
+    background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.7));
+    border: 1px solid rgba(0,0,0,0.08);
+    color: var(--mp-ink);
+    box-shadow:
+      0 8px 22px rgba(3, 6, 12, 0.06),
+      inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+  
+  /* adjust arrow color for light theme */
+  [data-theme="light"] .arrow {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 20 20' fill='%23111216'><path d='M5.25 7.5l4.75 5 4.75-5H5.25z'/></svg>");
+  }
+  
+  /* Light theme hover on options */
+  [data-theme="light"] .glass-options li:hover {
+    background: rgba(0,0,0,0.06);
+  }
+  
+  /* Light theme active */
+  [data-theme="light"] .glass-options li.active {
+    background: #0f1720; /* deep accent for light theme */
+    color: white;
+  }
+  
+  /* ensure dropdown isn't clipped by parent overflow: add suggestion rule if needed */
+  .glass-dropdown,
+  .glass-options {
+    will-change: transform, opacity;
+  }
+  
+  /* Small responsive tweak */
+  @media (max-width: 520px) {
+    .glass-dropdown { width: 100%; }
+    .glass-options { min-width: 100%; }
+  }
+  

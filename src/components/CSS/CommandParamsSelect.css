@@ -1,0 +1,115 @@
+/* CommandParamsSelect.css */
+/* Glassmorphism стиль под нативный <select> */
+
+.command-param-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.18);
+    padding: 10px 40px 10px 14px; /* место под стрелку справа */
+    font-size: 14px;
+    font-weight: 600;
+    font-family: ABCGintoDiscord, sans-serif;
+    color: var(--mp-ink);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.03),
+      0 8px 18px rgba(0,0,0,0.45);
+    transition: transform .14s ease, box-shadow .18s ease, background .18s ease;
+    width: 220px;
+    cursor: pointer;
+  }
+  
+  .command-param-select:hover {
+    transform: translateY(-2px);
+  }
+  
+  .command-param-select:focus {
+    outline: none;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.05),
+      0 12px 28px rgba(0,0,0,0.45),
+      0 0 0 4px rgba(75,124,255,0.08);
+  }
+  
+  /* Стрелка справа */
+  .command-param-select-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .command-param-select-wrapper::after {
+    position: absolute;
+    top: 50%;
+    right: 14px;
+    width: 14px;
+    height: 14px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 14px;
+    pointer-events: none;
+    transform: translateY(-50%);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 20 20' fill='%23e6eef8'><path d='M5.25 7.5l4.75 5 4.75-5H5.25z'/></svg>");
+  }
+  
+  /* Светлая тема */
+  [data-theme="light"] .command-param-select {
+    background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.7));
+    border: 1px solid rgba(0,0,0,0.08);
+    color: var(--mp-ink);
+    box-shadow:
+      0 8px 22px rgba(3, 6, 12, 0.06),
+      inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+  
+  [data-theme="light"] .command-param-select-wrapper::after {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 20 20' fill='%23111216'><path d='M5.25 7.5l4.75 5 4.75-5H5.25z'/></svg>");
+  }
+  
+
+  .param-delete-btn {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+}
+
+/* Цвет иконки в темной теме */
+[data-theme="dark"] .param-delete-btn svg {
+    color: #ffffff;
+}
+
+/* Цвет иконки в светлой теме */
+[data-theme="light"] .param-delete-btn svg {
+    color: #000000;
+}
+
+.param-delete-btn:hover {
+    transform: scale(1.05);
+}
+
+.param-delete-btn:active {
+    transform: scale(0.95);
+}
+
+.param-item {
+  display: flex;
+  align-items: center; /* выравнивание по вертикали */
+  gap: 8px; /* отступы между элементами */
+  margin: 0;
+}
+
+.param-item input{
+  margin: 0;
+  padding: 0;
+}

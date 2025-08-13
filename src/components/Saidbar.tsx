@@ -250,17 +250,6 @@ const Sidebars: React.FC<SidebarProps> = ({
                     {!collapsed && <span className="mp-util__label">Notifications</span>}
                     {!collapsed && <span className="mp-util__meta">3</span>}
                 </button>
-
-                <button
-                    className="mp-util"
-                    onClick={() => navigateTo("bot")}
-                    onMouseEnter={() => setHoverTip("Bot")}
-                    onMouseLeave={() => setHoverTip(null)}
-                    title={collapsed ? "Bot" : undefined}
-                >
-                    <Zap size={16} />
-                    {!collapsed && <span className="mp-util__label">Bot</span>}
-                </button>
             </div>
 
             {/* Footer: profile & logout */}

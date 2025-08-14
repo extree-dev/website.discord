@@ -6,8 +6,15 @@
     border-radius: var(--mp-radius);
     border: 1px solid var(--mp-divider);
     padding: 18px;
-    margin-top: 18px;
+    margin-top: 5rem;
     box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+    transition: transform 0.45s ease, opacity 0.45s ease;
+  }
+
+.command-access.shifted {
+    transform: translateY(10px);
+    opacity: 0.06;
+    pointer-events: none; /* чтобы нельзя было кликать, пока скрыт */
   }
   
   .command-access h3 {
@@ -66,6 +73,7 @@
     border: none;
     border-radius: 8px;
     padding: 8px 14px;
+    margin-bottom: 10px;
     cursor: pointer;
     transition: background 0.2s ease, transform 0.15s ease;
   }
@@ -77,6 +85,10 @@
   
   .command-access-add-btn:active {
     transform: translateY(0px);
+  }
+
+  .command-access-add-btn:focus{
+    outline: none;
   }
   
   /* Мобильная адаптация */

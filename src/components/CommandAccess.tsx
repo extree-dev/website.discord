@@ -7,7 +7,7 @@ type Props = {
     onChange: (access: string[]) => void;
 };
 
-export default function CommandAccess({ access, onChange }: Props) {
+export default function CommandAccess({ access, onChange, className = "" }: Props & { className?: string }) {
     function addAccess() {
         const role = prompt("Enter the Role ID or User ID:");
         if (role) onChange([...access, role]);
@@ -18,7 +18,7 @@ export default function CommandAccess({ access, onChange }: Props) {
     }
 
     return (
-        <div className="command-access">
+        <div className={`command-access ${className}`}>
             <h3>Command Access</h3>
             {access.length === 0 && <p>Access is open to everyone</p>}
             <div className="command-access-list">
@@ -33,7 +33,7 @@ export default function CommandAccess({ access, onChange }: Props) {
             </div>
 
             <button className="command-access-add-btn" onClick={addAccess}>
-                <FiPlus size={18} /> Add Access
+                Add Access
             </button>
         </div>
     );

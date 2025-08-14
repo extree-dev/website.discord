@@ -89,7 +89,7 @@ export default function CommandsPage() {
                 <div className="commands-header">
                     <h1>Bot Command Management</h1>
                     <button className="btn-primary" onClick={handleCreate}>
-                        <FiPlus size={20} /> Create Command
+                        Create Command
                     </button>
                 </div>
 

@@ -71,17 +71,21 @@
   
 
   .param-delete-btn {
+    background: none;       /* убираем фон */
+    outline: none;
+    border: none;          /* убираем рамку */
+    padding: 0;             /* убираем лишние отступы */
+    margin: 0;
+    cursor: pointer;        /* курсор руки */
+    display: inline-flex;   /* чтобы иконка была центрирована */
     align-items: center;
     justify-content: center;
-    text-align: center;
-    margin: 0;
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    transition: background 0.2s ease, transform 0.15s ease;
+    color: inherit;         /* наследуем цвет от родителя */
+    padding: 0px 0px 12px 5px;
+}
+
+.param-delete-btn:focus {
+  outline: none;
 }
 
 /* Цвет иконки в темной теме */
@@ -94,6 +98,23 @@
     color: #000000;
 }
 
+[data-theme="dark"] .param-delete-btn svg,
+[data-theme="light"] .param-delete-btn svg {
+    transition: color 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.param-delete-btn {
+    transition: transform 0.2s ease-in-out;
+    outline: none;
+    border: none;
+    background: transparent;
+}
+
+[data-theme="dark"] .param-delete-btn svg:hover,
+[data-theme="light"] .param-delete-btn svg:hover {
+    color: rgb(255, 53, 53);
+}
+
 .param-delete-btn:hover {
     transform: scale(1.05);
 }
@@ -101,6 +122,7 @@
 .param-delete-btn:active {
     transform: scale(0.95);
 }
+
 
 .param-item {
   display: flex;
@@ -112,4 +134,8 @@
 .param-item input{
   margin: 0;
   padding: 0;
+}
+
+.param-add-btn:focus{
+  outline: none;
 }

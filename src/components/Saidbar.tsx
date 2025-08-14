@@ -10,6 +10,7 @@ import {
     Server,
     Bell,
     Circle,
+    LayoutDashboard,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 import "../components/CSS/saidbar.css";
@@ -31,6 +32,7 @@ import "../components/CSS/saidbar.css";
 /* ---------- Types ---------- */
 
 export type SidebarId =
+    | "dashboard"
     | "overview"
     | "users"
     | "channels"
@@ -62,6 +64,7 @@ const STORAGE_KEY = "modpanel_sidebar_collapsed_v1";
 
 /* Default menu — can be replaced by props or context in your app */
 const DEFAULT_MENU: MenuItem[] = [
+    { id: "dashboard", title: "Dashboard", icon: <LayoutDashboard size={18} /> }, // ← добавили
     { id: "overview", title: "Overview", icon: <Home size={18} /> },
     { id: "users", title: "Users", icon: <Users size={18} />, badge: "12" },
     { id: "channels", title: "Channels", icon: <MessageCircle size={18} /> },
@@ -69,6 +72,7 @@ const DEFAULT_MENU: MenuItem[] = [
     { id: "bot", title: "Bot", icon: <Server size={18} /> },
     { id: "settings", title: "Settings", icon: <Settings size={18} /> },
 ];
+
 
 /* ---------- Component ---------- */
 
@@ -110,19 +114,20 @@ const Sidebars: React.FC<SidebarProps> = ({
     const containerRef = useRef<HTMLDivElement | null>(null);
 
     // on navigate (internal + callback)
-    function navigateTo(id: SidebarId) {
+    function navigateTo(id: SidebarId | "dashboard") {
         if (externalActive === undefined) {
-          setActive(id);
+            setActive(id as SidebarId);
         }
-        if (onNavigate) onNavigate(id);
+        onNavigate?.(id as SidebarId);
     
-        // Роутинг
-        if (id === "settings") {
-          navigate("/dashboard/settings");
+        if (id === "dashboard") {
+            window.location.href = "http://localhost:5173/dashboard/";
+        } else if (id === "settings") {
+            navigate("/dashboard/settings");
         } else {
-          navigate(`/dashboard/${id}`);
+            navigate(`/dashboard/${id}`);
         }
-      }
+    }
 
     // keyboard handling
     useEffect(() => {

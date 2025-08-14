@@ -23,8 +23,36 @@
     padding: 24px;
     width: 520px;
     max-width: 95%;
+    max-height: 90vh;       /* не больше 90% высоты экрана */
+    overflow-y: auto;       /* вертикальный скролл внутри */
     animation: slideUpModal 0.25s ease;
+    box-sizing: border-box; /* чтобы padding учитывался в размере */
+    outline: none;
 }
+
+.modal-content::-webkit-scrollbar {
+    width: 20px; /* ширина полосы прокрутки */
+}
+
+.modal-content::-webkit-scrollbar-track {
+    background: transparent; /* фон трека */
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+    background-color: var(--mp-accent);
+    border-radius: 20px; /* закругление */
+    border: 7px solid transparent; /* отступ внутри */
+    background-clip: padding-box; /* чтобы цвет не заливал отступы */
+    margin: 20px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(0, 60, 255);
+}
+
+
+
+
 
 /* Заголовок */
 .modal-content h2 {
@@ -71,7 +99,6 @@
     background: rgba(255,255,255,0.02);
     border-radius: 8px;
     padding: 12px;
-    margin-bottom: 16px;
 }
 
 .command-params h3,
@@ -104,7 +131,7 @@
     display: flex;
     justify-content: flex-end;
     gap: 10px;
-    margin-top: 20px;
+    margin-top: 3.5rem;
 }
 
 /* Кнопка сохранить */
@@ -116,6 +143,10 @@
     border-radius: 8px;
     border: none;
     cursor: pointer;
+    display: inline-flex;         /* выравнивание */
+    align-items: center;          /* центр по вертикали */
+    justify-content: center;      /* центр по горизонтали */
+    gap: 6px;                      /* расстояние между иконкой и текстом */
     transition: background 0.15s ease, transform 0.12s ease;
 }
 
@@ -146,6 +177,10 @@
 
 .btn-secondary:active {
     transform: scale(0.96);
+}
+
+.btn-secondary:focus{
+    outline: none;
 }
 
 /* Анимации */
@@ -189,15 +224,90 @@
     margin-bottom: 14px;
 }
 
+/*------------------------------------------------------------*/
+
 /* Для темной и светлой темы */
-[data-theme="light"] .modal-content {
-    background: var(--mp-surface-light);
+[data-theme="light"] .modal-content .btn-primary,
+[data-theme="light"] .command-access-add-btn,
+[data-theme="light"] .param-add-btn {
+    transition: background-color 0.3s ease, 
+                box-shadow 0.3s ease, 
+                transform 0.25s ease;
 }
 
-[data-theme="light"] .btn-secondary {
+[data-theme="light"] .modal-content .btn-primary:hover,
+[data-theme="light"] .command-access-add-btn:hover,
+[data-theme="light"] .param-add-btn:hover {
+    background-color: rgb(0, 60, 255);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+    transform: translateY(-2px);
+}
+
+[data-theme="light"] .commands-header .btn-primary:hover{
+    background-color: rgb(0, 60, 255);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+    transform: translateY(-2px);
+}
+
+[data-theme="light"] .param-add-btn{
+    background: var(--mp-accent);
+    display: inline-flex;       /* флекс для горизонтального расположения */
+    align-items: center;        /* центрирование по вертикали */
+    justify-content: center;    /* центрирование по горизонтали */
+    gap: 6px;                   /* отступ между иконкой и текстом */
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+
+[data-theme="light"] .btn-secondary:hover {
     background: rgba(0,0,0,0.04);
 }
 
 [data-theme="light"] .btn-secondary:hover {
     background: rgba(0,0,0,0.07);
 }
+
+/*------------------------------------------------------------*/
+
+/* Black Theme */
+[data-theme="dark"] .commands-header .btn-primary:hover{
+    background-color: rgb(0, 60, 255);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+    transform: translateY(-2px);
+}
+
+[data-theme="dark"] .modal-content .btn-primary:hover,
+[data-theme="dark"] .command-access-add-btn:hover,
+[data-theme="dark"] .param-add-btn:hover {
+    background-color: rgb(0, 60, 255);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+    transform: translateY(-2px);
+}
+
+[data-theme="dark"] .modal-content .btn-primary,
+[data-theme="dark"] .command-access-add-btn,
+[data-theme="dark"] .param-add-btn {
+    transition: background-color 0.3s ease, 
+                box-shadow 0.3s ease, 
+                transform 0.25s ease;
+}
+
+[data-theme="dark"] .param-add-btn{
+    background: var(--mp-accent);
+    display: inline-flex;       /* флекс для горизонтального расположения */
+    align-items: center;        /* центрирование по вертикали */
+    justify-content: center;    /* центрирование по горизонтали */
+    gap: 6px;                   /* отступ между иконкой и текстом */
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+}
+/*------------------------------------------------------------*/

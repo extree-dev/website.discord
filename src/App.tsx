@@ -8,7 +8,8 @@ import { Layout } from './components/Layout/Layout'
 import SettingsPage from './pages/Settings'
 import { ThemeProvider } from './stores/theme'
 import BotDashboard from './pages/BotDashboard'
-import CommandsPage from './pages/CommandsPage' // <--- добавили
+import CommandsPage from './pages/CommandsPage'
+import DashboardOverview from './pages/DashboardOverview'
 
 function App() {
   return (
@@ -23,7 +24,8 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/dashboard/settings" element={<SettingsPage />} />
               <Route path="/dashboard/bot" element={<BotDashboard />} />
-              <Route path="/dashboard/commands" element={<CommandsPage />} /> {/* <--- новый путь */}
+              <Route path="/dashboard/commands" element={<CommandsPage />} />
+              <Route path='/dashboard/overview' element={< DashboardOverview/>} />
             </Route>
           </Routes>
         </BrowserRouter>

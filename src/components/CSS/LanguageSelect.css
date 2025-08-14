@@ -84,6 +84,7 @@
   /* --------- OPTIONS (выпадающий список) --------- */
   .glass-options {
     position: absolute;
+    z-index: 9999;
     top: calc(100% + 10px);
     left: 0;
     width: 100%;
@@ -102,7 +103,6 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    z-index: 10060;
     pointer-events: auto; /* обязательно */
     -webkit-tap-highlight-color: transparent;
   }
@@ -171,7 +171,7 @@
   
   /* Light theme active */
   [data-theme="light"] .glass-options li.active {
-    background: #0f1720; /* deep accent for light theme */
+    background: var(--mp-accent);
     color: white;
   }
   

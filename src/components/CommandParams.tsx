@@ -1,17 +1,21 @@
 import React from "react";
 import { CommandParam } from "../pages/CommandsPage";
-import '../components/CSS/CommandParamsSelect.css';
+import "../components/CSS/CommandParamsSelect.css";
 import GlassSelect from "./GlassSelect";
-import { FiTrash2, FiPlus } from "react-icons/fi";
+import { FiTrash2 } from "react-icons/fi";
 
 type Props = {
     params: CommandParam[];
     onChange: (params: CommandParam[]) => void;
+    onSelectOpenChange?: (open: boolean) => void; // ✅ новый проп
 };
 
-export default function CommandParams({ params, onChange }: Props) {
+export default function CommandParams({ params, onChange, onSelectOpenChange }: Props) {
     function addParam() {
-        onChange([...params, { id: Date.now().toString(), name: "", description: "", type: "string", required: false }]);
+        onChange([
+            ...params,
+            { id: Date.now().toString(), name: "", description: "", type: "string", required: false }
+        ]);
     }
 
     function updateParam(id: string, key: keyof CommandParam, value: any) {
@@ -37,6 +41,7 @@ export default function CommandParams({ params, onChange }: Props) {
                         value={p.description}
                         onChange={(e) => updateParam(p.id, "description", e.target.value)}
                     />
+
                     <div className="command-param-select-wrapper">
                         <GlassSelect
                             value={p.type}
@@ -47,21 +52,23 @@ export default function CommandParams({ params, onChange }: Props) {
                                 { value: "boolean", label: "Boolean" },
                                 { value: "user", label: "User" },
                                 { value: "channel", label: "Channel" },
-                                { value: "role", label: "Role" },
+                                { value: "role", label: "Role" }
                             ]}
+                            onOpenChange={onSelectOpenChange} // ✅ проброс
                         />
                     </div>
+
                     <button
                         className="param-delete-btn"
                         onClick={() => removeParam(p.id)}
                         title="Delete parameter"
                     >
-                        <FiTrash2 size={18} />
+                        <FiTrash2 />
                     </button>
                 </div>
             ))}
             <button onClick={addParam} className="param-add-btn">
-                <FiPlus size={18} /> Add parameter
+                Add parameter
             </button>
         </div>
     );

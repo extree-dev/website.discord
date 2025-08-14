@@ -98,14 +98,14 @@ export default function BotDashboard() {
                             className="bot-action add-command"
                             onClick={() => alert("Command adding window")}
                         >
-                            + Add Command
+                            Add Command
                         </button>
 
                     </div>
 
                     {/* Integrations */}
                     <div className="bot-card">
-                        <h2 className="bot-card__title">Integrations 🔗</h2>
+                        <h2 className="bot-card__title">Integrations</h2>
 
                         <div className="bot-action-youtube">
                             <button onClick={() => alert("Connecting YouTube API")}>
@@ -171,48 +171,15 @@ export default function BotDashboard() {
 
                     {/* Automation */}
                     <div className="bot-card">
-                        <h2 className="bot-card__title">Automation / Auto-posts 📅</h2>
+                        <h2 className="bot-card__title">Automation / Auto-posts</h2>
                         <ul>
                             <li>Schedule message</li>
                             <li>Keyword responses</li>
                             <li>Welcome messages</li>
                         </ul>
                         <button className="bot-action">
-                            <FaPlus /> Add Task
+                                Add Task
                         </button>
-                    </div>
-
-                    {/* Command Access */}
-                    <div className="bot-card">
-                        <h2 className="bot-card__title">Command Access 🔗</h2>
-                        <div className="command-table-wrapper">
-                            <table className="command-table">
-                                <thead>
-                                    <tr className="command-thread">
-                                        <th>Command</th>
-                                        <th>On/Off</th>
-                                        <th>Access</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>/help</td>
-                                        <td><input type="checkbox" defaultChecked /></td>
-                                        <td>Everyone</td>
-                                    </tr>
-                                    <tr>
-                                        <td>/stats</td>
-                                        <td><input type="checkbox" /></td>
-                                        <td>Admins</td>
-                                    </tr>
-                                    <tr className="command-thread">
-                                        <td>/ping</td>
-                                        <td><input type="checkbox" defaultChecked /></td>
-                                        <td>Everyone</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
                     </div>
                 </div>
 

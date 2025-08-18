@@ -27,7 +27,7 @@ function App() {
 
             {/* Страницы с Layout */}
             <Route element={<Layout />}>
-              <Route path="/" element={<Home />} />
+              <Route path="/" element={<Login />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/moderation" element={<Moderation />} />
               <Route path="/dashboard" element={<Dashboard />} />

@@ -32,7 +32,10 @@
     font-weight: 700;
     margin-bottom: 0.5rem;
     background: linear-gradient(90deg, #6366f1, #4f46e5);
-    -webkit-background-clip: text;
+    -webkit-background-clip: text; /* для Chrome/Safari */
+    background-clip: text;         /* стандартное свойство */
+    -webkit-text-fill-color: transparent; /* чтобы работало в WebKit */
+    color: transparent; /* fallback */
     -webkit-text-fill-color: transparent;
 }
 

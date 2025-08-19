@@ -1,110 +1,142 @@
-.auth-form {
+/* Login.css - с поддержкой светлой и тёмной темы */
+
+.login-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 1rem;
+  background: linear-gradient(to bottom, var(--bg-start), var(--bg-end));
+  transition: background 0.3s ease;
+}
+
+.login-card {
+  background-color: var(--card-background);
+  border-radius: 1rem;
+  box-shadow: var(--shadow);
+  width: 100%;
+  max-width: 420px;
+  padding: 2.5rem;
+  position: relative;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.login-header-top {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.login-header h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--text-color);
+  margin-bottom: 0.5rem;
+  transition: color 0.3s ease;
+}
+
+.login-header p {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
+}
+
+.login-error {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--error-color);
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.login-form {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-.floating-input {
-  position: relative;
-  margin-top: 1rem;
-}
-
-.floating-input input {
-  width: 100%;
-  padding: 12px 12px 12px 0;
-  border: none;
-  border-bottom: 1px solid #ccc;
-  font-size: 1rem;
-  background: transparent;
-  color: #111;
-  outline: none;
-}
-
-.floating-input label {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #aaa;
-  font-size: 1rem;
-  pointer-events: none;
-  transition: all 0.2s ease-out;
-}
-
-.floating-input.filled label,
-.floating-input input:focus + label {
-  top: -10px;
-  font-size: 0.75rem;
-  color: #6366f1;
-}
-
-.auth-divider {
+.login-input-group {
   display: flex;
-  align-items: center;
-  text-align: center;
-  margin-top: 1rem;
-  color: #888; /* цвет текста */
-  font-size: 0.9rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
 }
 
-.auth-divider::before,
-.auth-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px; /* тонкая линия */
-  background-color: #ccc; /* цвет линии */
-  margin: 0 0.75rem; /* отступы между линией и текстом */
+.login-input-group label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-color);
+  transition: color 0.3s ease;
 }
 
-
-.underline {
-  position: absolute;
-  bottom: 0;
-  left: 0; /* с левого края */
-  width: 0%;
-  height: 2px; /* чуть толще, чтобы было заметнее */
-  background-color: #6366f1;
-  transition: width 0.3s ease; /* анимируем только ширину */
+.login-input-group input {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  background-color: var(--card-background);
+  color: var(--text-color);
+  font-family: 'ABCGintoDiscord', sans-serif;
 }
 
-.floating-input input:focus ~ .underline,
-.floating-input.filled ~ .underline {
-  width: 27rem;
+.login-input-group input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
 }
 
+.password-group {
+  position: relative;
+}
 
-.password-toggle {
+.password-toggle-btn {
   position: absolute;
   right: 0.5rem;
-  top: 50%;
+  top: 70%;
   transform: translateY(-50%);
   background: none;
   border: none;
-  outline: none;
   cursor: pointer;
-  color: #6366f1;
-  font-size: 0.9rem;
-  transition: color 0.2s ease;
-
-  /* Убираем браузерный фокус */
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-}
-
-.password-toggle:focus {
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   outline: none;
-  box-shadow: none;
 }
 
+.login-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 2rem 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  transition: color 0.3s ease;
+}
 
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 0 0.75rem;
+  transition: background-color 0.3s ease;
+}
 
 .social-login {
   display: flex;
   justify-content: center;
   gap: 1rem;
-  margin: 0;
-  padding: 0;
 }
 
 .social-btn {
@@ -115,65 +147,176 @@
   justify-content: center;
   border-radius: 50%;
   padding: 0.6rem;
-  transition: color 0.4s ease, transform 0.3s ease;
+  transition: transform 0.3s ease, background-color 0.3s ease;
 }
 
-/* Иконки подстраиваются под цвет */
-.social-btn svg {
-  width: 28px;
-  height: 28px;
-  transition: fill 0.4s ease, transform 0.3s ease;
-  fill: currentColor;
-}
-
-/* Hover эффект */
 .social-btn:hover {
   transform: scale(1.1);
 }
 
-/* Темная тема */
-[data-theme="dark"] .social-btn {
-  color: white;
-  background: none;
+.social-btn svg {
+  width: 28px;
+  height: 28px;
+  fill: currentColor;
+  transition: fill 0.4s ease, transform 0.3s ease;
 }
 
-/* Светлая тема */
-[data-theme="light"] .social-btn {
-  color: black;
-  background: none;
-}
-
-
-/* Светлая тема через кастомный атрибут */
-[data-theme="dark"] .social-btn{ 
-  color: white; 
-  background: none; 
-}
-[data-theme="dark"] .auth-divider{
-  color:white;
-  text-align: center;
-}
-
-[data-theme="light"] .auth-divider{ 
-  color:#111;
-  text-align: center;
-}
-
-
-[data-theme="light"] .social-btn{ color: black; background: none; }
-
-.auth-terms {
+.login-terms {
   font-size: 0.75rem;
-  color: #6b7280; /* серый текст */
   text-align: center;
-  margin-top: 0.75rem;
+  margin-top: 1.5rem;
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
 }
 
-.auth-terms a {
-  color: #6366f1;
+.login-terms a {
+  color: var(--primary-color);
   text-decoration: underline;
+  transition: color 0.3s ease;
 }
 
-.auth-terms a:hover {
-  color: #4f46e5;
+.login-terms a:hover {
+  color: var(--primary-color-hover);
+}
+
+.login-socials {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.login-social {
+  border: none;
+  background: transparent; /* убираем фон */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  padding: 0.6rem;
+  transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.login-social:hover {
+  transform: scale(1.1);
+}
+
+/* Цвет иконок по умолчанию */
+.login-social svg {
+  width: 28px;
+  height: 28px;
+  fill: var(--social-icon-color);
+  transition: fill 0.3s ease;
+}
+
+/* Можно при желании добавить hover для иконок */
+.login-social:hover svg {
+  fill: var(--primary-color);
+}
+
+
+/* Темная тема */
+[data-theme="dark"] .login-wrapper {
+  background: linear-gradient(to bottom, var(--bg-start), var(--bg-end));
+}
+
+[data-theme="dark"] .login-social svg {
+  fill: #ffffff; /* белые иконки */
+}
+
+[data-theme="dark"] .password-toggle-btn {
+  outline: none;
+  border: none;
+}
+
+[data-theme="dark"] .login-terms {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .login-terms a {
+  color: var(--primary-color);
+}
+
+[data-theme="dark"] .login-terms a:hover {
+  color: var(--primary-color-hover);
+}
+
+[data-theme="dark"] .login-card {
+  background-color: var(--card-background);
+  box-shadow: var(--shadow);
+}
+
+[data-theme="dark"] .login-header h1,
+[data-theme="dark"] .login-input-group label,
+[data-theme="dark"] .login-header p,
+[data-theme="dark"] .login-divider {
+  color: var(--text-color);
+}
+
+[data-theme="dark"] .login-input-group input {
+  background-color: var(--card-background);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .login-divider::before,
+[data-theme="dark"] .login-divider::after {
+  background-color: var(--border-color);
+}
+
+/* Светлая тема (на случай, если нужны точные overrides) */
+[data-theme="light"] .login-wrapper {
+  background: linear-gradient(to bottom, var(--bg-start), var(--bg-end));
+}
+
+[data-theme="light"] .login-terms {
+  color: var(--text-secondary);
+}
+
+[data-theme="light"] .login-terms a {
+  color: var(--primary-color);
+}
+
+[data-theme="light"] .password-toggle-btn {
+  outline: none;
+  border: none;
+}
+
+[data-theme="light"] .login-terms a:hover {
+  color: var(--primary-color-hover);
+}
+
+[data-theme="light"] .login-social svg {
+  fill: #1f2937; /* темные иконки */
+}
+
+[data-theme="light"] .login-card {
+  background-color: var(--card-background);
+  box-shadow: var(--shadow);
+}
+
+[data-theme="light"] .login-header h1,
+[data-theme="light"] .login-input-group label,
+[data-theme="light"] .login-header p,
+[data-theme="light"] .login-divider {
+  color: var(--text-color);
+}
+
+[data-theme="light"] .login-input-group input {
+  background-color: var(--card-background);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+[data-theme="light"] .login-divider::before,
+[data-theme="light"] .login-divider::after {
+  background-color: var(--border-color);
+}
+
+/* Адаптивность */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
 }

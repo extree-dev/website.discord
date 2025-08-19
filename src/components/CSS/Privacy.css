@@ -1,0 +1,109 @@
+.privacy-page {
+    background: rgba(0, 0, 0, 0.85); /* более глубокий тёмный фон */
+    color: #e0e0e0;
+    padding: 2rem;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+
+    display: flex;
+    justify-content: center; /* по горизонтали */
+    align-items: center;    /* по вертикали */
+    flex-direction: column; /* секции сверху вниз */
+    text-align: center;     /* текст по центру */
+    font-family: ABCGintoDiscord, sans-serif;
+}
+
+.privacy-content {
+    max-width: 900px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* выравнивание всех секций по центру */
+}
+
+.privacy-intro p {
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    line-height: 1.8;
+    color: #a0a0a0;
+    text-align: center; /* центрируем абзац */
+}
+
+.privacy-section {
+    background: rgba(255, 255, 255, 0.02);
+    padding: 1.8rem;
+    border-radius: 12px;
+    margin-bottom: 1.8rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeInUp 0.8s forwards;
+
+    width: 100%;
+    text-align: left; /* заголовки и списки слева */
+}
+
+.privacy-section h2 {
+    font-size: 1.5rem;
+    color: #6366f1;
+    margin-bottom: 1rem;
+    text-align: center; /* заголовки по центру */
+}
+
+.privacy-section p,
+.privacy-section ul {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #d0d0d0;
+}
+
+.privacy-section ul {
+    padding-left: 1.5rem;
+    list-style-type: disc;
+}
+
+.privacy-section ul li {
+    margin-bottom: 0.5rem;
+}
+
+.privacy-link {
+    color: #4f46e5;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
+
+.privacy-link:hover {
+    color: #6366f1;
+    text-decoration: underline;
+}
+
+.privacy-footer {
+    text-align: center;
+    padding-top: 2rem;
+    font-size: 0.9rem;
+    color: #888;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeInUp 0.8s forwards;
+    animation-delay: 0.9s;
+}
+
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Медиа-запросы */
+@media (max-width: 768px) {
+    .privacy-content {
+        padding: 0 1rem;
+    }
+    .privacy-section h2 {
+        font-size: 1.3rem;
+    }
+}

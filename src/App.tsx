@@ -14,6 +14,8 @@ import DashboardOverview from './pages/DashboardOverview'
 // Новые страницы
 import { Login } from './pages/Login'
 import { Register}  from './pages/Register'
+import Terms from './pages/Terms'
+import Privacy from './pages/Privacy'
 
 function App() {
   return (
@@ -35,6 +37,8 @@ function App() {
               <Route path="/dashboard/bot" element={<BotDashboard />} />
               <Route path="/dashboard/commands" element={<CommandsPage />} />
               <Route path="/dashboard/overview" element={<DashboardOverview />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
             </Route>
           </Routes>
         </BrowserRouter>

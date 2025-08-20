@@ -1,18 +1,29 @@
-.theme-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--mp-bg-secondary);
-    border: none;
-    padding: 6px;
-    border-radius: 8px;
-    cursor: pointer;
-    color: var(--mp-text);
-    transition: background 0.2s, color 0.2s;
-  }
-  
-  .theme-toggle:hover {
-    background: var(--mp-bg-hover);
-    color: var(--mp-accent);
-  }
-  
+/* Светлая тема */
+[data-theme="light"] {
+  --mp-bg: #ffffff;
+  --mp-surface: #f9f9f9;
+  --mp-ink: #5865f2;      /* основной текст */
+  --mp-muted: #6a6d7c;
+  --mp-accent: #5865f2;
+  --mp-success: #43b581;
+  --mp-error: #f04747;
+  --mp-warning: #faa61a;
+  --mp-divider: rgba(0,0,0,0.1);
+  --mp-radius: 10px;
+}
+
+/* Тёмная тема */
+[data-theme="dark"] {
+  --mp-bg: #1e1f22;
+  --mp-surface: #2b2d31;
+  --mp-ink: #e0e3ff;      /* основной текст */
+  --mp-muted: #9ca3af;
+  --mp-accent: #e0e3ff;
+  --mp-success: #43b581;
+  --mp-error: #f04747;
+  --mp-warning: #faa61a;
+  --mp-divider: rgba(255,255,255,0.1);
+  --mp-radius: 10px;
+  --mp-button-text: #000000;
+  --mp-accents: #5865f2;
+}

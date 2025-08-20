@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FaDiscord, FaGithub, FaGoogle } from "react-icons/fa";
 import { Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -14,6 +14,19 @@ export const Login = () => {
     const navigate = useNavigate();
 
     const isEmail = (value: string) => /\S+@\S+\.\S+/.test(value);
+
+    // Очистка ошибки при изменении полей ввода
+    useEffect(() => {
+        if (error && identifier.trim()) {
+            setError("");
+        }
+    }, [identifier, error]);
+
+    useEffect(() => {
+        if (error && password.trim()) {
+            setError("");
+        }
+    }, [password, error]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -61,24 +74,28 @@ export const Login = () => {
                 {error && <div className="login-error">{error}</div>}
 
                 <form onSubmit={handleSubmit} className="login-form" noValidate>
-                    <div className="login-input-group">
-                        <label htmlFor="identifier">Email or Login</label>
+                    <div className="login-input-group floating-label">
                         <input
                             id="identifier"
                             type="text"
                             value={identifier}
                             onChange={(e) => setIdentifier(e.target.value)}
+                            placeholder=" "
+                            required
                         />
+                        <label htmlFor="identifier">Email or Login</label>
                     </div>
 
-                    <div className="login-input-group password-group">
-                        <label htmlFor="password">Password</label>
+                    <div className="login-input-group floating-label password-group">
                         <input
                             id="password"
                             type={showPassword ? "text" : "password"}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            placeholder=" "
+                            required
                         />
+                        <label htmlFor="password">Password</label>
                         {password && (
                             <button
                                 type="button"
@@ -93,6 +110,9 @@ export const Login = () => {
                     <button type="submit" className="login-btn" disabled={isLoading}>
                         {isLoading ? "Loading..." : "Log in"}
                     </button>
+                    <p className="login-register">
+                        Don't have an account? <a href="/register">Create an account</a>
+                    </p>
 
                     <div className="login-divider">Or login with</div>
 

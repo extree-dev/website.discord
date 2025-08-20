@@ -30,13 +30,12 @@
   --bg-end: #1e293b;
 }
 
-/* === Layout === */
+/* === General Styles === */
 .register-wrapper {
   display: flex;
   min-height: 100vh;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(to bottom, var(--bg-start), var(--bg-end));
   padding: 1rem;
 }
 
@@ -44,9 +43,7 @@
   max-width: 420px;
   width: 100%;
   padding: 2.5rem;
-  background: var(--card-background);
   border-radius: 1rem;
-  box-shadow: var(--shadow);
   position: relative;
   z-index: 1;
   display: flex;
@@ -78,7 +75,7 @@
   line-height: 1.4;
 }
 
-/* === Error === */
+/* === Error Messages === */
 .register-error {
   padding: 0.75rem 1rem;
   background-color: rgba(239, 68, 68, 0.08);
@@ -91,89 +88,159 @@
   line-height: 1.5;
 }
 
+.input-error {
+  color: var(--error-color);
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  min-height: 1.25rem;
+  display: block;
+}
+
+.password-strength {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+
+.password-error {
+  color: var(--error-color);
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
 /* === Form === */
 .register-form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
 .register-input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  position: relative;
+  margin-bottom: 0.5rem;
 }
 
-.register-input-group label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-color);
+/* === Floating Label Container === */
+.floating-label-container {
+  position: relative;
+  margin-bottom: 0.5rem; /* Space for error message */
 }
 
-.register-input-group input {
+.floating-label {
+  position: relative;
+  display: block;
+}
+
+.floating-label input {
+  width: 100%;
   padding: 0.75rem 1rem;
   border: 1px solid var(--border-color);
   border-radius: 0.5rem;
   font-size: 0.9rem;
-  transition: all 0.2s;
-  background: var(--card-background);
-  color: var(--text-color);
+  transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
-.register-input-group input:focus {
+.floating-label input.error {
+  border-color: var(--error-color);
+}
+
+.floating-label input:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
 }
 
-/* === Password group === */
-.password-group .password-wrapper {
+.floating-label label {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--card-background);
+  padding: 0 0.25rem;
+  transition: all 0.2s ease;
+  pointer-events: none;
+  color: var(--text-secondary);
+}
+
+.floating-label input:focus + label,
+.floating-label input:not(:placeholder-shown) + label {
+  top: 0;
+  transform: translateY(-50%) scale(0.85);
+  color: var(--primary-color);
+}
+
+/* === Error message container - FIXED POSITIONING */
+.error-message-container {
+  position: relative;
+  min-height: 1.25rem;
+  margin-top: 0.25rem;
+}
+
+/* === Password Wrapper === */
+.password-wrapper {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
 }
 
 .password-wrapper input {
-  flex: 1;
+  width: 100%;
+  padding-right: 2.5rem;
 }
 
 .password-toggle-btn {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
+  padding: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
+  z-index: 2;
   color: var(--text-secondary);
-  padding: 0.25rem;
-  transition: color 0.2s;
+  transition: color 0.2s ease;
 }
 
 .password-toggle-btn:hover {
   color: var(--primary-color);
 }
 
-/* === Submit Button === */
+/* === Button === */
 .register-btn {
   width: 100%;
   padding: 0.85rem;
   border-radius: 0.5rem;
   font-weight: 600;
   font-size: 0.95rem;
-  background-color: var(--primary-color);
-  color: #fff;
   border: none;
   cursor: pointer;
-  transition: background-color 0.25s ease, transform 0.1s ease;
-}
-
-.register-btn:hover {
-  background-color: var(--primary-hover);
-  transform: translateY(-1px);
+  transition: all 0.2s ease;
+  margin-top: 0.5rem;
 }
 
 .register-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* === Footer === */
@@ -219,6 +286,75 @@
   color: var(--primary-hover);
 }
 
+/* === Light Theme Specific === */
+[data-theme="light"] .register-wrapper {
+  background-color: #e0e3ff;
+}
+
+[data-theme="light"] .register-card {
+  background: #e0e3ff;
+}
+
+[data-theme="light"] .register-input-group input {
+  background: #e0e3ff;
+  color: var(--text-color);
+  border: 1px solid #9d9d9d;
+}
+
+[data-theme="light"] .floating-label label {
+  background: #e0e3ff;
+}
+
+[data-theme="light"] .floating-label input:focus + label,
+[data-theme="light"] .floating-label input:not(:placeholder-shown) + label {
+  background: #e0e3ff;
+}
+
+[data-theme="light"] .register-btn {
+  background-color: #5865f2;
+  color: #e0e3ff;
+}
+
+[data-theme="light"] .register-btn:hover:not(:disabled) {
+  background-color: #4f46e5;
+  color: #ffffff;
+}
+
+/* === Dark Theme Specific === */
+[data-theme="dark"] .register-wrapper {
+  background-color: #000000;
+}
+
+[data-theme="dark"] .register-card {
+  background: #000000;
+}
+
+[data-theme="dark"] .register-input-group input {
+  background: #000000;
+  color: var(--text-color);
+  border: 1px solid #9d9d9d;
+  font-family: ABCGintoDiscord, sans-serif;
+}
+
+[data-theme="dark"] .floating-label label {
+  background: #000000;
+}
+
+[data-theme="dark"] .floating-label input:focus + label,
+[data-theme="dark"] .floating-label input:not(:placeholder-shown) + label {
+  background: #000000;
+}
+
+[data-theme="dark"] .register-btn {
+  background-color: #e0e3ff;
+  color: #000000;
+}
+
+[data-theme="dark"] .register-btn:hover:not(:disabled) {
+  background-color: #5865f2;
+  color: #e0e3ff;
+}
+
 /* === Responsive === */
 @media (max-width: 480px) {
   .register-card {
@@ -228,5 +364,27 @@
 
   .register-header h1 {
     font-size: 1.5rem;
+  }
+  
+  .register-form {
+    gap: 1rem;
+  }
+  
+  .floating-label input {
+    padding: 0.65rem 0.85rem;
+    font-size: 0.85rem;
+  }
+  
+  .register-btn {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+  
+  .error-message-container {
+    min-height: 1.1rem;
+  }
+  
+  .input-error {
+    font-size: 0.75rem;
   }
 }

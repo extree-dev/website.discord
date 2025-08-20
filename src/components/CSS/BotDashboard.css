@@ -389,6 +389,29 @@
     padding: 12px;
 }
 
+[data-theme="dark"] .save-button {
+  padding: 10px 18px;
+  font-weight: 700;
+  border-radius: 10px;
+  background: var(--mp-accent);
+  color: var(--mp-button-text);
+  box-shadow: 0 8px 20px rgba(75, 124, 255, 0.25);
+  font-family: 'ABCGintoDiscord', sans-serif;
+}
+
+[data-theme="dark"] .toggle-button {
+  padding: 8px 12px;
+  font-size: 13px;
+  background: var(--mp-accent);
+  color: var(--mp-button-text);
+  font-family: 'ABCGintoDiscord', sans-serif;
+}
+
+[data-theme="dark"] .toggle-button:hover {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--mp-button-text);
+}
 
 /* Мобильная адаптация */
 @media (max-width: 900px) {
@@ -396,3 +419,4 @@
     grid-template-columns: 1fr;
   }
 }
+

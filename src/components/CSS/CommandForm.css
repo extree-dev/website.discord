@@ -21,38 +21,36 @@
     border-radius: var(--mp-radius);
     box-shadow: 0 8px 24px rgba(0,0,0,0.45);
     padding: 24px;
-    width: 520px;
-    max-width: 95%;
-    max-height: 90vh;       /* не больше 90% высоты экрана */
-    overflow-y: auto;       /* вертикальный скролл внутри */
+    width: 100%;              /* растягивается на всю ширину */
+    max-width: 520px;         /* но не шире 520px */
+    max-height: 90vh;         /* не выше 90% экрана */
+    overflow-y: auto;         /* скролл по вертикали */
+    overflow-x: hidden;       /* убираем горизонтальный скролл */
     animation: slideUpModal 0.25s ease;
-    box-sizing: border-box; /* чтобы padding учитывался в размере */
+    box-sizing: border-box;   /* чтобы padding учитывался */
     outline: none;
+    scrollbar-gutter: stable; /* предотвращает "прыжки" */
 }
 
+/* Скроллбар */
 .modal-content::-webkit-scrollbar {
-    width: 20px; /* ширина полосы прокрутки */
+    width: 10px; /* уже и аккуратнее */
 }
 
 .modal-content::-webkit-scrollbar-track {
-    background: transparent; /* фон трека */
+    background: transparent;
 }
 
 .modal-content::-webkit-scrollbar-thumb {
     background-color: var(--mp-accent);
-    border-radius: 20px; /* закругление */
-    border: 7px solid transparent; /* отступ внутри */
-    background-clip: padding-box; /* чтобы цвет не заливал отступы */
-    margin: 20px;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
 }
 
 .modal-content::-webkit-scrollbar-thumb:hover {
     background-color: rgb(0, 60, 255);
 }
-
-
-
-
 
 /* Заголовок */
 .modal-content h2 {
@@ -76,7 +74,6 @@
 .modal-content input[type="text"],
 .modal-content input:not([type]),
 .modal-content input {
-    width: 100%;
     padding: 10px 12px;
     background: var(--mp-bg-input);
     border: 1px solid var(--mp-divider);
@@ -85,6 +82,8 @@
     color: var(--mp-ink);
     margin-bottom: 16px;
     transition: border 0.15s ease, background 0.15s ease;
+    width: 100%; /* поле ввода всегда влезает */
+    box-sizing: border-box;
 }
 
 .modal-content input:focus {
@@ -143,10 +142,10 @@
     border-radius: 8px;
     border: none;
     cursor: pointer;
-    display: inline-flex;         /* выравнивание */
-    align-items: center;          /* центр по вертикали */
-    justify-content: center;      /* центр по горизонтали */
-    gap: 6px;                      /* расстояние между иконкой и текстом */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     transition: background 0.15s ease, transform 0.12s ease;
 }
 
@@ -179,7 +178,7 @@
     transform: scale(0.96);
 }
 
-.btn-secondary:focus{
+.btn-secondary:focus {
     outline: none;
 }
 
@@ -226,7 +225,7 @@
 
 /*------------------------------------------------------------*/
 
-/* Для темной и светлой темы */
+/* Для светлой темы */
 [data-theme="light"] .modal-content .btn-primary,
 [data-theme="light"] .command-access-add-btn,
 [data-theme="light"] .param-add-btn {
@@ -243,18 +242,18 @@
     transform: translateY(-2px);
 }
 
-[data-theme="light"] .commands-header .btn-primary:hover{
+[data-theme="light"] .commands-header .btn-primary:hover {
     background-color: rgb(0, 60, 255);
     box-shadow: 0 8px 24px rgba(0,0,0,0.45);
     transform: translateY(-2px);
 }
 
-[data-theme="light"] .param-add-btn{
+[data-theme="light"] .param-add-btn {
     background: var(--mp-accent);
-    display: inline-flex;       /* флекс для горизонтального расположения */
-    align-items: center;        /* центрирование по вертикали */
-    justify-content: center;    /* центрирование по горизонтали */
-    gap: 6px;                   /* отступ между иконкой и текстом */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: 8px 14px;
     border-radius: 8px;
     border: none;
@@ -263,19 +262,14 @@
     cursor: pointer;
 }
 
-
-[data-theme="light"] .btn-secondary:hover {
-    background: rgba(0,0,0,0.04);
-}
-
 [data-theme="light"] .btn-secondary:hover {
     background: rgba(0,0,0,0.07);
 }
 
 /*------------------------------------------------------------*/
 
-/* Black Theme */
-[data-theme="dark"] .commands-header .btn-primary:hover{
+/* Для тёмной темы */
+[data-theme="dark"] .commands-header .btn-primary:hover {
     background-color: rgb(0, 60, 255);
     box-shadow: 0 8px 24px rgba(0,0,0,0.45);
     transform: translateY(-2px);
@@ -284,7 +278,7 @@
 [data-theme="dark"] .modal-content .btn-primary:hover,
 [data-theme="dark"] .command-access-add-btn:hover,
 [data-theme="dark"] .param-add-btn:hover {
-    background-color: rgb(0, 60, 255);
+    background-color: var(--mp-accents);
     box-shadow: 0 8px 24px rgba(0,0,0,0.45);
     transform: translateY(-2px);
 }
@@ -297,17 +291,25 @@
                 transform 0.25s ease;
 }
 
-[data-theme="dark"] .param-add-btn{
+[data-theme="dark"] .param-add-btn {
     background: var(--mp-accent);
-    display: inline-flex;       /* флекс для горизонтального расположения */
-    align-items: center;        /* центрирование по вертикали */
-    justify-content: center;    /* центрирование по горизонтали */
-    gap: 6px;                   /* отступ между иконкой и текстом */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: 8px 14px;
     border-radius: 8px;
     border: none;
-    color: white;
+    color: var(--mp-button-text);
     font-weight: 500;
     cursor: pointer;
+}
+
+[data-theme="dark"] .command-access-add-btn{
+    color: var(--mp-button-text);
+}
+
+[data-theme="dark"] .btn-primary {
+    color: var(--mp-button-text);
 }
 /*------------------------------------------------------------*/

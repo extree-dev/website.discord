@@ -5,20 +5,8 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  padding: 1rem;
   background: linear-gradient(to bottom, var(--bg-start), var(--bg-end));
   transition: background 0.3s ease;
-}
-
-.login-card {
-  background-color: var(--card-background);
-  border-radius: 1rem;
-  box-shadow: var(--shadow);
-  width: 100%;
-  max-width: 420px;
-  padding: 2.5rem;
-  position: relative;
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .login-header-top {
@@ -214,14 +202,99 @@
   fill: var(--primary-color);
 }
 
+/* Блок регистрации */
+.login-register {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
+}
+
+.login-register a {
+  color: var(--primary-color);
+  font-weight: 500;
+  text-decoration: underline;
+  transition: color 0.3s ease;
+}
+
+.login-register a:hover {
+  color: var(--primary-color-hover);
+}
+
+/* Floating Label */
+.floating-label {
+  position: relative;
+}
+
+.floating-label label {
+  position: absolute;
+  top: 50%;
+  left: 1rem;
+  transform: translateY(-50%);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+/* Когда поле в фокусе или есть текст → label поднимается */
+.floating-label input:focus + label,
+.floating-label input:not(:placeholder-shown) + label {
+  top: 0;
+  transform: translateY(-50%) scale(0.85);
+  background: #e0e3ff; /* подложка, чтобы текст не сливался с бордером */
+  padding: 0 0.25rem;
+  left: 0.75rem;
+  color: var(--primary-color);
+}
+
+[data-theme="dark"] .floating-label input:focus + label,
+.floating-label input:not(:placeholder-shown) + label {
+  top: 0;
+  transform: translateY(-50%) scale(0.85);
+  background: #000000; /* подложка, чтобы текст не сливался с бордером */
+  padding: 0 0.25rem;
+  left: 0.75rem;
+  color: var(--primary-color);
+}
+
 
 /* Темная тема */
 [data-theme="dark"] .login-wrapper {
-  background: linear-gradient(to bottom, var(--bg-start), var(--bg-end));
+  background: linear-gradient(to bottom, #000000);
+}
+
+[data-theme="dark"] .login-btn {
+  background-color: #e0e3ff;
+  color: #000000;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+[data-theme="dark"] .login-btn:hover {
+  background-color: #5865f2;
+  color: #e0e3ff;
+}
+
+
+[data-theme="dark"] .login-register {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .login-register a {
+  color: var(--primary-color);
+}
+
+[data-theme="dark"] .login-register a:hover {
+  color: var(--primary-color-hover);
 }
 
 [data-theme="dark"] .login-social svg {
-  fill: #ffffff; /* белые иконки */
+  fill: #e0e3ff; /* белые иконки */
+}
+
+[data-theme="dark"] .login-social svg:hover {
+  fill: #5865f2; /* белые иконки */
 }
 
 [data-theme="dark"] .password-toggle-btn {
@@ -242,8 +315,33 @@
 }
 
 [data-theme="dark"] .login-card {
-  background-color: var(--card-background);
-  box-shadow: var(--shadow);
+  background-color: #000000;
+}
+
+[data-theme="dark"] .theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mp-bg-secondary);
+  border: none;
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #e0e3ff;
+  transition: background 0.2s, color 0.2s;
+}
+
+[data-theme="dark"] .theme-toggle:hover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mp-bg-secondary);
+  border: none;
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #5865f2;
+  transition: background 0.2s, color 0.2s;
 }
 
 [data-theme="dark"] .login-header h1,
@@ -254,7 +352,7 @@
 }
 
 [data-theme="dark"] .login-input-group input {
-  background-color: var(--card-background);
+  background-color: #000000;
   color: var(--text-color);
   border-color: var(--border-color);
 }
@@ -266,7 +364,65 @@
 
 /* Светлая тема (на случай, если нужны точные overrides) */
 [data-theme="light"] .login-wrapper {
-  background: linear-gradient(to bottom, var(--bg-start), var(--bg-end));
+  background: linear-gradient(to bottom, #e0e3ff);
+}
+
+[data-theme="light"] .login-register {
+  color: var(--text-secondary);
+}
+
+[data-theme="light"] .login-register a {
+  color: var(--primary-color);
+}
+
+[data-theme="light"] .login-social svg {
+  fill: #5865f2; /* белые иконки */
+}
+
+[data-theme="light"] .login-social svg:hover {
+  fill: #000000; /* белые иконки */
+}
+
+[data-theme="light"] .login-btn {
+  background-color: #5865f2;
+  color: #e0e3ff;
+  transition: background-color 0.5s ease, color 0.5s ease, transform 0.1s ease;
+}
+
+[data-theme="light"] .login-btn:hover {
+  background-color: #5865f2;
+  color: #000000;
+}
+
+
+[data-theme="light"] .theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mp-bg-secondary);
+  border: none;
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #1f2937;
+  transition: background 0.2s, color 0.2s;
+}
+
+[data-theme="light"] .theme-toggle:hover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mp-bg-secondary);
+  border: none;
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #5865f2;
+  transition: background 0.2s, color 0.2s;
+}
+
+[data-theme="light"] .login-register a:hover {
+  color: var(--primary-color-hover);
 }
 
 [data-theme="light"] .login-terms {
@@ -286,13 +442,8 @@
   color: var(--primary-color-hover);
 }
 
-[data-theme="light"] .login-social svg {
-  fill: #1f2937; /* темные иконки */
-}
-
 [data-theme="light"] .login-card {
-  background-color: var(--card-background);
-  box-shadow: var(--shadow);
+  background-color: #e0e3ff;
 }
 
 [data-theme="light"] .login-header h1,
@@ -303,14 +454,14 @@
 }
 
 [data-theme="light"] .login-input-group input {
-  background-color: var(--card-background);
+  background-color: #e0e3ff;
   color: var(--text-color);
-  border-color: var(--border-color);
+  border-color: #b0b0b0;
 }
 
 [data-theme="light"] .login-divider::before,
 [data-theme="light"] .login-divider::after {
-  background-color: var(--border-color);
+  background-color: rgb(190, 190, 190);
 }
 
 /* Адаптивность */

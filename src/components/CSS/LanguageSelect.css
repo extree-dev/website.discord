@@ -129,7 +129,7 @@
   /* active item style (accent) */
   .glass-options li.active {
     background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 80%, black 10%));
-    color: white;
+    color: var(--mp-button-text);
     box-shadow: 0 8px 18px rgba(75,124,255,0.12), inset 0 1px 0 rgba(255,255,255,0.06);
   }
   

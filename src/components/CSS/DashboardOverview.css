@@ -1,239 +1,192 @@
+/* Overview Page
+   Clean, theme-based styling
+*/
+
 .overview-page {
-    flex: 1;
-    background: var(--mp-bg);
-    color: var(--mp-ink);
-    padding: 28px 32px;
-    font-family: ABCGintoDiscord, sans-serif;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
-  
-  /* Заголовок страницы */
-  .overview-header {
-    border-bottom: 1px solid var(--mp-divider);
-    padding-bottom: 14px;
-  }
-  .overview-header h1 {
-    font-size: 22px;
-    font-weight: 600;
-    margin: 0;
-  }
-  .overview-subtitle {
-    font-size: 14px;
-    color: var(--mp-muted);
-  }
-  
-  /* Сетка карточек */
-  .overview-grid {
-    display: grid;
-    gap: 1.5rem;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  }
-  .overview-card {
-    background: var(--mp-surface);
-    border-radius: var(--mp-radius);
-    padding: 18px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-  }
-  .overview-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 22px rgba(0,0,0,0.5);
-  }
-  .card-icon {
-    font-size: 26px;
-    color: var(--mp-accent);
-  }
-  .overview-card h2 {
-    font-size: 16px;
-    font-weight: 600;
-    margin: 0;
-  }
-  .overview-card p {
-    font-size: 20px;
-    font-weight: 700;
-  }
-  
-  /* Разделы */
-  .overview-section h2 {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 12px;
-  }
-  .activity-list {
-    background: var(--mp-surface);
-    border-radius: var(--mp-radius);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
-    padding: 16px;
-    list-style: none;
-    margin: 0;
-  }
-  .activity-list li {
-    padding: 8px 0;
-    border-bottom: 1px solid var(--mp-divider);
-    font-size: 14px;
-  }
-  .activity-list li:last-child {
-    border-bottom: none;
-  }
-  .time {
-    color: var(--mp-muted);
-    font-size: 12px;
-    margin-right: 8px;
-  }
-  
-  /* Адаптив */
-  @media (max-width: 900px) {
-    .overview-page {
-      padding: 16px;
-    }
-  }
-
-  .status-dot {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-  }
-  .status-dot.online { background: #43b581; }
-  .status-dot.offline { background: #f04747; }
-  
-  .bot-status, .version-info {
-    background: var(--mp-surface);
-    border-radius: var(--mp-radius);
-    padding: 16px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
-    max-width: 50%;
-  }
-  
-  .bot-status, .version-info h2{
-    text-align: center;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  
-
-  .status-container {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap; /* чтобы на узких экранах переносились */
-  }
-  
-  .bot-status,
-  .version-info {
-    flex: 1;
-    min-width: 260px; /* чтобы не были слишком узкими */
-    background: var(--mp-surface);
-    border-radius: var(--mp-radius);
-    padding: 16px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
-  }
-
-  .bot-status {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .bot-status .status-container {
-    display: flex;
-    justify-content: center; /* по центру */
-    gap: 60px; /* расстояние между колонками */
-  }
-  
-  .bot-status .status-column {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  .status-dot {
-    height: 8px;
-    width: 8px;
-    border-radius: 50%;
-    display: inline-block;
-  }
-  
-  .status-dot.online {
-    background-color: green;
-  }
-  
-
-  .version-info {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .version-info .status-container {
-    display: flex;
-    justify-content: center; /* центрирование по горизонтали */
-    gap: 60px; /* расстояние между колонками */
-  }
-
-  .version-info .status-column {
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* выравнивание текста по центру */
-  }
-
-  .status-text {
-    font-weight: 600;
-  }
-  .status-value {
-    color: var(--mp-accent);
-    font-weight: 600;
-  }
-  
-  .guilds-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: var(--mp-surface);
-    border-radius: var(--mp-radius);
-    overflow: hidden;
-    text-align: center;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
-  }
-  .guilds-table th, .guilds-table td {
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--mp-divider);
-  }
-  .guild-toggle {
-    padding: 6px 12px;
-    border: none;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.3s ease;
-    outline: none;           /* убирает рамку при фокусе */
-}
-.guild-toggle:focus {
-  outline: none;           /* на всякий случай */
+  flex: 1;
+  background: var(--mp-bg);
+  color: var(--mp-ink);
+  padding: 28px 32px;
+  font-family: ABCGintoDiscord, sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
+/* Заголовок */
+.overview-header {
+  border-bottom: 1px solid var(--mp-divider);
+  padding-bottom: 14px;
+}
+.overview-header h1 {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0;
+}
+.overview-subtitle {
+  font-size: 14px;
+  color: var(--mp-muted);
+}
 
-  .guild-toggle.on { background: var(--mp-accent); color: white; }
-  .guild-toggle.off { background: #c94040; color: white; }
-  
-  .logs-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-  .logs-list li {
-    padding: 6px 0;
-    border-bottom: 1px solid var(--mp-divider);
-  }
-  .logs-list li.error { color: #f04747; }
-  .logs-list li.warn { color: #faa61a; }
-  .logs-list .time {
-    font-weight: 600;
-    margin-right: 6px;
-  }
-  
+/* Сетка карточек */
+.overview-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+.overview-card {
+  background: var(--mp-surface);
+  border-radius: var(--mp-radius);
+  padding: 18px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.overview-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.5);
+}
+.card-icon {
+  font-size: 26px;
+  color: var(--mp-accent);
+}
+.overview-card h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+.overview-card p {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Разделы */
+.overview-section h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.activity-list {
+  background: var(--mp-surface);
+  border-radius: var(--mp-radius);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+  padding: 16px;
+  list-style: none;
+  margin: 0;
+}
+.activity-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--mp-divider);
+  font-size: 14px;
+}
+.activity-list li:last-child {
+  border-bottom: none;
+}
+.time {
+  color: var(--mp-muted);
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+/* Статусы */
+.status-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.status-dot.online { background: var(--mp-success); }
+.status-dot.offline { background: var(--mp-error); }
+
+.status-text { font-weight: 600; }
+.status-value {
+  color: var(--mp-accent);
+  font-weight: 600;
+}
+
+/* Статус и версия */
+.status-container {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.bot-status,
+.version-info {
+  flex: 1;
+  min-width: 260px;
+  background: var(--mp-surface);
+  border-radius: var(--mp-radius);
+  padding: 16px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+}
+
+.bot-status .status-container,
+.version-info .status-container {
+  display: flex;
+  justify-content: center;
+  gap: 60px;
+}
+.status-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Таблица */
+.guilds-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--mp-surface);
+  border-radius: var(--mp-radius);
+  overflow: hidden;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+}
+.guilds-table th,
+.guilds-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--mp-divider);
+}
+
+.guild-toggle {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  outline: none;
+}
+.guild-toggle:focus { outline: none; }
+.guild-toggle.on { background: var(--mp-accent); color: var(--mp-bg); }
+.guild-toggle.off { background: var(--mp-error); color: var(--mp-bg); }
+
+/* Логи */
+.logs-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.logs-list li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--mp-divider);
+}
+.logs-list li.error { color: var(--mp-error); }
+.logs-list li.warn { color: var(--mp-warning); }
+.logs-list .time {
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+/* Адаптив */
+@media (max-width: 900px) {
+  .overview-page { padding: 16px; }
+}

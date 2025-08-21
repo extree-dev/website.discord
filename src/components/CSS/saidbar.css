@@ -137,7 +137,19 @@
   Collapsed behavior fixes
 ------------------------------ */
 .mp-sidebar.mp-sidebar--collapsed {
-  overflow: visible;
+  width: 74px;
+  padding: 10px;
+  overflow: hidden; /* Предотвращаем выход элементов за границы */
+}
+
+.mp-sidebar.mp-sidebar--collapsed .mp-brand__meta,
+.mp-sidebar.mp-sidebar--collapsed .mp-nav__label,
+.mp-sidebar.mp-sidebar--collapsed .mp-nav__badge,
+.mp-sidebar.mp-sidebar--collapsed .mp-util__label,
+.mp-sidebar.mp-sidebar--collapsed .mp-util__meta,
+.mp-sidebar.mp-sidebar--collapsed .mp-profile__meta,
+.mp-sidebar.mp-sidebar--collapsed .mp-logout__label {
+  display: none !important;
 }
 
 .mp-sidebar.mp-sidebar--collapsed .mp-sidebar__top {
@@ -159,11 +171,50 @@
 }
 
 .mp-sidebar.mp-sidebar--collapsed .mp-collapse-btn {
-  margin-top: 6px;
-  margin-bottom: 6px;
+  margin: 6px auto;
+  display: flex;
   box-shadow:
     0 6px 20px rgba(0, 0, 0, 0.32),
     0 0 10px rgba(255, 255, 255, 0.03);
+}
+
+.mp-sidebar.mp-sidebar--collapsed .mp-util {
+  justify-content: center;
+  padding: 8px;
+}
+
+.mp-sidebar.mp-sidebar--collapsed .mp-profile {
+  justify-content: center;
+  width: 100%;
+}
+
+.mp-sidebar.mp-sidebar--collapsed .mp-logout {
+  justify-content: center;
+  padding: 8px;
+}
+
+.mp-sidebar.mp-sidebar--collapsed .mp-tooltip {
+  left: 82px;
+  z-index: 1000;
+}
+
+/* Убедимся, что навигационные элементы центрированы в компактном режиме */
+.mp-sidebar.mp-sidebar--collapsed .mp-nav__item {
+  justify-content: center;
+  padding: 8px;
+}
+
+/* Улучшенное отображение футера в компактном режиме */
+.mp-sidebar.mp-sidebar--collapsed .mp-sidebar__foot {
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Убедимся, что аватар профиля не слишком большой в компактном режиме */
+.mp-sidebar.mp-sidebar--collapsed .mp-profile__avatar {
+  width: 32px;
+  height: 32px;
 }
 
 .mp-sidebar.mp-sidebar--collapsed .mp-nav {

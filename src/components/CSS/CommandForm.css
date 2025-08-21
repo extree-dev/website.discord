@@ -237,13 +237,15 @@
 [data-theme="light"] .modal-content .btn-primary:hover,
 [data-theme="light"] .command-access-add-btn:hover,
 [data-theme="light"] .param-add-btn:hover {
-    background-color: rgb(0, 60, 255);
+    color: #000000;
+    background-color: var(--mp-accent);
     box-shadow: 0 8px 24px rgba(0,0,0,0.45);
     transform: translateY(-2px);
 }
 
 [data-theme="light"] .commands-header .btn-primary:hover {
-    background-color: rgb(0, 60, 255);
+    background-color: var(--mp-accent);
+    color: #000000;
     box-shadow: 0 8px 24px rgba(0,0,0,0.45);
     transform: translateY(-2px);
 }
@@ -270,7 +272,8 @@
 
 /* Для тёмной темы */
 [data-theme="dark"] .commands-header .btn-primary:hover {
-    background-color: rgb(0, 60, 255);
+    background-color: var(--mp-accent);
+    color: var(--mp-surface);
     box-shadow: 0 8px 24px rgba(0,0,0,0.45);
     transform: translateY(-2px);
 }

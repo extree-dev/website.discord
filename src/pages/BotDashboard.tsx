@@ -1,12 +1,19 @@
-// BotDashboard.tsx (added functionality)
+// BotDashboard.tsx
 import React, { useState } from "react";
 import "../components/CSS/BotDashboard.css";
-import "../components/CSS/BotStatusSelect.css";
+import "../components/CSS/BotStatusSelect.css"; // твой CSS из LanguageSelect.css
 import Sidebars from "@/components/Saidbar";
-import { FaSyncAlt, FaYoutube, FaTwitch, FaLink, FaPlus } from "react-icons/fa";
+import { FaSyncAlt, FaYoutube, FaTwitch, FaLink } from "react-icons/fa";
 import {
-    LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip,
-    BarChart, Bar, ResponsiveContainer
+    LineChart,
+    Line,
+    CartesianGrid,
+    XAxis,
+    YAxis,
+    Tooltip,
+    BarChart,
+    Bar,
+    ResponsiveContainer,
 } from "recharts";
 
 type Status = "online" | "idle" | "dnd" | "offline";
@@ -14,13 +21,6 @@ type Status = "online" | "idle" | "dnd" | "offline";
 export default function BotDashboard() {
     const [status, setStatus] = useState<Status>("online");
     const [open, setOpen] = useState(false);
-
-    const statusLabels: Record<Status, string> = {
-        online: "🟢 Online",
-        idle: "🌙 Idle",
-        dnd: "⛔ Do Not Disturb",
-        offline: "⚫ Offline",
-    };
 
     const statuses = [
         { value: "online", label: "🟢 Online" },
@@ -60,31 +60,38 @@ export default function BotDashboard() {
 
                 <div className="bot-grid">
                     {/* Status */}
+
                     <div className="bot-card">
-                        <h2 className="bot-card__title">Status</h2>
-                        <p className="bot-card__value">Select bot status</p>
-                        <div className={`glass-dropdown ${open ? "open" : ""}`}>
-                            <div className="glass-selected" onClick={() => setOpen(!open)}>
-                                <span>{statusLabels[status]}</span>
-                                <span className="arrow" />
-                            </div>
-                            {open && (
-                                <ul className="glass-options">
-                                    {statuses.map((s) => (
-                                        <li
-                                            key={s.value}
-                                            onClick={() => {
-                                                setStatus(s.value as Status);
-                                                setOpen(false);
-                                            }}
-                                        >
-                                            {s.label}
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
+                        <h2 className="bot-card__title">Integrations</h2>
+
+                        <div className="bot-action-youtube">
+                            <button onClick={() => alert("Connecting YouTube API")}>
+                                <span className="icon-container">
+                                    <FaYoutube />
+                                </span>
+                                <p className="p-youtube">Connect YouTube</p>
+                            </button>
+                        </div>
+
+                        <div className="bot-action-twitch">
+                            <button onClick={() => alert("Connecting Twitch")}>
+                                <span className="icon-container">
+                                    <FaTwitch />
+                                </span>
+                                <p className="p-twitch">Connect Twitch</p>
+                            </button>
+                        </div>
+
+                        <div className="bot-action-webhooks">
+                            <button onClick={() => alert("Configuring webhooks")}>
+                                <span className="icon-container">
+                                    <FaLink />
+                                </span>
+                                <p className="p-webhooks">Configure Webhooks</p>
+                            </button>
                         </div>
                     </div>
+                    
 
                     {/* Commands */}
                     <div className="bot-card">
@@ -100,44 +107,42 @@ export default function BotDashboard() {
                         >
                             Add Command
                         </button>
-
                     </div>
 
                     {/* Integrations */}
+                    
                     <div className="bot-card">
-                        <h2 className="bot-card__title">Integrations</h2>
-
-                        <div className="bot-action-youtube">
-                            <button onClick={() => alert("Connecting YouTube API")}>
-                                <span className="icon-container">
-                                    <FaYoutube />
-                                </span>
-                                <p className="p-youtube">
-                                    Connect YouTube
-                                </p>
-                            </button>
-                        </div>
-
-                        <div className="bot-action-twitch">
-                            <button onClick={() => alert("Connecting Twitch")}>
-                                <span className="icon-container">
-                                    <FaTwitch />
-                                </span>
-                                <p className="p-twitch">
-                                    Connect Twitch
-                                </p>
-                            </button>
-                        </div>
-
-                        <div className="bot-action-webhooks">
-                            <button onClick={() => alert("Configuring webhooks")}>
-                                <span className="icon-container">
-                                    <FaLink />
-                                </span>
-                                <p className="p-webhooks">
-                                    Configure Webhooks
-                                </p>
-                            </button>
+                        <h2 className="bot-card__title">Status</h2>
+                        <p className="bot-card__value">Select bot status</p>
+                        <div className={`glass-dropdown ${open ? "open" : ""}`}>
+                            <div
+                                className="glass-selected"
+                                onClick={() => setOpen(!open)}
+                                tabIndex={0}
+                            >
+                                <span>{statuses.find((s) => s.value === status)?.label}</span>
+                                <span className="arrow" />
+                            </div>
+                            {open && (
+                                <ul className="glass-options">
+                                    {statuses.map((s) => (
+                                        <li
+                                            key={s.value}
+                                            className={`${s.value} ${status === s.value ? "active" : ""
+                                                }`}
+                                            onClick={() => {
+                                                setStatus(s.value as Status);
+                                                setOpen(false);
+                                            }}
+                                        >
+                                            {s.label}
+                                            {status === s.value && (
+                                                <span className="opt-check">✔</span>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                         </div>
                     </div>
 
@@ -146,7 +151,12 @@ export default function BotDashboard() {
                         <h2 className="bot-card__title">Online Users</h2>
                         <ResponsiveContainer width="100%" height={200}>
                             <LineChart data={onlineData}>
-                                <Line type="monotone" dataKey="users" stroke="#00ffaa" strokeWidth={2} />
+                                <Line
+                                    type="monotone"
+                                    dataKey="users"
+                                    stroke="#00ffaa"
+                                    strokeWidth={2}
+                                />
                                 <CartesianGrid stroke="#ccc" strokeDasharray="5 5" />
                                 <XAxis dataKey="hour" />
                                 <YAxis />
@@ -168,24 +178,14 @@ export default function BotDashboard() {
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
-
-                    {/* Automation */}
-                    <div className="bot-card">
-                        <h2 className="bot-card__title">Automation / Auto-posts</h2>
-                        <ul>
-                            <li>Schedule message</li>
-                            <li>Keyword responses</li>
-                            <li>Welcome messages</li>
-                        </ul>
-                        <button className="bot-action">
-                                Add Task
-                        </button>
-                    </div>
                 </div>
 
                 {/* Restart button */}
                 <div className="bot-restart-container">
-                    <button className="bot-action restart" onClick={() => alert("Bot restarted!")}>
+                    <button
+                        className="bot-action restart"
+                        onClick={() => alert("Bot restarted!")}
+                    >
                         <FaSyncAlt className="restart-icon" />
                         Restart Bot
                     </button>

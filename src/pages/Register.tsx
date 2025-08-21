@@ -13,12 +13,12 @@ export const Register = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState("");
-    const [errors, setErrors] = useState<{ 
-        name?: string; 
+    const [errors, setErrors] = useState<{
+        name?: string;
         nickname?: string;
-        email?: string; 
-        password?: string; 
-        confirmPassword?: string 
+        email?: string;
+        password?: string;
+        confirmPassword?: string;
     }>({});
     const [isLoading, setIsLoading] = useState(false);
     const [passwordStrength, setPasswordStrength] = useState(0);
@@ -26,52 +26,16 @@ export const Register = () => {
 
     const navigate = useNavigate();
 
-    // Валидация email при изменении
-    const validateEmail = (email: string) => {
-        if (email.trim() === "") return true;
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    };
+    const [form, setForm] = useState({
+        username: "",
+        email: "",
+        password: ""
+    });
 
-    // Валидация nickname (только буквы, цифры, подчеркивания, 3-20 символов)
-    const validateNickname = (nickname: string) => {
-        if (nickname.trim() === "") return true;
-        const nicknameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-        return nicknameRegex.test(nickname);
-    };
+    const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const validateNickname = (nickname: string) => /^[a-zA-Z0-9_]{3,20}$/.test(nickname);
 
-    // Очистка ошибок при заполнении полей
-    useEffect(() => {
-        if (name.trim() && errors.name) {
-            setErrors(prev => ({ ...prev, name: undefined }));
-        }
-    }, [name, errors.name]);
-
-    useEffect(() => {
-        if (nickname.trim() && errors.nickname) {
-            setErrors(prev => ({ ...prev, nickname: undefined }));
-        }
-    }, [nickname, errors.nickname]);
-
-    useEffect(() => {
-        if (email.trim() && errors.email) {
-            setErrors(prev => ({ ...prev, email: undefined }));
-        }
-    }, [email, errors.email]);
-
-    useEffect(() => {
-        if (password && errors.password) {
-            setErrors(prev => ({ ...prev, password: undefined }));
-        }
-    }, [password, errors.password]);
-
-    useEffect(() => {
-        if (confirmPassword && errors.confirmPassword) {
-            setErrors(prev => ({ ...prev, confirmPassword: undefined }));
-        }
-        setPasswordsMatch(password === confirmPassword || confirmPassword === "");
-    }, [password, confirmPassword, errors.confirmPassword]);
-
+    useEffect(() => setPasswordsMatch(password === confirmPassword || confirmPassword === ""), [password, confirmPassword]);
     useEffect(() => {
         let strength = 0;
         if (password.length >= 8) strength += 1;
@@ -81,58 +45,36 @@ export const Register = () => {
         setPasswordStrength(strength);
     }, [password]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        let valid = true;
+        setError("");
         const newErrors: typeof errors = {};
+        let valid = true;
 
-        if (!name.trim()) {
-            newErrors.name = "Full name is required";
-            valid = false;
-        }
-
-        if (!nickname.trim()) {
-            newErrors.nickname = "Nickname is required";
-            valid = false;
-        } else if (!validateNickname(nickname)) {
-            newErrors.nickname = "Nickname must be 3-20 characters (letters, numbers, underscores only)";
-            valid = false;
-        }
-
-        if (!email.trim()) {
-            newErrors.email = "Email is required";
-            valid = false;
-        } else if (!validateEmail(email)) {
-            newErrors.email = "Please enter a valid email address";
-            valid = false;
-        }
-
-        if (!password) {
-            newErrors.password = "Password is required";
-            valid = false;
-        } else if (password.length < 8) {
-            newErrors.password = "Password must be at least 8 characters";
-            valid = false;
-        }
-
-        if (!confirmPassword) {
-            newErrors.confirmPassword = "Please confirm your password";
-            valid = false;
-        } else if (password !== confirmPassword) {
-            newErrors.confirmPassword = "Passwords do not match";
-            valid = false;
-        }
+        if (!name.trim()) { newErrors.name = "Full name is required"; valid = false; }
+        if (!nickname.trim()) { newErrors.nickname = "Nickname is required"; valid = false; }
+        else if (!validateNickname(nickname)) { newErrors.nickname = "3-20 chars, letters, numbers, underscores"; valid = false; }
+        if (!email.trim()) { newErrors.email = "Email is required"; valid = false; }
+        else if (!validateEmail(email)) { newErrors.email = "Invalid email"; valid = false; }
+        if (!password) { newErrors.password = "Password is required"; valid = false; }
+        else if (password.length < 8) { newErrors.password = "Password must be 8+ chars"; valid = false; }
+        if (!confirmPassword) { newErrors.confirmPassword = "Confirm your password"; valid = false; }
+        else if (password !== confirmPassword) { newErrors.confirmPassword = "Passwords do not match"; valid = false; }
 
         setErrors(newErrors);
-
         if (!valid) return;
 
         setIsLoading(true);
         try {
-            // Симуляция API запроса
-            setTimeout(() => {
-                navigate("/dashboard");
-            }, 1000);
+            const res = await fetch("http://localhost:4000/api/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(form)  // <--- теперь TS знает, что такое form
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Registration failed");
+            navigate("/dashboard");
         } catch (err) {
             setError(err instanceof Error ? err.message : "Registration failed");
         } finally {
@@ -140,47 +82,19 @@ export const Register = () => {
         }
     };
 
-    const getPasswordStrengthLabel = () => {
-        switch (passwordStrength) {
-            case 0: return "Very Weak";
-            case 1: return "Weak";
-            case 2: return "Medium";
-            case 3: return "Strong";
-            case 4: return "Very Strong";
-            default: return "";
-        }
-    };
-
-    const getPasswordStrengthColor = () => {
-        switch (passwordStrength) {
-            case 0: return "#ff4444";
-            case 1: return "#ff8800";
-            case 2: return "#ffbb33";
-            case 3: return "#00C851";
-            case 4: return "#007E33";
-            default: return "#666";
-        }
-    };
-
-    const isEmailInvalid = email.trim() && !validateEmail(email);
-    const isNicknameInvalid = nickname.trim() && !validateNickname(nickname);
+    const getPasswordStrengthColor = () => ["#ff4444", "#ff8800", "#ffbb33", "#00C851", "#007E33"][passwordStrength] || "#666";
+    const getPasswordStrengthLabel = () => ["Very Weak", "Weak", "Medium", "Strong", "Very Strong"][passwordStrength] || "";
 
     return (
         <div className="register-wrapper">
             <div className="register-card">
-                <div className="register-header-top">
-                    <ThemeToggle />
-                </div>
-
+                <div className="register-header-top"><ThemeToggle /></div>
                 <div className="register-header">
                     <h1>Create your account</h1>
                     <p>Get started with our platform</p>
                 </div>
-
                 {error && <div className="register-error">{error}</div>}
-
                 <form className="register-form" onSubmit={handleSubmit} noValidate>
-
                     {/* Name */}
                     <div className="register-input-group">
                         <div className="floating-label-container">
@@ -198,9 +112,7 @@ export const Register = () => {
                                 <label htmlFor="name">Full Name</label>
                             </div>
                         </div>
-                        <div className="error-message-container">
-                            {errors.name && <div className="input-error">{errors.name}</div>}
-                        </div>
+                        {errors.name && <div className="input-error">{errors.name}</div>}
                     </div>
 
                     {/* Nickname */}
@@ -215,17 +127,12 @@ export const Register = () => {
                                     placeholder=" "
                                     required
                                     autoComplete="username"
-                                    className={errors.nickname || isNicknameInvalid ? "error" : ""}
+                                    className={errors.nickname ? "error" : ""}
                                 />
                                 <label htmlFor="nickname">Nickname</label>
                             </div>
                         </div>
-                        <div className="error-message-container">
-                            {errors.nickname && <div className="input-error">{errors.nickname}</div>}
-                            {!errors.nickname && isNicknameInvalid && (
-                                <div className="input-error">3-20 characters (letters, numbers, underscores only)</div>
-                            )}
-                        </div>
+                        {errors.nickname && <div className="input-error">{errors.nickname}</div>}
                     </div>
 
                     {/* Email */}
@@ -240,17 +147,12 @@ export const Register = () => {
                                     placeholder=" "
                                     required
                                     autoComplete="email"
-                                    className={errors.email || isEmailInvalid ? "error" : ""}
+                                    className={errors.email ? "error" : ""}
                                 />
                                 <label htmlFor="email">Email</label>
                             </div>
                         </div>
-                        <div className="error-message-container">
-                            {errors.email && <div className="input-error">{errors.email}</div>}
-                            {!errors.email && isEmailInvalid && (
-                                <div className="input-error">Please enter a valid email address</div>
-                            )}
-                        </div>
+                        {errors.email && <div className="input-error">{errors.email}</div>}
                     </div>
 
                     {/* Password */}
@@ -272,7 +174,6 @@ export const Register = () => {
                                     <button
                                         type="button"
                                         className="password-toggle-btn"
-                                        title={showPassword ? "Hide password" : "Show password"}
                                         onClick={() => setShowPassword(!showPassword)}
                                     >
                                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -280,16 +181,12 @@ export const Register = () => {
                                 )}
                             </div>
                         </div>
-                        <div className="error-message-container">
-                            {errors.password && (
-                                <div className="input-error">{errors.password}</div>
-                            )}
-                            {password.length > 0 && !errors.password && (
-                                <div className="password-strength" style={{ color: getPasswordStrengthColor() }}>
-                                    Strength: {getPasswordStrengthLabel()}
-                                </div>
-                            )}
-                        </div>
+                        {errors.password && <div className="input-error">{errors.password}</div>}
+                        {password.length > 0 && !errors.password && (
+                            <div className="password-strength" style={{ color: getPasswordStrengthColor() }}>
+                                Strength: {getPasswordStrengthLabel()}
+                            </div>
+                        )}
                     </div>
 
                     {/* Confirm Password */}
@@ -311,7 +208,6 @@ export const Register = () => {
                                     <button
                                         type="button"
                                         className="password-toggle-btn"
-                                        title={showConfirmPassword ? "Hide password" : "Show password"}
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                     >
                                         {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -319,42 +215,16 @@ export const Register = () => {
                                 )}
                             </div>
                         </div>
-                        <div className="error-message-container">
-                            {errors.confirmPassword && (
-                                <div className="input-error">{errors.confirmPassword}</div>
-                            )}
-                            {!errors.confirmPassword && !passwordsMatch && confirmPassword && (
-                                <div className="input-error">Passwords do not match</div>
-                            )}
-                        </div>
+                        {errors.confirmPassword && <div className="input-error">{errors.confirmPassword}</div>}
+                        {!errors.confirmPassword && !passwordsMatch && confirmPassword && (
+                            <div className="input-error">Passwords do not match</div>
+                        )}
                     </div>
 
-                    <button
-                        type="submit"
-                        className="register-btn"
-                        disabled={isLoading}
-                    >
+                    <button type="submit" className="register-btn" disabled={isLoading}>
                         {isLoading ? <span className="loading-spinner"></span> : "Create account"}
                     </button>
                 </form>
-
-                <div className="register-footer">
-                    <p>
-                        Already have an account?{" "}
-                        <button 
-                            className="register-link" 
-                            onClick={() => navigate("/login")}
-                            type="button"
-                        >
-                            Sign in
-                        </button>
-                    </p>
-                </div>
-
-                <p className="login-terms">
-                    &copy; {new Date().getFullYear()} Sentinel LLC. By logging in, you agree to our{" "}
-                    <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.
-                </p>
             </div>
         </div>
     );

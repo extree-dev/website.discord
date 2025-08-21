@@ -4,29 +4,24 @@ import "../components/CSS/LanguageSelect.css";
 import { LuCheck } from "react-icons/lu";
 
 type Props = {
-    value: string;
-    onChange: (lang: string) => void;
+    options: string[];
+    defaultValue?: string;
+    onChange: (value: string) => void;
 };
 
-export default function LanguageSelect({ value, onChange }: Props) {
+
+export default function LanguageSelect({ options, defaultValue, onChange }: Props) {
     const [open, setOpen] = useState(false);
     const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
+    const [value, setValue] = useState(defaultValue || options[0]);
 
     const containerRef = useRef<HTMLDivElement | null>(null);
 
-    const languages = [
-        { code: "ru", label: "Русский" },
-        { code: "en", label: "English" },
-        { code: "de", label: "Deutsch" },
-    ];
-
-    const current = languages.find((l) => l.code === value)?.label || "";
+    const current = value;
 
     useEffect(() => {
         function onDoc(e: MouseEvent) {
-            if (!containerRef.current?.contains(e.target as Node)) {
-                setOpen(false);
-            }
+            if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
         }
         document.addEventListener("mousedown", onDoc);
         return () => document.removeEventListener("mousedown", onDoc);
@@ -55,22 +50,18 @@ export default function LanguageSelect({ value, onChange }: Props) {
                 zIndex: 9999,
             }}
         >
-            {languages.map((lang) => (
+            {options.map((opt: string) => (
                 <li
-                    key={lang.code}
-                    className={lang.code === value ? "active" : ""}
+                    key={opt}
+                    className={opt === value ? "active" : ""}
                     onClick={(e) => {
-                        e.stopPropagation(); // блокируем всплытие
-                        onChange(lang.code);
+                        e.stopPropagation();
+                        setValue(opt);
+                        onChange(opt);
                         setOpen(false);
                     }}
                 >
-                    <span className="opt-label">{lang.label}</span>
-                    {value === lang.code && (
-                        <span className="opt-check">
-                            <LuCheck size={15} color="white" />
-                        </span>
-                    )}
+                    <span className="opt-label">{opt}</span>
                 </li>
             ))}
         </ul>
@@ -78,11 +69,7 @@ export default function LanguageSelect({ value, onChange }: Props) {
 
     return (
         <>
-            <div
-                className={`glass-dropdown ${open ? "open" : ""}`}
-                ref={containerRef}
-            >
-                {/* Перенёс onClick сюда */}
+            <div className={`glass-dropdown ${open ? "open" : ""}`} ref={containerRef}>
                 <div
                     className="glass-selected"
                     tabIndex={0}
@@ -93,8 +80,8 @@ export default function LanguageSelect({ value, onChange }: Props) {
                     <span className="arrow" aria-hidden />
                 </div>
             </div>
-
             {open && coords && ReactDOM.createPortal(optionsList, document.body)}
         </>
     );
 }
+

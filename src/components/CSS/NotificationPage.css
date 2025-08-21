@@ -1,0 +1,211 @@
+/* NotificationPage.css */
+/* Использует CSS-переменные из theme.css */
+
+/* Основной контейнер страницы */
+.notification-page-container {
+    display: flex;
+    min-height: 100vh;
+    background: var(--mp-bg);
+}
+
+/* Контейнер для основного контента (справа от сайдбара) */
+.notification-content-area {
+    flex: 1;
+    transition: margin-left 150ms ease;
+    min-height: 100vh;
+}
+
+/* Когда сайдбар свернут */
+.mp-sidebar--collapsed ~ .notification-content-area {
+    margin-left: 74px; /* Ширина свернутого сайдбара */
+}
+
+/* Glassmorphic select */
+.notification-card select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background: rgba(255, 255, 255, 0.1); /* light glass for light theme */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: var(--mp-radius);
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--mp-text);
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.2s ease;
+  }
+  
+  /* Arrow indicator */
+  .notification-card select::-ms-expand {
+    display: none;
+  }
+  
+  .notification-card select:focus {
+    outline: none;
+    border-color: var(--mp-accent);
+    box-shadow: 0 0 10px rgba(88, 101, 242, 0.4);
+  }
+  
+  /* Dark theme adjustments */
+  [data-theme="dark"] .notification-card select {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--mp-text);
+  }
+  
+  [data-theme="dark"] .notification-card select:focus {
+    box-shadow: 0 0 10px rgba(224, 227, 255, 0.3);
+  }
+  
+
+/* Контент уведомлений */
+.notification-fullscreen {
+    background: var(--mp-bg);
+    color: var(--mp-ink);
+    box-sizing: border-box;
+    padding: 28px 32px;
+    font-family: 'ABCGintoDiscord', sans-serif;
+    min-height: 100vh;
+}
+
+/* Хедер */
+.notification-header {
+    border-bottom: 1px solid var(--mp-divider);
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+}
+
+.notification-title {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--mp-ink);
+}
+
+.notification-subtitle {
+    font-size: 13px;
+    color: var(--mp-muted);
+    margin-top: 6px;
+}
+
+/* Сетка карточек */
+.notification-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    align-items: stretch;
+}
+
+/* Карточка */
+.notification-card {
+    background: var(--mp-surface);
+    border-radius: var(--mp-radius);
+    border: 1px solid var(--mp-divider);
+    padding: 18px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 160px;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.notification-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    background: var(--mp-bg-hover, var(--mp-surface));
+}
+
+.notification-card__title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--mp-ink);
+    margin: 0 0 6px 0;
+}
+
+/* Текстовое описание */
+.notification-help {
+    color: var(--mp-muted);
+    font-size: 12px;
+}
+
+/* Кнопки */
+.toggle-button,
+.save-button {
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease, opacity 0.12s ease;
+}
+
+.toggle-button {
+    padding: 8px 12px;
+    font-size: 13px;
+    background: var(--mp-surface);
+    color: var(--mp-ink);
+}
+
+.toggle-button:hover {
+    background: var(--mp-accent);
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(75, 124, 255, 0.25);
+    opacity: 0.95;
+    transform: translateY(-1px);
+}
+
+.save-button {
+    padding: 10px 18px;
+    font-weight: 700;
+    border-radius: 10px;
+    background: var(--mp-accent);
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(75, 124, 255, 0.25);
+}
+
+.save-button:hover {
+    opacity: 0.95;
+    transform: translateY(-2px);
+}
+
+/* Ряд действий */
+.notification-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 6px;
+}
+
+/* Мобильная адаптация */
+@media (max-width: 900px) {
+    .notification-content-area {
+        margin-left: 0 !important;
+    }
+
+    .notification-fullscreen {
+        padding: 16px;
+    }
+
+    .notification-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .notification-title {
+        font-size: 20px;
+    }
+}
+
+/* Темы */
+
+/* Светлая тема */
+[data-theme="light"] {
+    --mp-bg-hover: #f0f0ff;
+}
+
+/* Тёмная тема */
+[data-theme="dark"] {
+    --mp-bg-hover: #3a3c42;
+}

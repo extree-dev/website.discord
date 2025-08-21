@@ -38,7 +38,8 @@ export type SidebarId =
     | "channels"
     | "commands"
     | "bot"
-    | "settings";
+    | "settings"
+    | "notification";
 
 type MenuItem = {
     id: SidebarId;
@@ -71,6 +72,7 @@ const DEFAULT_MENU: MenuItem[] = [
     { id: "commands", title: "Commands", icon: <Zap size={18} /> },
     { id: "bot", title: "Bot", icon: <Server size={18} /> },
     { id: "settings", title: "Settings", icon: <Settings size={18} /> },
+    { id: "notification", title: "Notifications", icon: <Bell size={18} />, badge: "3" },
 ];
 
 
@@ -114,20 +116,22 @@ const Sidebars: React.FC<SidebarProps> = ({
     const containerRef = useRef<HTMLDivElement | null>(null);
 
     // on navigate (internal + callback)
-    function navigateTo(id: SidebarId | "dashboard") {
+    function navigateTo(id: SidebarId) {
         if (externalActive === undefined) {
-            setActive(id as SidebarId);
+          setActive(id);
         }
-        onNavigate?.(id as SidebarId);
-    
+        onNavigate?.(id);
+      
         if (id === "dashboard") {
-            window.location.href = "http://localhost:5173/dashboard/";
+          window.location.href = "http://localhost:5173/dashboard/";
         } else if (id === "settings") {
-            navigate("/dashboard/settings");
+          navigate("/dashboard/settings");
+        } else if (id === "notification") {
+          navigate("/dashboard/notification");
         } else {
-            navigate(`/dashboard/${id}`);
+          navigate(`/dashboard/${id}`);
         }
-    }
+      }
 
     // keyboard handling
     useEffect(() => {
@@ -242,20 +246,6 @@ const Sidebars: React.FC<SidebarProps> = ({
             {/* Divider */}
             <div className="mp-divider" role="separator" />
 
-            {/* Secondary / utilities */}
-            <div className="mp-utilities">
-                <button
-                    className="mp-util"
-                    onClick={() => navigateTo("commands")}
-                    onMouseEnter={() => setHoverTip("Notifications")}
-                    onMouseLeave={() => setHoverTip(null)}
-                    title={collapsed ? "Notifications" : undefined}
-                >
-                    <Bell size={16} />
-                    {!collapsed && <span className="mp-util__label">Notifications</span>}
-                    {!collapsed && <span className="mp-util__meta">3</span>}
-                </button>
-            </div>
 
             {/* Footer: profile & logout */}
             <div className="mp-sidebar__foot">

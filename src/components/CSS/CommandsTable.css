@@ -1,79 +1,38 @@
 /* CommandsTable.css
-   Визуальный стиль согласован с Settings.css, Dashboard.css, Sidebar.css
-   Использует те же CSS-переменные для единого языка дизайна
+   Полная поддержка светлой и тёмной тем
+   Использует CSS-переменные из themetoggle.css
 */
 
+/* Общие стили */
 .commands-table {
     width: 100%;
     border-collapse: collapse;
-    background: var(--mp-surface);
     border-radius: var(--mp-radius);
     overflow: hidden;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
     font-size: 14px;
     outline: none;
 }
 
-/* Заголовки таблицы */
-.commands-table thead {
-    background: rgba(255,255,255,0.02);
+.commands-table th,
+.commands-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--mp-divider);
+    vertical-align: middle;
 }
 
 .commands-table th {
     text-align: left;
-    padding: 14px 16px;
     font-weight: 600;
-    color: var(--mp-muted);
-    border-bottom: 1px solid var(--mp-divider);
     font-size: 13px;
     letter-spacing: 0.3px;
 }
 
-/* Чередование фона строк */
-.commands-table tbody tr:nth-child(odd) {
-    background: rgba(255,255,255,0.01);
-}
-
-.commands-table tbody tr:nth-child(even) {
-    background: transparent;
-}
-
-/* Стиль строк */
-.commands-table td {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--mp-divider);
-    color: var(--mp-ink);
-    vertical-align: middle;
-}
-
-/* Последняя строка без бордера */
-.commands-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-/* Ховер строк */
-.commands-table tbody tr:hover {
-    background: rgba(255,255,255,0.04);
-    transition: background 0.15s ease;
-}
-
-/* Имя команды с / */
 .commands-table td:first-child {
     font-family: monospace;
     font-weight: 600;
-    color: var(--mp-accent);
 }
 
-/* Чекбоксы */
-.commands-table input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-    accent-color: var(--mp-accent);
-    border-radius: 4px;
-}
-
-/* Кнопки действий */
 .commands-table td:last-child {
     display: flex;
     gap: 8px;
@@ -88,51 +47,28 @@
     transition: background 0.15s ease, transform 0.12s ease, opacity 0.12s ease;
 }
 
-/* Кнопка редактирования */
-.commands-table button:first-child {
-    background: #4b7cff;
-    color: var(--mp-accent);
-}
-
-.commands-table button:first-child:hover {
-    background-color: rgb(0, 60, 255);
-    color: white;
-    transform: translateY(-2px);
-}
-
-/* Кнопка удаления */
-.commands-table button:last-child {
-    background: rgba(255,70,70,0.15);
-    color: #ff4b4b;
-}
-
-.commands-table button:last-child:hover {
-    background: #ff4b4b;
-    color: white;
-    transform: translateY(-2px);
-}
-
-/* Мобильная адаптация */
-@media (max-width: 900px) {
-    .commands-table th:nth-child(3),
-    .commands-table td:nth-child(3),
-    .commands-table th:nth-child(4),
-    .commands-table td:nth-child(4) {
-        display: none; /* Прячем usage и toggle на маленьких экранах */
-    }
-
-    .commands-table td,
-    .commands-table th {
-        padding: 10px;
-    }
-}
-
-/* --- Дополнительно: плавный акцент при клике --- */
 .commands-table button:active {
     transform: scale(0.96);
 }
 
-/* --- Анимация появления строк --- */
+.commands-table button:focus {
+    outline: 2px solid var(--mp-accent);
+    outline-offset: 2px;
+}
+
+.commands-table input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--mp-accent);
+    border-radius: 4px;
+}
+
+.commands-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Анимация строк */
 .commands-table tbody tr {
     animation: fadeInRow 0.25s ease;
 }
@@ -148,47 +84,23 @@
     }
 }
 
-/* --- Scroll-обертка для мобильных --- */
+/* Scroll-обертка */
 .commands-table-wrapper {
     width: 100%;
     overflow-x: auto;
     border-radius: var(--mp-radius);
 }
 
-/* Для светлой темы */
-[data-theme="light"] .commands-table th {
-    color: var(--mp-muted);
-}
-
-[data-theme="light"] .commands-table td:first-child {
-    color: var(--mp-accent);
-}
-
-/* Фокус для клавиатурной навигации */
-.commands-table button:focus {
-    outline: 2px solid var(--mp-accent);
-    outline-offset: 2px;
-}
-
-/* Стиль для disabled-команд */
+/* Disabled строки */
 .commands-table tr.disabled td {
     opacity: 0.6;
 }
-
 .commands-table tr.disabled td:first-child {
     text-decoration: line-through;
 }
 
-.command-actions {
-    display: flex;
-    gap: 8px;
-  }
-
-  .commands-table button:focus{
-    outline: none;
-  }
-  
-  .icon-btn {
+/* --- Иконки --- */
+.icon-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -200,30 +112,130 @@
     cursor: pointer;
     font-size: 18px;
     transition: background 0.2s ease, transform 0.15s ease;
-  }
-  
-  .icon-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    transform: scale(1.05);
-  }
-  
-  .icon-btn:active {
+}
+.icon-btn:active {
     transform: scale(0.95);
-  }
-  
-  [data-theme="dark"] .icon-btn svg {
+}
+
+/* --- Адаптив --- */
+@media (max-width: 900px) {
+    .commands-table th:nth-child(3),
+    .commands-table td:nth-child(3),
+    .commands-table th:nth-child(4),
+    .commands-table td:nth-child(4) {
+        display: none; /* usage и toggle скрываются */
+    }
+
+    .commands-table td,
+    .commands-table th {
+        padding: 10px;
+    }
+}
+
+/* =========================
+   СВЕТЛАЯ ТЕМА
+   ========================= */
+[data-theme="light"] .commands-table {
+    background: var(--mp-surface);
+}
+[data-theme="light"] .commands-table thead {
+    background: var(--mp-bg);
+}
+[data-theme="light"] .commands-table th {
+    color: var(--mp-muted);
+}
+[data-theme="light"] .commands-table td {
+    color: var(--mp-ink);
+}
+[data-theme="light"] .commands-table td:first-child {
+    color: var(--mp-accent);
+}
+[data-theme="light"] .commands-table tbody tr:nth-child(odd) {
+    background: rgba(0,0,0,0.02);
+}
+[data-theme="light"] .commands-table tbody tr:hover {
+    background: rgba(0,0,0,0.05);
+}
+
+/* Кнопки */
+[data-theme="light"] .commands-table button.edit-btn {
+    background: var(--mp-accent);
+    color: #000000;
+}
+[data-theme="light"] .commands-table button.edit-btn:hover {
+    background: var(--mp-accents);
+    transform: translateY(-2px);
+}
+[data-theme="light"] .commands-table button.delete-btn {
+    background: rgba(240,71,71,0.15);
+    color: var(--mp-error);
+}
+[data-theme="light"] .commands-table button.delete-btn:hover {
+    background: var(--mp-accents);
     color: #fff;
-  }
-  
-  [data-theme="light"] .icon-btn svg {
-    color: #000;
-  }
-  
-  .edit-btn svg {
-    color: #4ba3ff;
-  }
-  
-  .delete-btn svg {
-    color: #ff4b4b;
-  }
-  
+    transform: translateY(-2px);
+}
+
+/* Иконки */
+[data-theme="light"] .icon-btn:hover {
+    background: rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .edit-btn svg {
+    color: var(--mp-accents);
+}
+[data-theme="light"] .delete-btn svg {
+    color: var(--mp-error);
+}
+
+/* =========================
+   ТЁМНАЯ ТЕМА
+   ========================= */
+[data-theme="dark"] .commands-table {
+    background: var(--mp-surface);
+}
+[data-theme="dark"] .commands-table thead {
+    background: var(--mp-bg);
+}
+[data-theme="dark"] .commands-table th {
+    color: var(--mp-muted);
+}
+[data-theme="dark"] .commands-table td {
+    color: var(--mp-ink);
+}
+[data-theme="dark"] .commands-table td:first-child {
+    color: var(--mp-accent);
+}
+[data-theme="dark"] .commands-table tbody tr:nth-child(odd) {
+    background: rgba(255,255,255,0.02);
+}
+[data-theme="dark"] .commands-table tbody tr:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+/* Кнопки */
+[data-theme="dark"] .commands-table button.edit-btn {
+    background: var(--mp-accent);
+    color: var(--mp-button-text);
+}
+[data-theme="dark"] .commands-table button.edit-btn:hover {
+    transform: translateY(-2px);
+}
+[data-theme="dark"] .commands-table button.delete-btn {
+    background: rgba(240,71,71,0.15);
+    color: var(--mp-error);
+}
+[data-theme="dark"] .commands-table button.delete-btn:hover {
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+/* Иконки */
+[data-theme="dark"] .icon-btn:hover {
+    background: rgba(255,255,255,0.1);
+}
+[data-theme="dark"] .edit-btn svg {
+    color: var(--mp-accents);
+}
+[data-theme="dark"] .delete-btn svg {
+    color: var(--mp-error);
+}

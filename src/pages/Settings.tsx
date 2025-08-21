@@ -57,7 +57,11 @@ const SettingsPage: React.FC = () => {
                         <h2 className="settings-card__title">Language</h2>
                         <div className="settings-row">
                             <label>Select language:</label>
-                            <LanguageSelect value={language} onChange={(lang) => setLanguage(lang)} />
+                            <LanguageSelect
+                                options={["en", "es", "fr", "de"]} // <- список доступных языков
+                                defaultValue={language}
+                                onChange={(lang) => setLanguage(lang)}
+                            />
                         </div>
                     </div>
 

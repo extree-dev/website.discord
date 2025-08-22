@@ -4,11 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npm run dev:server",
-    "dev:server": "cd src/server && ts-node index.ts"
+    "dev": "concurrently --kill-others-on-fail=false --raw -n SERVER,CLIENT -c \"blue,green\" \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd src/server && ts-node index.ts",
+    "db:sync": "powershell -Command \"$name=$env:npm_config_name; if (-not $name) { $name=(Get-Date -Format yyyyMMddHHmmss) }; npx prisma migrate dev --name $name; npx prisma generate\""
   },
   "dependencies": {
+    "@prisma/client": "^6.14.0",
     "axios": "^1.11.0",
+    "bcryptjs": "^3.0.2",
     "dotenv": "^17.2.1",
     "framer-motion": "^12.23.12",
     "gsap": "^3.13.0",
@@ -33,6 +36,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
+    "prisma": "^6.14.0",
     "ts-node": "^10.9.2",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.35.1",

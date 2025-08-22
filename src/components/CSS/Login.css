@@ -89,7 +89,7 @@
 .password-toggle-btn {
   position: absolute;
   right: 0.5rem;
-  top: 70%;
+  top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
@@ -241,9 +241,9 @@
 /* Когда поле в фокусе или есть текст → label поднимается */
 .floating-label input:focus + label,
 .floating-label input:not(:placeholder-shown) + label {
-  top: 0;
-  transform: translateY(-50%) scale(0.85);
-  background: #e0e3ff; /* подложка, чтобы текст не сливался с бордером */
+  top: -0.5rem; /* поднимаем выше */
+  transform: scale(0.85);
+  background: var(--card-background); /* подложка под текст */
   padding: 0 0.25rem;
   left: 0.75rem;
   color: var(--primary-color);

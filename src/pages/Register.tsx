@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import ThemeToggle from "@/components/ThemeToggle";
+import ThemeToggle from "@/components/ThemeToggle.js";
 import "../components/CSS/Register.css";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -50,7 +50,8 @@ export const Register = () => {
         setError("");
         const newErrors: typeof errors = {};
         let valid = true;
-
+    
+        // Валидация
         if (!name.trim()) { newErrors.name = "Full name is required"; valid = false; }
         if (!nickname.trim()) { newErrors.nickname = "Nickname is required"; valid = false; }
         else if (!validateNickname(nickname)) { newErrors.nickname = "3-20 chars, letters, numbers, underscores"; valid = false; }
@@ -60,18 +61,28 @@ export const Register = () => {
         else if (password.length < 8) { newErrors.password = "Password must be 8+ chars"; valid = false; }
         if (!confirmPassword) { newErrors.confirmPassword = "Confirm your password"; valid = false; }
         else if (password !== confirmPassword) { newErrors.confirmPassword = "Passwords do not match"; valid = false; }
-
+    
         setErrors(newErrors);
         if (!valid) return;
-
+    
         setIsLoading(true);
         try {
+            // Формируем объект для отправки напрямую из актуальных стейтов
+            const payload = {
+                name: name.trim(),
+                nickname: nickname.trim(),
+                email: email.trim(),
+                password
+            };
+
+            console.log("Payload:", payload);
+    
             const res = await fetch("http://localhost:4000/api/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(form)  // <--- теперь TS знает, что такое form
+                body: JSON.stringify(payload)
             });
-
+    
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Registration failed");
             navigate("/dashboard");
@@ -81,6 +92,7 @@ export const Register = () => {
             setIsLoading(false);
         }
     };
+    
 
     const getPasswordStrengthColor = () => ["#ff4444", "#ff8800", "#ffbb33", "#00C851", "#007E33"][passwordStrength] || "#666";
     const getPasswordStrengthLabel = () => ["Very Weak", "Weak", "Medium", "Strong", "Very Strong"][passwordStrength] || "";

@@ -91,7 +91,7 @@ export default function BotDashboard() {
                             </button>
                         </div>
                     </div>
-                    
+
 
                     {/* Commands */}
                     <div className="bot-card">
@@ -110,7 +110,7 @@ export default function BotDashboard() {
                     </div>
 
                     {/* Integrations */}
-                    
+
                     <div className="bot-card">
                         <h2 className="bot-card__title">Status</h2>
                         <p className="bot-card__value">Select bot status</p>

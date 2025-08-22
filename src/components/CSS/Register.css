@@ -181,29 +181,13 @@
 .password-wrapper {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: center; /* Вертикальное выравнивание */
+  width: 100%;
 }
 
 .password-wrapper input {
-  width: 100%;
-  padding-right: 2.5rem;
-}
-
-.password-toggle-btn {
-  position: absolute;
-  right: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2;
-  color: var(--text-secondary);
-  transition: color 0.2s ease;
+  flex: 1;
+  padding-right: 2.5rem; /* место для глазика */
 }
 
 .password-toggle-btn:hover {

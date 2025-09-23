@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Sidebars from "@/components/Saidbar";
+import Sidebars from "@/components/Saidbar.js";
 import "../components/CSS/DashboardOverview.css";
 import {
     FiTrendingUp,

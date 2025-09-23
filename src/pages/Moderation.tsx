@@ -1,4 +1,4 @@
-import { useServerStore } from '../stores/server'
+import { useServerStore } from '@/stores/server.js'
 
 export default function Moderation() {
   const { bans, kicks } = useServerStore()

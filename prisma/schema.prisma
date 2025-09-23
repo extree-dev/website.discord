@@ -15,14 +15,33 @@ datasource db {
 
 // ======= MODELS =======
 model User {
+  id            Int      @id @default(autoincrement())
+  name          String
+  nickname      String   @unique
+  email         String   @unique
+  password      String
+  discordId     String?  @unique
+  posts         Post[]
+  sessions      Session[]
+  createdAt     DateTime @default(now())
+  lastLogin     DateTime?
+  loginAttempts Int      @default(0)
+  lockedUntil   DateTime?
+  isActive      Boolean  @default(true)
+}
+
+model Session {
   id        Int      @id @default(autoincrement())
-  name      String
-  nickname  String   @unique
-  email     String   @unique
-  password  String
-  discordId String?  @unique
-  posts     Post[]
+  token     String   @unique
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  ipAddress String
+  userAgent String
   createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Post {

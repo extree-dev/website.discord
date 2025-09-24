@@ -195,7 +195,7 @@ router.post("/register", async (req, res) => {
     }
 
     // Проверка уникальности в транзакции для избежания race condition
-    const existingUser = await prisma.$transaction(async (tx) => {
+    const existingUser = await prisma.$transaction(async (tx: PrismaClient) => {
       return await tx.user.findFirst({
         where: { 
           OR: [
@@ -302,7 +302,7 @@ router.post("/login", async (req, res) => {
     const sanitizedIdentifier = sanitizeInput(identifier);
 
     // Поиск пользователя с блокировкой для избежания race condition
-    const user = await prisma.$transaction(async (tx) => {
+    const user = await prisma.$transaction(async (tx: PrismaClient) => {
       const user = await tx.user.findFirst({
         where: { 
           OR: [
@@ -536,7 +536,7 @@ router.get("/oauth/callback/discord", async (req, res) => {
     const globalName = sanitizeInput(discordUser.global_name || discordUser.username);
 
     // Поиск или создание пользователя в транзакции
-    const user = await prisma.$transaction(async (tx) => {
+    const user = await prisma.$transaction(async (tx: PrismaClient) => {
       let user = await tx.user.findFirst({
         where: { discordId: discordId }
       });

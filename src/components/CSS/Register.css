@@ -339,6 +339,33 @@
   color: #e0e3ff;
 }
 
+/* Добавьте в Register.css */
+.recaptcha-loading {
+    text-align: center;
+    margin-top: 10px;
+    color: #666;
+    font-size: 0.8rem;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.register-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 /* === Responsive === */
 @media (max-width: 480px) {
   .register-card {

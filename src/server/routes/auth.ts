@@ -9,6 +9,89 @@ import helmet from "helmet";
 const router = express.Router();
 const prisma = new PrismaClient();
 
+// ==================== ЗАЩИТА ОТ SQL-ИНЪЕКЦИЙ ====================
+
+const sqlInjectionPatterns = [
+  /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|EXEC|ALTER|CREATE|TRUNCATE)\b)/i,
+  /('|"|`|--|#|\/\*|\*\/|;|\|)/,
+  /(\b(OR|AND)\s+['"]?[0-9]+\s*=\s*[0-9]+\b)/i,
+  /(WAITFOR\s+DELAY|SLEEP\s*\(\s*[0-9]+\s*\))/i,
+  /(xp_cmdshell|sp_configure|@@version)/i
+];
+
+const detectSQLInjection = (input: string): boolean => {
+  return sqlInjectionPatterns.some(pattern => pattern.test(input));
+};
+
+const secureSanitizeInput = (input: string, fieldName: string, ip: string): string => {
+  const trimmed = validator.trim(input);
+  const escaped = validator.escape(trimmed);
+  
+  if (detectSQLInjection(input) || detectSQLInjection(trimmed)) {
+    securityLogger.logSuspiciousActivity('sql_injection_attempt', {
+      field: fieldName,
+      originalInput: input.substring(0, 100),
+      sanitizedInput: escaped.substring(0, 100),
+      ip: ip,
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  return escaped;
+};
+
+const sqlInjectionProtection = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const clientIP = getClientIP(req);
+  
+  if (req.query) {
+    for (const [key, value] of Object.entries(req.query)) {
+      if (typeof value === 'string' && detectSQLInjection(value)) {
+        securityLogger.logSuspiciousActivity('sql_injection_query', {
+          parameter: key,
+          value: value.substring(0, 50),
+          ip: clientIP,
+          url: req.originalUrl
+        });
+        return res.status(400).json({ error: "Invalid request parameters" });
+      }
+    }
+  }
+  
+  if (req.body && typeof req.body === 'object') {
+    const suspiciousFields = checkObjectForSQLInjection(req.body, clientIP);
+    if (suspiciousFields.length > 0) {
+      securityLogger.logSuspiciousActivity('sql_injection_body', {
+        fields: suspiciousFields,
+        ip: clientIP,
+        url: req.originalUrl
+      });
+      return res.status(400).json({ error: "Invalid request data" });
+    }
+  }
+  
+  next();
+};
+
+const checkObjectForSQLInjection = (obj: any, ip: string, path: string = ''): string[] => {
+  const suspiciousFields: string[] = [];
+  
+  for (const [key, value] of Object.entries(obj)) {
+    const currentPath = path ? `${path}.${key}` : key;
+    
+    if (typeof value === 'string') {
+      if (detectSQLInjection(value)) {
+        suspiciousFields.push(currentPath);
+      }
+    } else if (typeof value === 'object' && value !== null) {
+      suspiciousFields.push(...checkObjectForSQLInjection(value, ip, currentPath));
+    }
+  }
+  
+  return suspiciousFields;
+};
+
+router.use(sqlInjectionProtection);
+
 // ==================== ИНТЕРФЕЙСЫ ДЛЯ ТИПИЗАЦИИ ====================
 
 interface UserBasic {

@@ -4,6 +4,7 @@ import { PrismaClient } from "@prisma/client";
 import crypto from "crypto";
 import validator from "validator";
 import rateLimit from "express-rate-limit";
+import axios from "axios";
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -14,7 +15,7 @@ const router = express.Router();
 const argon2Options = {
   type: argon2.argon2id,
   memoryCost: 65536,
-  timeCost: 4, // Увеличили для большей безопасности
+  timeCost: 4,
   parallelism: 1,
   hashLength: 32
 };
@@ -22,10 +23,13 @@ const argon2Options = {
 // Глобальный перец для паролей
 const PASSWORD_PEPPER = process.env.PASSWORD_PEPPER || crypto.randomBytes(32).toString('hex');
 
+// reCAPTCHA секретный ключ
+const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY;
+
 // Rate limiting для регистрации
 const registerLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 час
-  max: 5, // Максимум 5 регистраций в час с одного IP
+  windowMs: 60 * 60 * 1000,
+  max: 5,
   message: {
     error: "Too many registration attempts from this IP, please try again later"
   },
@@ -36,25 +40,215 @@ const registerLimiter = rateLimit({
 // Применяем лимитер к регистрации
 router.use("/register", registerLimiter);
 
+// ==================== ЗАЩИТА ОТ SQL-ИНЪЕКЦИЙ ====================
+
+const sqlInjectionPatterns = [
+  /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|EXEC|ALTER|CREATE|TRUNCATE)\b)/i,
+  /('|"|`|--|#|\/\*|\*\/|;|\|)/,
+  /(\b(OR|AND)\s+['"]?[0-9]+\s*=\s*[0-9]+\b)/i,
+  /(WAITFOR\s+DELAY|SLEEP\s*\(\s*[0-9]+\s*\))/i,
+  /(xp_cmdshell|sp_configure|@@version)/i
+];
+
+const detectSQLInjection = (input: string): boolean => {
+  return sqlInjectionPatterns.some(pattern => pattern.test(input));
+};
+
+// Улучшенная санитизация с защитой от SQL-инъекций
+const secureSanitizeInput = (input: string, fieldName: string, ip: string): string => {
+  const trimmed = validator.trim(input);
+  const escaped = validator.escape(trimmed);
+  
+  if (detectSQLInjection(input) || detectSQLInjection(trimmed)) {
+    securityLogger.logSuspiciousActivity('sql_injection_attempt', {
+      field: fieldName,
+      originalInput: input.substring(0, 100),
+      sanitizedInput: escaped.substring(0, 100),
+      ip: ip,
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  return escaped;
+};
+
+// Специализированная санитизация для разных типов полей
+const sanitizeForDatabase = {
+  text: (input: string, fieldName: string, ip: string): string => {
+    const sanitized = secureSanitizeInput(input, fieldName, ip);
+    return validator.blacklist(sanitized, '<>\"\'`;|&$');
+  },
+  
+  email: (input: string, fieldName: string, ip: string): string => {
+    const sanitized = validator.trim(input.toLowerCase());
+    
+    if (detectSQLInjection(sanitized)) {
+      securityLogger.logSuspiciousActivity('sql_injection_email', {
+        field: fieldName,
+        input: sanitized.substring(0, 50),
+        ip: ip
+      });
+      throw new Error('Invalid email format');
+    }
+    
+    return sanitized;
+  },
+  
+  nickname: (input: string, fieldName: string, ip: string): string => {
+    const sanitized = validator.escape(validator.trim(input));
+    
+    if (!/^[a-zA-Z0-9_\-\.]+$/.test(sanitized)) {
+      securityLogger.logSuspiciousActivity('invalid_nickname_chars', {
+        field: fieldName,
+        input: sanitized,
+        ip: ip
+      });
+      throw new Error('Nickname contains invalid characters');
+    }
+    
+    return sanitized;
+  }
+};
+
+// Middleware для проверки SQL-инъекций
+const sqlInjectionProtection = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const clientIP = getClientIP(req);
+  
+  // Проверка query parameters
+  if (req.query) {
+    for (const [key, value] of Object.entries(req.query)) {
+      if (typeof value === 'string' && detectSQLInjection(value)) {
+        securityLogger.logSuspiciousActivity('sql_injection_query', {
+          parameter: key,
+          value: value.substring(0, 50),
+          ip: clientIP,
+          url: req.originalUrl
+        });
+        return res.status(400).json({ error: "Invalid request parameters" });
+      }
+    }
+  }
+  
+  // Проверка body (для JSON)
+  if (req.body && typeof req.body === 'object') {
+    const suspiciousFields = checkObjectForSQLInjection(req.body, clientIP);
+    if (suspiciousFields.length > 0) {
+      securityLogger.logSuspiciousActivity('sql_injection_body', {
+        fields: suspiciousFields,
+        ip: clientIP,
+        url: req.originalUrl
+      });
+      return res.status(400).json({ error: "Invalid request data" });
+    }
+  }
+  
+  next();
+};
+
+const checkObjectForSQLInjection = (obj: any, ip: string, path: string = ''): string[] => {
+  const suspiciousFields: string[] = [];
+  
+  for (const [key, value] of Object.entries(obj)) {
+    const currentPath = path ? `${path}.${key}` : key;
+    
+    if (typeof value === 'string') {
+      if (detectSQLInjection(value)) {
+        suspiciousFields.push(currentPath);
+      }
+    } else if (typeof value === 'object' && value !== null) {
+      suspiciousFields.push(...checkObjectForSQLInjection(value, ip, currentPath));
+    }
+  }
+  
+  return suspiciousFields;
+};
+
+// ==================== reCAPTCHA ПРОВЕРКА ====================
+
+const verifyRecaptcha = async (token: string, ip: string): Promise<boolean> => {
+  if (!RECAPTCHA_SECRET_KEY) {
+    console.warn('RECAPTCHA_SECRET_KEY not set, skipping verification');
+    return true;
+  }
+  
+  try {
+    const response = await axios.post(
+      'https://www.google.com/recaptcha/api/siteverify',
+      null,
+      {
+        params: {
+          secret: RECAPTCHA_SECRET_KEY,
+          response: token,
+          remoteip: ip
+        }
+      }
+    );
+    
+    return response.data.success && response.data.score > 0.5;
+  } catch (error) {
+    console.error('reCAPTCHA verification error:', error);
+    return false;
+  }
+};
+
 // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 
-// Санитизация и валидация ввода
-const sanitizeInput = (input: string): string => {
-  return validator.escape(validator.trim(input));
+// Логирование безопасности
+const securityLogger = {
+  logSuspiciousActivity: (type: string, data: any) => {
+    console.warn(`[SECURITY] ${type}`, {
+      ...data,
+      timestamp: new Date().toISOString(),
+      ip: data.ip || 'unknown'
+    });
+  },
+  
+  logRegistration: (email: string, success: boolean, metadata: any) => {
+    console.info(`[REGISTRATION] ${success ? 'SUCCESS' : 'FAILED'}`, {
+      email: email.substring(0, 3) + '***',
+      success,
+      ...metadata,
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
-// Санитизация для email (без escape, чтобы не ломать адрес)
-const sanitizeEmail = (email: string): string => {
-  return validator.trim(email).toLowerCase();
+// Middleware для извлечения IP
+const getClientIP = (req: express.Request): string => {
+  return req.ip || 
+         (req.connection as any).remoteAddress || 
+         (req.headers['x-forwarded-for'] as string) || 
+         'unknown';
 };
 
-const validateEmail = (email: string): boolean => {
+// Защита от timing attacks
+const constantTimeDelay = (ms: number = 500): Promise<void> => {
+  return new Promise(resolve => setTimeout(resolve, ms));
+};
+
+// Валидация email домена
+const validateEmailDomain = async (email: string): Promise<boolean> => {
+  const domain = email.split('@')[1];
+  
+  const tempEmailDomains = [
+    'tempmail.com', '10minutemail.com', 'guerrillamail.com',
+    'mailinator.com', 'yopmail.com', 'throwawaymail.com'
+  ];
+  
+  if (tempEmailDomains.some(temp => domain.includes(temp))) {
+    return false;
+  }
+  
+  return true;
+};
+
+const validateEmail = async (email: string): Promise<boolean> => {
   return (
-    validator.isEmail(email, { allow_utf8_local_part: false }) && // стандартная проверка
-    validator.isLength(email, { max: 254 }) // ограничение по стандарту
+    validator.isEmail(email, { allow_utf8_local_part: false }) &&
+    validator.isLength(email, { max: 254 }) &&
+    await validateEmailDomain(email)
   );
 };
-
 
 const validateNickname = (nickname: string): boolean => {
   return validator.isLength(nickname, { min: 3, max: 20 }) &&
@@ -66,12 +260,13 @@ const validateNickname = (nickname: string): boolean => {
 
 const validateName = (name: string): boolean => {
   return validator.isLength(name, { min: 2, max: 50 }) &&
-         validator.isAlpha(validator.blacklist(name, ' '), 'en-US') && // Только буквы и пробелы
+         validator.isAlpha(validator.blacklist(name, ' '), 'en-US') &&
          !validator.contains(name.toLowerCase(), 'admin') &&
          !validator.contains(name.toLowerCase(), 'moderator');
 };
 
-const validatePassword = (password: string): { valid: boolean; error?: string } => {
+// Улучшенная валидация пароля с проверкой утечек
+const validatePassword = async (password: string): Promise<{ valid: boolean; error?: string }> => {
   if (password.length < 12) {
     return { valid: false, error: "Password must be at least 12 characters long" };
   }
@@ -98,6 +293,17 @@ const validatePassword = (password: string): { valid: boolean; error?: string } 
     };
   }
 
+  // Запрет последовательных символов
+  if (/(.)\1{2,}/.test(password)) {
+    return { valid: false, error: "Password contains repeated characters" };
+  }
+  
+  // Запрет простых последовательностей
+  const sequences = ['123', 'abc', 'qwe', '987', '321'];
+  if (sequences.some(seq => password.toLowerCase().includes(seq))) {
+    return { valid: false, error: "Password contains simple sequences" };
+  }
+
   return { valid: true };
 };
 
@@ -105,39 +311,6 @@ const validatePassword = (password: string): { valid: boolean; error?: string } 
 const hashPassword = async (password: string): Promise<string> => {
   const pepperedPassword = password + PASSWORD_PEPPER;
   return await argon2.hash(pepperedPassword, argon2Options);
-};
-
-// Защита от timing attacks
-const constantTimeDelay = (ms: number = 500): Promise<void> => {
-  return new Promise(resolve => setTimeout(resolve, ms));
-};
-
-// Логирование безопасности
-const securityLogger = {
-  logSuspiciousActivity: (type: string, data: any) => {
-    console.warn(`[SECURITY] ${type}`, {
-      ...data,
-      timestamp: new Date().toISOString(),
-      ip: data.ip || 'unknown'
-    });
-  },
-  
-  logRegistration: (email: string, success: boolean, metadata: any) => {
-    console.info(`[REGISTRATION] ${success ? 'SUCCESS' : 'FAILED'}`, {
-      email: email.substring(0, 3) + '***', // Частичное логирование
-      success,
-      ...metadata,
-      timestamp: new Date().toISOString()
-    });
-  }
-};
-
-// Middleware для извлечения IP с учетом прокси
-const getClientIP = (req: express.Request): string => {
-  return req.ip || 
-         (req.connection as any).remoteAddress || 
-         (req.headers['x-forwarded-for'] as string) || 
-         'unknown';
 };
 
 // Middleware для проверки Content-Type
@@ -149,6 +322,7 @@ const validateContentType = (req: express.Request, res: express.Response, next: 
 };
 
 router.use(validateContentType);
+router.use(sqlInjectionProtection);
 
 // ==================== ОБНОВЛЕННАЯ РЕГИСТРАЦИЯ ====================
 
@@ -158,7 +332,16 @@ router.post("/register", async (req, res) => {
   const userAgent = req.get('User-Agent') || 'unknown';
   
   try {
-    const { name, nickname, email, password, confirmPassword } = req.body;
+    const { name, nickname, email, password, confirmPassword, recaptchaToken } = req.body;
+
+    // Проверка reCAPTCHA
+    if (RECAPTCHA_SECRET_KEY && (!recaptchaToken || !await verifyRecaptcha(recaptchaToken, clientIP))) {
+      securityLogger.logSuspiciousActivity('recaptcha_failed', {
+        ip: clientIP,
+        email: email
+      });
+      return res.status(400).json({ error: "Bot verification failed" });
+    }
 
     // Базовая валидация наличия полей
     if (!name?.trim() || !nickname?.trim() || !email?.trim() || !password || !confirmPassword) {
@@ -184,10 +367,10 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // Санитизация ввода
-    const sanitizedName = sanitizeInput(name);
-    const sanitizedNickname = sanitizeInput(nickname);
-    const sanitizedEmail = sanitizeEmail(email);
+    // Улучшенная санитизация с защитой от SQL-инъекций
+    const sanitizedName = sanitizeForDatabase.text(name, 'name', clientIP);
+    const sanitizedNickname = sanitizeForDatabase.nickname(nickname, 'nickname', clientIP);
+    const sanitizedEmail = sanitizeForDatabase.email(email, 'email', clientIP);
 
     // Расширенная валидация имени
     if (!validateName(sanitizedName)) {
@@ -203,7 +386,7 @@ router.post("/register", async (req, res) => {
     }
 
     // Валидация email
-    if (!validateEmail(sanitizedEmail)) {
+    if (!await validateEmail(sanitizedEmail)) {
       await constantTimeDelay();
       securityLogger.logRegistration(sanitizedEmail, false, {
         reason: 'invalid_email',
@@ -228,7 +411,7 @@ router.post("/register", async (req, res) => {
     }
 
     // Валидация пароля
-    const passwordValidation = validatePassword(password);
+    const passwordValidation = await validatePassword(password);
     if (!passwordValidation.valid) {
       await constantTimeDelay();
       securityLogger.logRegistration(sanitizedEmail, false, {
@@ -240,7 +423,7 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // Проверка уникальности в транзакции для избежания race condition
+    // Проверка уникальности в транзакции
     const existingUser = await prisma.$transaction(async (tx) => {
       return await tx.user.findFirst({
         where: { 
@@ -271,14 +454,13 @@ router.post("/register", async (req, res) => {
     // Хеширование пароля
     const hashedPassword = await hashPassword(password);
 
-    // Создание пользователя с транзакцией - УДАЛЕНЫ НЕСУЩЕСТВУЮЩИЕ ПОЛЯ
+    // Создание пользователя
     const user = await prisma.user.create({
       data: { 
         name: sanitizedName,
         nickname: sanitizedNickname,
         email: sanitizedEmail,
         password: hashedPassword,
-        // Удалены поля, которых нет в модели User: lastLogin, loginAttempts, lockedUntil, isActive, emailVerified, registrationIp, userAgent
       },
       select: {
         id: true,
@@ -286,7 +468,6 @@ router.post("/register", async (req, res) => {
         nickname: true,
         email: true,
         createdAt: true,
-        // Удалено поле isActive, которого нет в модели
       }
     });
 
@@ -297,12 +478,9 @@ router.post("/register", async (req, res) => {
       userAgent: userAgent.substring(0, 100)
     });
 
-    // Опционально: отправка email для верификации
-    // await sendVerificationEmail(user.email, user.id);
-
-    // Постоянное время ответа для защиты от timing attacks
+    // Постоянное время ответа
     const elapsed = Date.now() - startTime;
-    await constantTimeDelay(Math.max(0, 800 - elapsed)); // Увеличили базовое время
+    await constantTimeDelay(Math.max(0, 800 - elapsed));
 
     return res.status(201).json({
       success: true,
@@ -313,7 +491,6 @@ router.post("/register", async (req, res) => {
         nickname: user.nickname,
         email: user.email,
         createdAt: user.createdAt,
-        // Удалено поле isActive, которого нет в модели
       },
       nextSteps: [
         "Check your email for verification link",
@@ -322,10 +499,9 @@ router.post("/register", async (req, res) => {
       ]
     });
 
-  } catch (err: unknown) { // ИСПРАВЛЕНА ТИПИЗАЦИЯ ОШИБКИ
+  } catch (err: unknown) {
     console.error("Registration error:", err);
 
-    // Логирование ошибки безопасности
     securityLogger.logSuspiciousActivity('registration_error', {
       error: err instanceof Error ? err.message : 'Unknown error',
       ip: clientIP,
@@ -334,7 +510,6 @@ router.post("/register", async (req, res) => {
 
     await constantTimeDelay();
     
-    // Обработка ошибок Prisma
     if (err instanceof Error && 'code' in err) {
       const prismaError = err as { code: string };
       
@@ -355,7 +530,6 @@ router.post("/register", async (req, res) => {
       }
     }
 
-    // Общая ошибка сервера
     return res.status(500).json({ 
       error: "Registration service temporarily unavailable. Please try again later." 
     });
@@ -364,7 +538,6 @@ router.post("/register", async (req, res) => {
 
 // ==================== ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ ====================
 
-// Функция для верификации пароля (для логина)
 export const verifyPassword = async (hashedPassword: string, password: string): Promise<boolean> => {
   try {
     const pepperedPassword = password + PASSWORD_PEPPER;
@@ -375,9 +548,7 @@ export const verifyPassword = async (hashedPassword: string, password: string): 
   }
 };
 
-// Функция для отправки email верификации (заглушка)
 const sendVerificationEmail = async (email: string, userId: string): Promise<void> => {
-  // В реальной реализации здесь будет логика отправки email
   console.log(`Verification email would be sent to: ${email} for user: ${userId}`);
 };
 

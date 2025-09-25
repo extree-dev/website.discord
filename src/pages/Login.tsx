@@ -39,45 +39,66 @@ export const Login: React.FC<LoginProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Сбрасываем ошибки
+    setErrors({});
+    
+    // Валидация
     const newErrors: typeof errors = {};
     if (!identifier.trim()) newErrors.identifier = "Enter your email or login";
     if (!password.trim()) newErrors.password = "Enter the password";
+    
     if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
+        setErrors(newErrors);
+        return;
     }
 
     setIsLoading(true);
+    
     try {
-      const res = await fetch("http://localhost:4000/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, password }),
-      });
-      const data = await res.json();
+        const res = await fetch("http://localhost:4000/api/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ identifier, password }),
+        });
+        
+        const data = await res.json();
 
-      if (!res.ok) {
-        if (data.error.includes("temporarily locked")) {
-          const retryAfter = data.retryAfter || 3600; 
-          setLockUntil(Date.now() + retryAfter * 1000);
-          setLockMessage(data.error);
-        } else {
-          const serverErrors: typeof errors = {};
-          if (data.error.includes("User")) serverErrors.identifier = data.error;
-          else if (data.error.includes("password")) serverErrors.password = data.error;
-          else serverErrors.identifier = data.error;
-          setErrors(serverErrors);
+        if (!res.ok) {
+            // Обработка ошибки блокировки аккаунта
+            if (data.error.includes("locked") || data.error.includes("temporarily")) {
+                const lockTime = 30 * 60 * 1000; // 30 минут блокировки
+                setLockUntil(Date.now() + lockTime);
+                setLockMessage("Protection system activated. Please try again in 2 minutes.");
+            } else {
+                // Обычные ошибки валидации
+                const serverErrors: typeof errors = {};
+                if (data.error.includes("credentials") || data.error.includes("Invalid")) {
+                    serverErrors.identifier = "Invalid email/nickname or password";
+                    serverErrors.password = "Invalid email/nickname or password";
+                } else if (data.error.includes("User") || data.error.includes("email") || data.error.includes("nickname")) {
+                    serverErrors.identifier = data.error;
+                } else if (data.error.includes("password")) {
+                    serverErrors.password = data.error;
+                } else {
+                    serverErrors.identifier = data.error;
+                }
+                setErrors(serverErrors);
+            }
+            return;
         }
-        return;
-      }
 
-      navigate("/dashboard");
+        // УСПЕШНЫЙ ЛОГИН - переходим на dashboard
+        console.log("Login successful:", data);
+        navigate("/dashboard");
+        
     } catch (err) {
-      setErrors({ identifier: err instanceof Error ? err.message : "Login failed" });
+        console.error("Login error:", err);
+        setErrors({ identifier: "Network error. Please try again." });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  };
+};
 
   // ======= OAuth =======
   const handleOAuth = (provider: "discord" | "google" | "github") => {

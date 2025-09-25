@@ -17,5 +17,8 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
+    server: {
+      open: '/login'  // Просто строка, без объекта
+    }
   }
 })

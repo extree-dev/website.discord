@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import ThemeToggle from "@/components/ThemeToggle.js";
 import "../components/CSS/Register.css";
 import { Eye, EyeOff } from "lucide-react";
+import { Toast } from "@/components/Toast.js";
 
 export const Register = () => {
     const [name, setName] = useState("");
@@ -23,6 +24,7 @@ export const Register = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [passwordStrength, setPasswordStrength] = useState(0);
     const [passwordsMatch, setPasswordsMatch] = useState(true);
+    const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
     const navigate = useNavigate();
 
@@ -50,7 +52,7 @@ export const Register = () => {
         setError("");
         const newErrors: typeof errors = {};
         let valid = true;
-    
+
         // Валидация
         if (!name.trim()) { newErrors.name = "Full name is required"; valid = false; }
         if (!nickname.trim()) { newErrors.nickname = "Nickname is required"; valid = false; }
@@ -61,10 +63,10 @@ export const Register = () => {
         else if (password.length < 8) { newErrors.password = "Password must be 8+ chars"; valid = false; }
         if (!confirmPassword) { newErrors.confirmPassword = "Confirm your password"; valid = false; }
         else if (password !== confirmPassword) { newErrors.confirmPassword = "Passwords do not match"; valid = false; }
-    
+
         setErrors(newErrors);
         if (!valid) return;
-    
+
         setIsLoading(true);
         try {
             // Формируем объект для отправки напрямую из актуальных стейтов
@@ -72,27 +74,45 @@ export const Register = () => {
                 name: name.trim(),
                 nickname: nickname.trim(),
                 email: email.trim(),
-                password
+                password,
+                confirmPassword: password // Добавляем confirmPassword для сервера
             };
 
             console.log("Payload:", payload);
-    
+
             const res = await fetch("http://localhost:4000/api/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
-    
+
             const data = await res.json();
+
             if (!res.ok) throw new Error(data.error || "Registration failed");
-            navigate("/dashboard");
+
+            // УСПЕШНАЯ РЕГИСТРАЦИЯ - ПОКАЗЫВАЕМ УВЕДОМЛЕНИЕ, НЕ ПЕРЕХОДИМ
+            setError(""); // Очищаем ошибки
+            alert("Registration successful! You can now log in."); // Или используйте toast уведомление
+
+            // Очищаем форму
+            setName("");
+            setNickname("");
+            setEmail("");
+            setPassword("");
+            setConfirmPassword("");
+
+            // Опционально: автоматический переход на логин через 2 секунды
+            setTimeout(() => {
+                navigate("/login");
+            }, 2000);
+
         } catch (err) {
             setError(err instanceof Error ? err.message : "Registration failed");
         } finally {
             setIsLoading(false);
         }
     };
-    
+
 
     const getPasswordStrengthColor = () => ["#ff4444", "#ff8800", "#ffbb33", "#00C851", "#007E33"][passwordStrength] || "#666";
     const getPasswordStrengthLabel = () => ["Very Weak", "Weak", "Medium", "Strong", "Very Strong"][passwordStrength] || "";
@@ -238,6 +258,14 @@ export const Register = () => {
                     </button>
                 </form>
             </div>
+            {/* Toast компонент */}
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
         </div>
     );
 };

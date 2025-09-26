@@ -23,6 +23,9 @@ import { Register } from "@/pages/Register.js";
 import { LockModal } from "@/components/LocalModal.js";
 import Terms from "@/pages/Terms.js";
 import Privacy from "@/pages/Privacy.js";
+import { OAuthSuccess } from "@/pages/OAuthSuccess.js";
+import { CompleteProfile } from "@/components/CompleteProfile.js";
+import AdminLogs from "@/pages/AdminLogs.js";
 
 function App() {
   const [lockUntil, setLockUntil] = useState<number | null>(null);
@@ -60,6 +63,9 @@ function App() {
               <Route path="/dashboard/notification" element={<NotificationPage />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
+              <Route path="/oauth/success" element={<OAuthSuccess />} />
+              <Route path="/complete-profile" element={<CompleteProfile />} />
+              <Route path="/admin/logs" element={<AdminLogs />} />
             </Route>
           </Routes>
 

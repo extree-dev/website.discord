@@ -4,10 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently --kill-others-on-fail=false --raw -n SERVER,CLIENT -c \"blue,green\" \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:server": "cd src/server && ts-node index.ts",
+    "dev": "concurrently --kill-others-on-fail=false --raw -n SERVER,CLIENT -c \"blue,green\" \"bun run dev:server\" \"bun run dev:client\"",
+    "dev:server": "cd src/server && bun --bun index.ts",
     "dev:client": "vite",
-    "db:sync": "node scripts/db-sync.js"
+    "db:sync": "bun scripts/db-sync.js"
   },
   "dependencies": {
     "@prisma/client": "^6.16.2",
@@ -45,8 +45,10 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
+    "module-alias": "^2.2.3",
     "prisma": "^6.16.2",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.35.1",
     "vite": "^7.1.7"

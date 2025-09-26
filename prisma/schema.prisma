@@ -15,19 +15,40 @@ datasource db {
 
 // ======= MODELS =======
 model User {
-  id            Int      @id @default(autoincrement())
+  id            Int       @id @default(autoincrement())
   name          String
-  nickname      String   @unique
-  email         String   @unique
-  password      String
-  discordId     String?  @unique
+  nickname      String    @unique
+  email         String    @unique
+  password      String?   
+  discordId     String?   @unique
+  emailVerified Boolean   @default(false)
   posts         Post[]
   sessions      Session[]
-  createdAt     DateTime @default(now())
+  profile       Profile?  @relation("UserProfile")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   lastLogin     DateTime?
-  loginAttempts Int      @default(0)
+  loginAttempts Int       @default(0)
   lockedUntil   DateTime?
-  isActive      Boolean  @default(true)
+  isActive      Boolean   @default(true)
+
+  @@map("users")
+}
+
+model Profile {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  user            User     @relation("UserProfile", fields: [userId], references: [id], onDelete: Cascade)
+  firstName       String?
+  lastName        String?
+  dateOfBirth     DateTime?
+  phone           String?
+  country         String?
+  city            String?
+  avatar          String?
+  profileCompleted Boolean @default(false)
+
+  @@map("profiles")
 }
 
 model Session {
@@ -38,17 +59,36 @@ model Session {
   expiresAt DateTime
   ipAddress String
   userAgent String
+  loginMethod String @default("password")
   createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([expiresAt])
+  @@index([loginMethod])
+  @@map("sessions")
 }
 
 model Post {
-  id        Int     @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   title     String
   content   String?
-  published Boolean @default(false)
+  published Boolean  @default(false)
   authorId  Int
-  author    User    @relation(fields: [authorId], references: [id])
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([authorId])
+  @@index([published])
+  @@map("posts")
+}
+
+model SecurityLog {
+  id        Int      @id @default(autoincrement())
+  type      String
+  message   String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@map("security_logs")
 }

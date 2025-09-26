@@ -5,6 +5,15 @@ import crypto from "crypto";
 import validator from "validator";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
+import { securityLogger } from "@/utils/securityLogger";
+
+
+
+if (!process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_REDIRECT_URI) {
+  console.error('Missing Discord OAuth environment variables');
+  console.log('DISCORD_CLIENT_ID:', process.env.DISCORD_CLIENT_ID);
+  console.log('DISCORD_REDIRECT_URI:', process.env.DISCORD_REDIRECT_URI);
+}
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -26,7 +35,7 @@ const detectSQLInjection = (input: string): boolean => {
 const secureSanitizeInput = (input: string, fieldName: string, ip: string): string => {
   const trimmed = validator.trim(input);
   const escaped = validator.escape(trimmed);
-  
+
   if (detectSQLInjection(input) || detectSQLInjection(trimmed)) {
     securityLogger.logSuspiciousActivity('sql_injection_attempt', {
       field: fieldName,
@@ -36,13 +45,13 @@ const secureSanitizeInput = (input: string, fieldName: string, ip: string): stri
       timestamp: new Date().toISOString()
     });
   }
-  
+
   return escaped;
 };
 
 const sqlInjectionProtection = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const clientIP = getClientIP(req);
-  
+
   if (req.query) {
     for (const [key, value] of Object.entries(req.query)) {
       if (typeof value === 'string' && detectSQLInjection(value)) {
@@ -56,7 +65,7 @@ const sqlInjectionProtection = (req: express.Request, res: express.Response, nex
       }
     }
   }
-  
+
   if (req.body && typeof req.body === 'object') {
     const suspiciousFields = checkObjectForSQLInjection(req.body, clientIP);
     if (suspiciousFields.length > 0) {
@@ -68,16 +77,16 @@ const sqlInjectionProtection = (req: express.Request, res: express.Response, nex
       return res.status(400).json({ error: "Invalid request data" });
     }
   }
-  
+
   next();
 };
 
 const checkObjectForSQLInjection = (obj: any, ip: string, path: string = ''): string[] => {
   const suspiciousFields: string[] = [];
-  
+
   for (const [key, value] of Object.entries(obj)) {
     const currentPath = path ? `${path}.${key}` : key;
-    
+
     if (typeof value === 'string') {
       if (detectSQLInjection(value)) {
         suspiciousFields.push(currentPath);
@@ -86,7 +95,7 @@ const checkObjectForSQLInjection = (obj: any, ip: string, path: string = ''): st
       suspiciousFields.push(...checkObjectForSQLInjection(value, ip, currentPath));
     }
   }
-  
+
   return suspiciousFields;
 };
 
@@ -206,26 +215,6 @@ const verifyPassword = async (hashedPassword: string, password: string): Promise
 // Защита от timing attacks
 const constantTimeDelay = (ms: number = 500): Promise<void> => {
   return new Promise(resolve => setTimeout(resolve, ms));
-};
-
-// Логирование безопасности
-const securityLogger = {
-  logSuspiciousActivity: (type: string, data: any) => {
-    console.warn(`[SECURITY] ${type}`, {
-      ...data,
-      timestamp: new Date().toISOString(),
-      ip: data.ip || 'unknown'
-    });
-  },
-
-  logAuthAttempt: (identifier: string, success: boolean, metadata: any) => {
-    console.info(`[AUTH] ${success ? 'SUCCESS' : 'FAILED'}`, {
-      identifier: identifier.substring(0, 3) + '***',
-      success,
-      ...metadata,
-      timestamp: new Date().toISOString()
-    });
-  }
 };
 
 // Генерация безопасных токенов
@@ -563,162 +552,369 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// ==================== DISCORD OAUTH ====================
+// ==================== DISCORD OAUTH УЛУЧШЕННАЯ РЕАЛИЗАЦИЯ ====================
 
+interface DiscordUser {
+  id: string;
+  username: string;
+  discriminator: string;
+  global_name?: string;
+  avatar?: string;
+  email: string;
+  verified: boolean;
+}
+
+// Генерация состояния для OAuth
+const generateOAuthState = (): string => {
+  return crypto.randomBytes(32).toString('hex');
+};
+
+// Хранение состояний OAuth (в продакшене используйте Redis)
+const oauthStates = new Map<string, { ip: string; timestamp: number }>();
+
+// Очистка просроченных состояний каждые 5 минут
+setInterval(() => {
+  const now = Date.now();
+  for (const [state, data] of oauthStates.entries()) {
+    if (now - data.timestamp > 10 * 60 * 1000) { // 10 минут
+      oauthStates.delete(state);
+    }
+  }
+}, 5 * 60 * 1000);
+
+// Discord OAuth initiation
 router.get("/oauth/discord", (req, res) => {
-  const state = generateSecureToken(16);
-  const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${process.env.DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(process.env.DISCORD_REDIRECT_URI!)}&response_type=code&scope=identify%20email&state=${state}`;
+  const clientIP = getClientIP(req);
+  const state = generateOAuthState();
 
-  res.cookie('oauth_state', state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 10 * 60 * 1000
+  // Сохраняем состояние с IP и временем
+  oauthStates.set(state, {
+    ip: clientIP,
+    timestamp: Date.now()
   });
 
-  res.redirect(authUrl);
+  const discordParams = new URLSearchParams({
+    client_id: process.env.DISCORD_CLIENT_ID!,
+    redirect_uri: process.env.DISCORD_REDIRECT_URI!,
+    response_type: 'code',
+    scope: 'identify email',
+    state: state,
+    prompt: 'none'
+  });
+
+  const authUrl = `https://discord.com/api/oauth2/authorize?${discordParams.toString()}`;
+
+  res.json({
+    success: true,
+    authUrl: authUrl,
+    state: state
+  });
 });
 
-router.get("/oauth/callback/discord", async (req, res) => {
+// Discord OAuth callback - УЛУЧШЕННАЯ ВЕРСИЯ
+router.get("/oauth/discord/callback", async (req, res) => {
   const { code, state } = req.query;
   const clientIP = getClientIP(req);
+  const userAgent = req.get('User-Agent') || 'unknown';
 
-  // Валидация state для защиты от CSRF
-  if (state !== req.cookies.oauth_state) {
-    securityLogger.logSuspiciousActivity('oauth_csrf_attempt', {
+  if (!code || typeof code !== 'string') {
+    securityLogger.logSuspiciousActivity('oauth_missing_code', {
+      ip: clientIP,
+      state: state
+    });
+    return res.redirect(`${process.env.FRONTEND_URL}/login?error=invalid_oauth_request`);
+  }
+
+  const stateData = oauthStates.get(state as string);
+  if (!stateData) {
+    securityLogger.logSuspiciousActivity('oauth_invalid_state', {
       ip: clientIP,
       providedState: state
     });
-    return res.status(400).send("Invalid state parameter");
+    return res.redirect(`${process.env.FRONTEND_URL}/login?error=invalid_state`);
   }
 
-  if (!code || typeof code !== "string") {
-    return res.status(400).send("Missing authorization code");
+  if (stateData.ip !== clientIP) {
+    securityLogger.logSuspiciousActivity('oauth_ip_mismatch', {
+      expectedIp: stateData.ip,
+      actualIp: clientIP,
+      state: state
+    });
   }
+
+  oauthStates.delete(state as string);
 
   try {
-    // Обмен code на access_token
-    const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    // 1) exchange code -> token (ваш существующий код)
+    const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         client_id: process.env.DISCORD_CLIENT_ID!,
         client_secret: process.env.DISCORD_CLIENT_SECRET!,
-        grant_type: "authorization_code",
-        code,
+        grant_type: 'authorization_code',
+        code: code as string,
         redirect_uri: process.env.DISCORD_REDIRECT_URI!,
       }),
     });
 
-    if (!tokenRes.ok) {
-      throw new Error(`Discord API responded with status: ${tokenRes.status}`);
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      throw new Error(`Discord token API error: ${tokenResponse.status} - ${errorText}`);
     }
+    const tokenData = await tokenResponse.json();
+    if (!tokenData.access_token) throw new Error('No access token received from Discord');
 
-    const tokenData = await tokenRes.json();
-    if (!tokenData.access_token) {
-      throw new Error("Failed to get Discord access token");
-    }
-
-    // Получение данных пользователя
-    const userRes = await fetch("https://discord.com/api/users/@me", {
+    // 2) get discord user
+    const userResponse = await fetch('https://discord.com/api/users/@me', {
       headers: {
         Authorization: `Bearer ${tokenData.access_token}`,
-        'User-Agent': 'YourApp/1.0'
+        'User-Agent': 'YourApp/1.0 (+https://yourapp.com)'
       },
     });
+    if (!userResponse.ok) throw new Error(`Discord user API error: ${userResponse.status}`);
+    const discordUser: DiscordUser = await userResponse.json();
 
-    if (!userRes.ok) {
-      throw new Error(`Discord user API responded with status: ${userRes.status}`);
-    }
+    if (!discordUser.id || !discordUser.email) throw new Error('Invalid user data from Discord');
 
-    const discordUser = await userRes.json();
-
-    // Валидация данных от Discord
-    if (!discordUser.id || !discordUser.email) {
-      throw new Error("Invalid user data from Discord");
-    }
-
+    // sanitize etc.
     const email = sanitizeInput(discordUser.email).toLowerCase();
     const discordId = discordUser.id;
     const username = sanitizeInput(discordUser.username);
     const globalName = sanitizeInput(discordUser.global_name || discordUser.username);
+    const displayName = globalName || username;
 
-    // ИСПРАВЛЕННАЯ ТРАНЗАКЦИЯ
-    const user = await prisma.$transaction(async (tx) => {
-      let user = await tx.user.findFirst({
-        where: { discordId: discordId }
-      });
+    // 3) transaction: ищем/создаём / связываем — но возвращаем только { id, requiresCompletion }
+    const txResult = await prisma.$transaction(async (tx) => {
+      // 3.a. Найти по discordId
+      let foundUser = await tx.user.findFirst({ where: { discordId } });
 
-      if (!user) {
-        user = await tx.user.findFirst({
-          where: { email: email }
-        });
-      }
+      if (foundUser) {
+        // узнаем профиль отдельно (если таблица profile существует и связана через userId)
+        const profileRow = await tx.profile.findFirst({ where: { userId: foundUser.id } });
+        const isProfileComplete = Boolean(foundUser.name && foundUser.email && profileRow?.firstName);
 
-      if (!user) {
-        // Создаем нового пользователя
-        const randomPassword = generateSecureToken(32);
-        const hashedPassword = await hashPassword(randomPassword);
-
-        user = await tx.user.create({
+        const updatedUser = await tx.user.update({
+          where: { id: foundUser.id },
           data: {
-            name: globalName,
-            nickname: username,
-            email: email,
-            discordId: discordId,
-            password: hashedPassword,
             lastLogin: new Date(),
             loginAttempts: 0,
-            isActive: true
-          },
+            lockedUntil: null
+          }
         });
-      } else if (!user.discordId) {
-        // Привязываем Discord к существующему аккаунту
-        user = await tx.user.update({
-          where: { id: user.id },
-          data: {
-            discordId: discordId,
-            lastLogin: new Date()
-          },
-        });
-      } else {
-        // Обновляем время последнего логина
-        user = await tx.user.update({
-          where: { id: user.id },
-          data: {
-            lastLogin: new Date()
-          },
-        });
+
+        return { id: updatedUser.id, requiresCompletion: !isProfileComplete };
       }
 
-      return user;
-    }) as UserAuth;
+      // 3.b. Найти по email (привязать discord)
+      foundUser = await tx.user.findFirst({
+        where: {
+          email,
+          discordId: null
+        }
+      });
 
-    // Создаем сессию
+      if (foundUser) {
+        const updated = await tx.user.update({
+          where: { id: foundUser.id },
+          data: {
+            discordId,
+            lastLogin: new Date(),
+            loginAttempts: 0,
+            lockedUntil: null
+          }
+        });
+        // узнаем профиль
+        const profileRow = await tx.profile.findFirst({ where: { userId: updated.id } });
+        const isProfileComplete = Boolean(updated.name && updated.email && profileRow?.firstName);
+        return { id: updated.id, requiresCompletion: !isProfileComplete };
+      }
+
+      // 3.c. Создать нового пользователя + профиль (создаём user, потом profile если relation отсутствует как nested)
+      const randomPassword = generateSecureToken(32);
+      const hashedPassword = await hashPassword(randomPassword);
+
+      const baseNickname = username.toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 15);
+      let uniqueNickname = baseNickname;
+      let counter = 1;
+      while (await tx.user.findFirst({ where: { nickname: uniqueNickname } })) {
+        uniqueNickname = `${baseNickname}_${counter}`;
+        counter++;
+        if (counter > 100) {
+          uniqueNickname = `discord_${discordId.substring(0, 8)}`;
+          break;
+        }
+      }
+
+      const createdUser = await tx.user.create({
+        data: {
+          name: displayName,
+          nickname: uniqueNickname,
+          email,
+          discordId,
+          password: hashedPassword,
+          emailVerified: discordUser.verified || false,
+          lastLogin: new Date(),
+          loginAttempts: 0,
+          isActive: true
+        }
+      });
+
+      // создаём профиль отдельно (если у вас таблица profile и у неё поле userId)
+      await tx.profile.create({
+        data: {
+          userId: createdUser.id,
+          firstName: '',
+          lastName: '',
+          dateOfBirth: null,
+          avatar: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordId}/${discordUser.avatar}.png` : null
+        }
+      });
+
+      return { id: createdUser.id, requiresCompletion: true };
+    });
+
+    // 4) Создать сессию
     const sessionToken = generateSecureToken(64);
+    const sessionExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
     await prisma.session.create({
       data: {
-        userId: user.id,
+        userId: txResult.id,
         token: await hashPassword(sessionToken),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        expiresAt: sessionExpiry,
         ipAddress: clientIP,
-        userAgent: req.get('User-Agent')?.substring(0, 500) || 'unknown'
+        userAgent: userAgent.substring(0, 500),
+        loginMethod: 'discord'
       }
     });
 
-    // Очищаем state cookie
-    res.clearCookie('oauth_state');
+    // 5) Редирект
+    let redirectPath = txResult.requiresCompletion ? '/complete-profile' : '/dashboard';
+    const redirectUrl = new URL(`${process.env.FRONTEND_URL}${redirectPath}`);
+    redirectUrl.searchParams.set('token', sessionToken);
+    redirectUrl.searchParams.set('userId', txResult.id.toString());
+    redirectUrl.searchParams.set('method', 'discord');
+    redirectUrl.searchParams.set('requiresCompletion', txResult.requiresCompletion.toString());
 
-    return res.redirect(`${process.env.FRONTEND_URL}/dashboard?token=${sessionToken}`);
+    return res.redirect(redirectUrl.toString());
+  } catch (err) {
+    // логируем и редиректим с ошибкой
+    securityLogger.logError('oauth_discord_callback_error', { error: (err as Error).message, ip: clientIP });
+    return res.redirect(`${process.env.FRONTEND_URL}/login?error=oauth_failed`);
+  }
+});
 
-  } catch (err: unknown) {
-    console.error("Discord OAuth error:", err);
+// ==================== ПРОВЕРКА СТАТУСА DISCORD АУТЕНТИФИКАЦИИ ====================
 
-    securityLogger.logSuspiciousActivity('oauth_error', {
-      error: err instanceof Error ? err.message : 'Unknown error',
-      ip: clientIP
+router.get("/oauth/discord/status", async (req, res) => {
+  const { userId } = req.query;
+
+  if (!userId) {
+    return res.status(400).json({ error: "User ID required" });
+  }
+
+  try {
+    const user = await prisma.user.findFirst({
+      where: { id: parseInt(userId as string) },
+      select: { discordId: true, email: true }
     });
 
-    res.status(500).send("OAuth authentication failed");
+    res.json({
+      hasDiscord: !!user?.discordId,
+      email: user?.email
+    });
+  } catch (error) {
+    console.error('Discord status check error:', error);
+    res.status(500).json({ error: "Status check failed" });
+  }
+});
+
+router.get("/users/:userId/basic", async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  const userId = parseInt(req.params.userId);
+
+  if (!token) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  try {
+    const tokenHash = await hashPassword(token);
+    const session = await prisma.session.findFirst({
+      where: {
+        token: tokenHash,
+        expiresAt: { gt: new Date() }
+      }
+    });
+
+    if (!session || session.userId !== userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const user = await prisma.user.findFirst({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        nickname: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error('User info fetch error:', error);
+    res.status(500).json({ error: "Failed to fetch user info" });
+  }
+});
+
+// ==================== ОТВЯЗКА DISCORD АККАУНТА ====================
+
+router.post("/oauth/discord/disconnect", async (req, res) => {
+  const { userId, password } = req.body; // Требуем пароль для безопасности
+
+  if (!userId || !password) {
+    return res.status(400).json({ error: "User ID and password required" });
+  }
+
+  try {
+    const user = await prisma.user.findFirst({
+      where: { id: parseInt(userId) }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Проверяем пароль для безопасности
+    if (!user.password || !(await verifyPassword(user.password, password))) {
+      return res.status(401).json({ error: "Invalid password" });
+    }
+
+    // Не позволяем отвязать Discord, если это единственный метод входа
+    if (!user.password) {
+      return res.status(400).json({
+        error: "Cannot disconnect Discord. Please set a password first."
+      });
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { discordId: null }
+    });
+
+    res.json({
+      success: true,
+      message: "Discord account disconnected successfully"
+    });
+
+  } catch (error) {
+    console.error('Discord disconnect error:', error);
+    res.status(500).json({ error: "Disconnect failed" });
   }
 });
 
@@ -741,6 +937,85 @@ router.post("/logout", async (req, res) => {
   } catch (err: unknown) {
     console.error("Logout error:", err);
     res.status(500).json({ error: "Logout failed" });
+  }
+});
+
+router.post("/complete-profile", async (req, res) => {
+  const clientIP = getClientIP(req);
+  const token = req.headers.authorization?.replace('Bearer ', '');
+
+  if (!token) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  try {
+    // Проверяем сессию
+    const tokenHash = await hashPassword(token);
+    const session = await prisma.session.findFirst({
+      where: {
+        token: tokenHash,
+        expiresAt: { gt: new Date() }
+      },
+      include: { user: true }
+    });
+
+    if (!session) {
+      return res.status(401).json({ error: "Invalid or expired session" });
+    }
+
+    const { firstName, lastName, dateOfBirth, phone, country, city } = req.body;
+
+    // Валидация
+    if (!firstName?.trim() || !lastName?.trim()) {
+      return res.status(400).json({ error: "First name and last name are required" });
+    }
+
+    // Обновляем профиль пользователя
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        name: `${firstName.trim()} ${lastName.trim()}`,
+      }
+    });
+
+    // Upsert профиля отдельно
+    await prisma.profile.upsert({
+      where: { userId: session.user.id }, // предполагается уникальный индекс по userId
+      create: {
+        userId: session.user.id,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+        phone: phone?.trim() || null,
+        country: country?.trim() || null,
+        city: city?.trim() || null,
+        profileCompleted: true
+      },
+      update: {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+        phone: phone?.trim() || null,
+        country: country?.trim() || null,
+        city: city?.trim() || null,
+        profileCompleted: true
+      }
+    });
+
+    securityLogger.logAuthAttempt(session.user.email, true, {
+      userId: session.user.id,
+      action: 'profile_completed',
+      ip: clientIP
+    });
+
+    res.json({
+      success: true,
+      message: "Profile completed successfully"
+    });
+
+  } catch (error) {
+    console.error('Profile completion error:', error);
+    res.status(500).json({ error: "Failed to complete profile" });
   }
 });
 

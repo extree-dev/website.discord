@@ -1,4 +1,6 @@
-import { useState } from "react";
+// Login.tsx - ОБНОВЛЯЕМ КОМПОНЕНТ
+
+import { useState, useEffect } from "react";
 import { FaDiscord } from "react-icons/fa";
 import { Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -24,98 +26,123 @@ export const Login: React.FC<LoginProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ identifier?: string; password?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isDiscordLoading, setIsDiscordLoading] = useState(false);
+  const [oauthError, setOauthError] = useState("");
 
   const navigate = useNavigate();
 
-  const handleIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setIdentifier(e.target.value);
-    if (errors.identifier) setErrors(prev => ({ ...prev, identifier: undefined }));
-  };
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== "http://localhost:5173") return;
 
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPassword(e.target.value);
-    if (errors.password) setErrors(prev => ({ ...prev, password: undefined }));
-  };
+      console.log('Received message from OAuth popup:', event.data);
 
+      if (event.data.type === 'OAUTH_SUCCESS') {
+        const { token, userId, method, requiresCompletion } = event.data;
+
+        // Сохраняем токен
+        localStorage.setItem('authToken', token);
+        localStorage.setItem('userId', userId);
+
+        // Перенаправляем в зависимости от необходимости завершения профиля
+        if (requiresCompletion) {
+          navigate('/complete-profile');
+        } else {
+          navigate('/dashboard');
+        }
+
+      } else if (event.data.type === 'OAUTH_ERROR') {
+        setOauthError(event.data.error || "Authentication failed");
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [navigate]);
+
+  // Обработчик Discord OAuth
+  const handleDiscordLogin = async () => {
+    setIsDiscordLoading(true);
+    setOauthError("");
+
+    try {
+      // Получаем URL для аутентификации Discord
+      const response = await fetch("http://localhost:4000/api/oauth/discord");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to initiate Discord login");
+      }
+
+      // Открываем окно OAuth
+      const width = 600;
+      const height = 700;
+      const left = (window.screen.width - width) / 2;
+      const top = (window.screen.height - height) / 2;
+
+      window.open(
+        data.authUrl,
+        "Discord Auth",
+        `width=${width},height=${height},left=${left},top=${top}`
+      );
+
+    } catch (error) {
+      console.error('Discord OAuth error:', error);
+      setOauthError(error instanceof Error ? error.message : "Discord login failed");
+    } finally {
+      setIsDiscordLoading(false);
+    }
+  };
+  // Обычный логин (остается без изменений)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Сбрасываем ошибки
     setErrors({});
-    
-    // Валидация
-    const newErrors: typeof errors = {};
-    if (!identifier.trim()) newErrors.identifier = "Enter your email or login";
-    if (!password.trim()) newErrors.password = "Enter the password";
-    
-    if (Object.keys(newErrors).length > 0) {
-        setErrors(newErrors);
-        return;
+    setOauthError("");
+
+    if (!identifier.trim()) {
+      setErrors({ identifier: "Enter your email or login" });
+      return;
+    }
+    if (!password.trim()) {
+      setErrors({ password: "Enter the password" });
+      return;
     }
 
     setIsLoading(true);
-    
+
     try {
-        const res = await fetch("http://localhost:4000/api/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ identifier, password }),
-        });
-        
-        const data = await res.json();
+      const res = await fetch("http://localhost:4000/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier, password }),
+      });
 
-        if (!res.ok) {
-            // Обработка ошибки блокировки аккаунта
-            if (data.error.includes("locked") || data.error.includes("temporarily")) {
-                const lockTime = 30 * 60 * 1000; // 30 минут блокировки
-                setLockUntil(Date.now() + lockTime);
-                setLockMessage("Protection system activated. Please try again in 2 minutes.");
-            } else {
-                // Обычные ошибки валидации
-                const serverErrors: typeof errors = {};
-                if (data.error.includes("credentials") || data.error.includes("Invalid")) {
-                    serverErrors.identifier = "Invalid email/nickname or password";
-                    serverErrors.password = "Invalid email/nickname or password";
-                } else if (data.error.includes("User") || data.error.includes("email") || data.error.includes("nickname")) {
-                    serverErrors.identifier = data.error;
-                } else if (data.error.includes("password")) {
-                    serverErrors.password = data.error;
-                } else {
-                    serverErrors.identifier = data.error;
-                }
-                setErrors(serverErrors);
-            }
-            return;
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.error.includes("locked") || data.error.includes("temporarily")) {
+          const lockTime = 30 * 60 * 1000;
+          setLockUntil(Date.now() + lockTime);
+          setLockMessage("Protection system activated. Please try again in 30 minutes.");
+        } else {
+          setErrors({
+            identifier: "Invalid email/nickname or password",
+            password: "Invalid email/nickname or password"
+          });
         }
+        return;
+      }
 
-        // УСПЕШНЫЙ ЛОГИН - переходим на dashboard
-        console.log("Login successful:", data);
-        navigate("/dashboard");
-        
+      // Сохраняем токен и переходим на dashboard
+      localStorage.setItem('authToken', data.session.token);
+      navigate("/dashboard");
+
     } catch (err) {
-        console.error("Login error:", err);
-        setErrors({ identifier: "Network error. Please try again." });
+      console.error("Login error:", err);
+      setErrors({ identifier: "Network error. Please try again." });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
-};
-
-  // ======= OAuth =======
-  const handleOAuth = (provider: "discord" | "google" | "github") => {
-    const oauthWindow = window.open(
-      `http://localhost:4000/api/oauth/${provider}`,
-      "_blank",
-      "width=500,height=600"
-    );
-
-    const oauthListener = (event: MessageEvent) => {
-      if (event.origin !== "http://localhost:4000") return;
-      const { redirect } = event.data;
-      if (redirect) window.location.href = redirect;
-      window.removeEventListener("message", oauthListener);
-    };
-
-    window.addEventListener("message", oauthListener);
   };
 
   return (
@@ -127,37 +154,45 @@ export const Login: React.FC<LoginProps> = ({
           <p>Log in to continue</p>
         </div>
 
+        {oauthError && (
+          <div className="login-error global-error">
+            {oauthError}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="login-form" noValidate>
-          {/* Identifier */}
+          {/* Поля для обычного логина */}
           <div className="login-input-group floating-label">
             <input
               id="identifier"
               type="text"
               value={identifier}
-              onChange={handleIdentifierChange}
+              onChange={(e) => setIdentifier(e.target.value)}
               placeholder=" "
               className={errors.identifier ? "error" : ""}
+              disabled={isLoading || isDiscordLoading}
             />
             <label htmlFor="identifier">Email or Login</label>
             {errors.identifier && <div className="input-error">{errors.identifier}</div>}
           </div>
 
-          {/* Password */}
           <div className="login-input-group floating-label password-group">
             <div className="password-wrapper">
               <input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 value={password}
-                onChange={handlePasswordChange}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder=" "
                 className={errors.password ? "error" : ""}
+                disabled={isLoading || isDiscordLoading}
               />
               <label htmlFor="password">Password</label>
               <button
                 type="button"
                 className="password-toggle-btn"
                 onClick={() => setShowPassword(!showPassword)}
+                disabled={isLoading || isDiscordLoading}
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
@@ -165,7 +200,11 @@ export const Login: React.FC<LoginProps> = ({
             {errors.password && <div className="input-error">{errors.password}</div>}
           </div>
 
-          <button type="submit" className="login-btn" disabled={isLoading}>
+          <button
+            type="submit"
+            className="login-btn"
+            disabled={isLoading || isDiscordLoading}
+          >
             {isLoading ? "Loading..." : "Log in"}
           </button>
 
@@ -173,13 +212,24 @@ export const Login: React.FC<LoginProps> = ({
             Don't have an account? <a href="/register">Create an account</a>
           </p>
 
-          <div className="login-divider">Or login with</div>
+          <div className="login-divider">Or continue with</div>
 
-          <div className="login-socials">
-            <button type="button" onClick={() => handleOAuth("discord")} className="login-social discord">
-              <FaDiscord size={24} />
-            </button>
-          </div>
+          {/* Discord OAuth кнопка */}
+          <button
+            type="button"
+            onClick={handleDiscordLogin}
+            className="discord-oauth-btn"
+            disabled={isLoading || isDiscordLoading}
+          >
+            {isDiscordLoading ? (
+              <div className="loading-spinner-small"></div>
+            ) : (
+              <>
+                <FaDiscord size={20} />
+                Continue with Discord
+              </>
+            )}
+          </button>
 
           <p className="login-terms">
             &copy; {new Date().getFullYear()} Sentinel LLC. By logging in, you agree to our{" "}
@@ -188,7 +238,6 @@ export const Login: React.FC<LoginProps> = ({
         </form>
       </div>
 
-      {/* Lock modal */}
       {lockUntil && (
         <LockModal
           message={lockMessage}

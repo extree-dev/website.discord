@@ -249,6 +249,55 @@
   color: var(--primary-color);
 }
 
+/* Добавляем в Login.css */
+
+.discord-oauth-btn {
+  width: 100%;
+  padding: 12px 16px;
+  background: #5865F2;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  margin-bottom: 20px;
+}
+
+.discord-oauth-btn:hover:not(:disabled) {
+  background: #4752c4;
+  transform: translateY(-1px);
+}
+
+.discord-oauth-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loading-spinner-small {
+  width: 20px;
+  height: 20px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.global-error {
+  background: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
 [data-theme="dark"] .floating-label input:focus + label,
 .floating-label input:not(:placeholder-shown) + label {
   top: 0;

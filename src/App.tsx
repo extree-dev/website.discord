@@ -66,6 +66,7 @@ function App() {
               <Route path="/oauth/success" element={<OAuthSuccess />} />
               <Route path="/complete-profile" element={<CompleteProfile />} />
               <Route path="/admin/logs" element={<AdminLogs />} />
+              <Route path="/complete-profile" element={<CompleteProfile />} />
             </Route>
           </Routes>
 

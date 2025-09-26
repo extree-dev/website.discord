@@ -7,7 +7,6 @@ import dotenv from 'dotenv'
 dotenv.config({ path: path.resolve(__dirname, '.env') })
 
 export default defineConfig(({ mode }) => {
-  // Загружаем env переменные для Vite
   const env = loadEnv(mode, process.cwd(), '')
 
   return {
@@ -18,7 +17,14 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      open: '/login'  // Просто строка, без объекта
+      open: '/login',
+      proxy: {
+        '/api': {
+          target: 'http://localhost:4000',
+          changeOrigin: true,
+          secure: false
+        }
+      }
     }
   }
 })

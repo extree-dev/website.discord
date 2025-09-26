@@ -6,6 +6,7 @@ import validator from "validator";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { securityLogger } from "@/utils/securityLogger";
+import { generateToken, verifyToken } from "@/utils/jwt";
 
 
 
@@ -613,196 +614,203 @@ router.get("/oauth/discord", (req, res) => {
 
 // Discord OAuth callback - УЛУЧШЕННАЯ ВЕРСИЯ
 router.get("/oauth/discord/callback", async (req, res) => {
-  const { code, state } = req.query;
-  const clientIP = getClientIP(req);
-  const userAgent = req.get('User-Agent') || 'unknown';
+    const { code, state } = req.query;
+    const clientIP = getClientIP(req);
+    const userAgent = req.get('User-Agent') || 'unknown';
 
-  if (!code || typeof code !== 'string') {
-    securityLogger.logSuspiciousActivity('oauth_missing_code', {
-      ip: clientIP,
-      state: state
-    });
-    return res.redirect(`${process.env.FRONTEND_URL}/login?error=invalid_oauth_request`);
-  }
-
-  const stateData = oauthStates.get(state as string);
-  if (!stateData) {
-    securityLogger.logSuspiciousActivity('oauth_invalid_state', {
-      ip: clientIP,
-      providedState: state
-    });
-    return res.redirect(`${process.env.FRONTEND_URL}/login?error=invalid_state`);
-  }
-
-  if (stateData.ip !== clientIP) {
-    securityLogger.logSuspiciousActivity('oauth_ip_mismatch', {
-      expectedIp: stateData.ip,
-      actualIp: clientIP,
-      state: state
-    });
-  }
-
-  oauthStates.delete(state as string);
-
-  try {
-    // 1) exchange code -> token (ваш существующий код)
-    const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: process.env.DISCORD_CLIENT_ID!,
-        client_secret: process.env.DISCORD_CLIENT_SECRET!,
-        grant_type: 'authorization_code',
-        code: code as string,
-        redirect_uri: process.env.DISCORD_REDIRECT_URI!,
-      }),
-    });
-
-    if (!tokenResponse.ok) {
-      const errorText = await tokenResponse.text();
-      throw new Error(`Discord token API error: ${tokenResponse.status} - ${errorText}`);
+    if (!code || typeof code !== 'string') {
+        securityLogger.logSuspiciousActivity('oauth_missing_code', {
+            ip: clientIP,
+            state: state
+        });
+        return res.redirect(`${process.env.FRONTEND_URL}/login?error=invalid_oauth_request`);
     }
-    const tokenData = await tokenResponse.json();
-    if (!tokenData.access_token) throw new Error('No access token received from Discord');
 
-    // 2) get discord user
-    const userResponse = await fetch('https://discord.com/api/users/@me', {
-      headers: {
-        Authorization: `Bearer ${tokenData.access_token}`,
-        'User-Agent': 'YourApp/1.0 (+https://yourapp.com)'
-      },
-    });
-    if (!userResponse.ok) throw new Error(`Discord user API error: ${userResponse.status}`);
-    const discordUser: DiscordUser = await userResponse.json();
+    const stateData = oauthStates.get(state as string);
+    if (!stateData) {
+        securityLogger.logSuspiciousActivity('oauth_invalid_state', {
+            ip: clientIP,
+            providedState: state
+        });
+        return res.redirect(`${process.env.FRONTEND_URL}/login?error=invalid_state`);
+    }
 
-    if (!discordUser.id || !discordUser.email) throw new Error('Invalid user data from Discord');
+    if (stateData.ip !== clientIP) {
+        securityLogger.logSuspiciousActivity('oauth_ip_mismatch', {
+            expectedIp: stateData.ip,
+            actualIp: clientIP,
+            state: state
+        });
+    }
 
-    // sanitize etc.
-    const email = sanitizeInput(discordUser.email).toLowerCase();
-    const discordId = discordUser.id;
-    const username = sanitizeInput(discordUser.username);
-    const globalName = sanitizeInput(discordUser.global_name || discordUser.username);
-    const displayName = globalName || username;
+    oauthStates.delete(state as string);
 
-    // 3) transaction: ищем/создаём / связываем — но возвращаем только { id, requiresCompletion }
-    const txResult = await prisma.$transaction(async (tx) => {
-      // 3.a. Найти по discordId
-      let foundUser = await tx.user.findFirst({ where: { discordId } });
-
-      if (foundUser) {
-        // узнаем профиль отдельно (если таблица profile существует и связана через userId)
-        const profileRow = await tx.profile.findFirst({ where: { userId: foundUser.id } });
-        const isProfileComplete = Boolean(foundUser.name && foundUser.email && profileRow?.firstName);
-
-        const updatedUser = await tx.user.update({
-          where: { id: foundUser.id },
-          data: {
-            lastLogin: new Date(),
-            loginAttempts: 0,
-            lockedUntil: null
-          }
+    try {
+        // 1) exchange code -> token
+        const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                client_id: process.env.DISCORD_CLIENT_ID!,
+                client_secret: process.env.DISCORD_CLIENT_SECRET!,
+                grant_type: 'authorization_code',
+                code: code as string,
+                redirect_uri: process.env.DISCORD_REDIRECT_URI!,
+            }),
         });
 
-        return { id: updatedUser.id, requiresCompletion: !isProfileComplete };
-      }
-
-      // 3.b. Найти по email (привязать discord)
-      foundUser = await tx.user.findFirst({
-        where: {
-          email,
-          discordId: null
+        if (!tokenResponse.ok) {
+            const errorText = await tokenResponse.text();
+            throw new Error(`Discord token API error: ${tokenResponse.status} - ${errorText}`);
         }
-      });
+        const tokenData = await tokenResponse.json();
+        if (!tokenData.access_token) throw new Error('No access token received from Discord');
 
-      if (foundUser) {
-        const updated = await tx.user.update({
-          where: { id: foundUser.id },
-          data: {
-            discordId,
-            lastLogin: new Date(),
-            loginAttempts: 0,
-            lockedUntil: null
-          }
+        // 2) get discord user
+        const userResponse = await fetch('https://discord.com/api/users/@me', {
+            headers: {
+                Authorization: `Bearer ${tokenData.access_token}`,
+                'User-Agent': 'YourApp/1.0 (+https://yourapp.com)'
+            },
         });
-        // узнаем профиль
-        const profileRow = await tx.profile.findFirst({ where: { userId: updated.id } });
-        const isProfileComplete = Boolean(updated.name && updated.email && profileRow?.firstName);
-        return { id: updated.id, requiresCompletion: !isProfileComplete };
-      }
+        if (!userResponse.ok) throw new Error(`Discord user API error: ${userResponse.status}`);
+        const discordUser: DiscordUser = await userResponse.json();
 
-      // 3.c. Создать нового пользователя + профиль (создаём user, потом profile если relation отсутствует как nested)
-      const randomPassword = generateSecureToken(32);
-      const hashedPassword = await hashPassword(randomPassword);
+        if (!discordUser.id || !discordUser.email) throw new Error('Invalid user data from Discord');
 
-      const baseNickname = username.toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 15);
-      let uniqueNickname = baseNickname;
-      let counter = 1;
-      while (await tx.user.findFirst({ where: { nickname: uniqueNickname } })) {
-        uniqueNickname = `${baseNickname}_${counter}`;
-        counter++;
-        if (counter > 100) {
-          uniqueNickname = `discord_${discordId.substring(0, 8)}`;
-          break;
-        }
-      }
+        // sanitize etc.
+        const email = sanitizeInput(discordUser.email).toLowerCase();
+        const discordId = discordUser.id;
+        const username = sanitizeInput(discordUser.username);
+        const globalName = sanitizeInput(discordUser.global_name || discordUser.username);
+        const displayName = globalName || username;
 
-      const createdUser = await tx.user.create({
-        data: {
-          name: displayName,
-          nickname: uniqueNickname,
-          email,
-          discordId,
-          password: hashedPassword,
-          emailVerified: discordUser.verified || false,
-          lastLogin: new Date(),
-          loginAttempts: 0,
-          isActive: true
-        }
-      });
+        // 3) transaction: ищем/создаём пользователя
+        const txResult = await prisma.$transaction(async (tx) => {
+            // 3.a. Найти по discordId
+            let foundUser = await tx.user.findFirst({ where: { discordId } });
 
-      // создаём профиль отдельно (если у вас таблица profile и у неё поле userId)
-      await tx.profile.create({
-        data: {
-          userId: createdUser.id,
-          firstName: '',
-          lastName: '',
-          dateOfBirth: null,
-          avatar: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordId}/${discordUser.avatar}.png` : null
-        }
-      });
+            if (foundUser) {
+                const profileRow = await tx.profile.findFirst({ where: { userId: foundUser.id } });
+                const isProfileComplete = Boolean(foundUser.name && foundUser.email && profileRow?.firstName);
 
-      return { id: createdUser.id, requiresCompletion: true };
-    });
+                const updatedUser = await tx.user.update({
+                    where: { id: foundUser.id },
+                    data: {
+                        lastLogin: new Date(),
+                        loginAttempts: 0,
+                        lockedUntil: null
+                    }
+                });
 
-    // 4) Создать сессию
-    const sessionToken = generateSecureToken(64);
-    const sessionExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+                return { 
+                    id: updatedUser.id, 
+                    requiresCompletion: !isProfileComplete,
+                    email: updatedUser.email,
+                    name: updatedUser.name
+                };
+            }
 
-    await prisma.session.create({
-      data: {
-        userId: txResult.id,
-        token: await hashPassword(sessionToken),
-        expiresAt: sessionExpiry,
-        ipAddress: clientIP,
-        userAgent: userAgent.substring(0, 500),
-        loginMethod: 'discord'
-      }
-    });
+            // 3.b. Найти по email (привязать discord)
+            foundUser = await tx.user.findFirst({
+                where: {
+                    email,
+                    discordId: null
+                }
+            });
 
-    // 5) Редирект
-    let redirectPath = txResult.requiresCompletion ? '/complete-profile' : '/dashboard';
-    const redirectUrl = new URL(`${process.env.FRONTEND_URL}${redirectPath}`);
-    redirectUrl.searchParams.set('token', sessionToken);
-    redirectUrl.searchParams.set('userId', txResult.id.toString());
-    redirectUrl.searchParams.set('method', 'discord');
-    redirectUrl.searchParams.set('requiresCompletion', txResult.requiresCompletion.toString());
+            if (foundUser) {
+                const updated = await tx.user.update({
+                    where: { id: foundUser.id },
+                    data: {
+                        discordId,
+                        lastLogin: new Date(),
+                        loginAttempts: 0,
+                        lockedUntil: null
+                    }
+                });
+                const profileRow = await tx.profile.findFirst({ where: { userId: updated.id } });
+                const isProfileComplete = Boolean(updated.name && updated.email && profileRow?.firstName);
+                return { 
+                    id: updated.id, 
+                    requiresCompletion: !isProfileComplete,
+                    email: updated.email,
+                    name: updated.name
+                };
+            }
 
-    return res.redirect(redirectUrl.toString());
-  } catch (err) {
-    // логируем и редиректим с ошибкой
-    securityLogger.logError('oauth_discord_callback_error', { error: (err as Error).message, ip: clientIP });
-    return res.redirect(`${process.env.FRONTEND_URL}/login?error=oauth_failed`);
-  }
+            // 3.c. Создать нового пользователя
+            const randomPassword = generateSecureToken(32);
+            const hashedPassword = await hashPassword(randomPassword);
+
+            const baseNickname = username.toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 15);
+            let uniqueNickname = baseNickname;
+            let counter = 1;
+            while (await tx.user.findFirst({ where: { nickname: uniqueNickname } })) {
+                uniqueNickname = `${baseNickname}_${counter}`;
+                counter++;
+                if (counter > 100) {
+                    uniqueNickname = `discord_${discordId.substring(0, 8)}`;
+                    break;
+                }
+            }
+
+            const createdUser = await tx.user.create({
+                data: {
+                    name: displayName,
+                    nickname: uniqueNickname,
+                    email,
+                    discordId,
+                    password: hashedPassword,
+                    emailVerified: discordUser.verified || false,
+                    lastLogin: new Date(),
+                    loginAttempts: 0,
+                    isActive: true
+                }
+            });
+
+            await tx.profile.create({
+                data: {
+                    userId: createdUser.id,
+                    firstName: '',
+                    lastName: '',
+                    dateOfBirth: null,
+                    avatar: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordId}/${discordUser.avatar}.png` : null
+                }
+            });
+
+            return { 
+                id: createdUser.id, 
+                requiresCompletion: true,
+                email: createdUser.email,
+                name: createdUser.name
+            };
+        });
+
+        // 4) ГЕНЕРИРУЕМ JWT ТОКЕН вместо session token
+        const jwtToken = generateToken({
+            userId: txResult.id,
+            email: txResult.email,
+            name: txResult.name
+        });
+
+        // 5) Редирект с JWT токеном
+        let redirectPath = txResult.requiresCompletion ? '/complete-profile' : '/dashboard';
+        const redirectUrl = new URL(`${process.env.FRONTEND_URL}${redirectPath}`);
+        redirectUrl.searchParams.set('token', jwtToken); // Используем JWT
+        redirectUrl.searchParams.set('userId', txResult.id.toString());
+        redirectUrl.searchParams.set('method', 'discord');
+        redirectUrl.searchParams.set('requiresCompletion', txResult.requiresCompletion.toString());
+
+        return res.redirect(redirectUrl.toString());
+
+    } catch (err) {
+        securityLogger.logError('oauth_discord_callback_error', { 
+            error: (err as Error).message, 
+            ip: clientIP 
+        });
+        return res.redirect(`${process.env.FRONTEND_URL}/login?error=oauth_failed`);
+    }
 });
 
 // ==================== ПРОВЕРКА СТАТУСА DISCORD АУТЕНТИФИКАЦИИ ====================
@@ -831,45 +839,41 @@ router.get("/oauth/discord/status", async (req, res) => {
 });
 
 router.get("/users/:userId/basic", async (req, res) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  const userId = parseInt(req.params.userId);
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    const userId = parseInt(req.params.userId);
 
-  if (!token) {
-    return res.status(401).json({ error: "Authentication required" });
-  }
-
-  try {
-    const tokenHash = await hashPassword(token);
-    const session = await prisma.session.findFirst({
-      where: {
-        token: tokenHash,
-        expiresAt: { gt: new Date() }
-      }
-    });
-
-    if (!session || session.userId !== userId) {
-      return res.status(401).json({ error: "Unauthorized" });
+    if (!token) {
+        return res.status(401).json({ error: "Authentication required" });
     }
 
-    const user = await prisma.user.findFirst({
-      where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        nickname: true
-      }
-    });
+    try {
+        // Верифицируем JWT токен вместо проверки сессии
+        const decoded = verifyToken(token);
+        
+        // Проверяем, что userId в токене совпадает с запрошенным
+        if (decoded.userId !== userId) {
+            return res.status(403).json({ error: "Access denied" });
+        }
 
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+        const user = await prisma.user.findFirst({
+            where: { id: userId },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                nickname: true
+            }
+        });
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        res.json(user);
+    } catch (error) {
+        console.error('User info fetch error:', error);
+        res.status(401).json({ error: "Invalid or expired token" });
     }
-
-    res.json(user);
-  } catch (error) {
-    console.error('User info fetch error:', error);
-    res.status(500).json({ error: "Failed to fetch user info" });
-  }
 });
 
 // ==================== ОТВЯЗКА DISCORD АККАУНТА ====================

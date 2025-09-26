@@ -13,6 +13,16 @@ interface ProfileData {
     agreeTerms: boolean;
 }
 
+interface ProfileErrors {
+    firstName?: string;
+    lastName?: string;
+    dateOfBirth?: string;
+    phone?: string;
+    country?: string;
+    city?: string;
+    agreeTerms?: string;
+}
+
 
 export const CompleteProfile: React.FC = () => {
     const [profileData, setProfileData] = useState<ProfileData>({
@@ -24,7 +34,7 @@ export const CompleteProfile: React.FC = () => {
         city: '',
         agreeTerms: false
     });
-    const [errors, setErrors] = useState<Partial<ProfileData>>({});
+    const [errors, setErrors] = useState<ProfileErrors>({}); // Используем правильный тип
     const [isLoading, setIsLoading] = useState(false);
     const [userInfo, setUserInfo] = useState<{ email: string; name: string } | null>(null);
 
@@ -32,43 +42,83 @@ export const CompleteProfile: React.FC = () => {
     const [searchParams] = useSearchParams();
 
     useEffect(() => {
-        // Проверяем аутентификацию
-        const token = localStorage.getItem('authToken');
-        const userId = localStorage.getItem('userId');
+        // Получаем параметры из URL
+        const token = searchParams.get('token');
+        const userId = searchParams.get('userId');
+
+        console.log('URL Params:', { token, userId }); // Для отладки
 
         if (!token || !userId) {
-            navigate('/login');
-            return;
+            // Если нет параметров, проверяем localStorage
+            const storedToken = localStorage.getItem('authToken');
+            const storedUserId = localStorage.getItem('userId');
+            
+            if (!storedToken || !storedUserId) {
+                navigate('/login');
+                return;
+            }
+            
+            // Используем сохраненные данные
+            fetchUserInfo(storedUserId, storedToken);
+        } else {
+            // Сохраняем параметры из URL в localStorage
+            localStorage.setItem('authToken', token);
+            localStorage.setItem('userId', userId);
+            
+            fetchUserInfo(userId, token);
         }
+    }, [searchParams, navigate]);
 
-        // Получаем базовую информацию пользователя
-        fetchUserInfo();
-    }, []);
-
-    const fetchUserInfo = async () => {
+    const fetchUserInfo = async (userId: string, token: string) => {
         try {
-            const userId = localStorage.getItem('userId');
+            console.log('Fetching user info for:', userId); // Для отладки
+            
             const response = await fetch(`http://localhost:4000/api/users/${userId}/basic`, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
                 }
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                setUserInfo(data);
-                // Заполняем имя из Discord, если есть
-                if (data.name) {
-                    const names = data.name.split(' ');
-                    setProfileData(prev => ({
-                        ...prev,
-                        firstName: names[0] || '',
-                        lastName: names.slice(1).join(' ') || ''
-                    }));
-                }
+            console.log('Response status:', response.status); // Для отладки
+
+            if (response.status === 401) {
+                // Токен недействителен
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('userId');
+                navigate('/login');
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('User data:', data); // Для отладки
+            
+            setUserInfo(data);
+            
+            // Заполняем имя из Discord, если есть
+            if (data.name) {
+                const names = data.name.split(' ');
+                setProfileData(prev => ({
+                    ...prev,
+                    firstName: names[0] || '',
+                    lastName: names.slice(1).join(' ') || ''
+                }));
+            }
+            
+            // Если есть email из Discord, используем его
+            if (data.email) {
+                setUserInfo(prev => prev ? { ...prev, email: data.email } : { email: data.email, name: '' });
             }
         } catch (error) {
             console.error('Error fetching user info:', error);
+            // Если ошибка, перенаправляем на логин
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userId');
+            navigate('/login');
         }
     };
     

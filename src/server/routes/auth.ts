@@ -5,7 +5,7 @@ import crypto from "crypto";
 import validator from "validator";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
-import { securityLogger } from "@/utils/securityLogger";
+import { securityLogger } from "../../utils/securityLogger";
 import { generateToken, verifyToken } from "@/utils/jwt";
 
 

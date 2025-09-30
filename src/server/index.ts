@@ -2,12 +2,12 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
-import router from "./routes/auth";
-import adminRoutes from "./routes/admin";
+import router from "./routes/auth.js";
+import adminRoutes from "./routes/admin.js";
 import 'module-alias/register';
 import { addAlias } from "module-alias";
-import { setupModerationRoutes } from './api/moderation'
-import { setupUserRoutes } from "./api/users";
+import { setupModerationRoutes } from './api/moderation.js'
+import { setupUserRoutes } from "./api/users.js";
 
 addAlias('@', __dirname);
 

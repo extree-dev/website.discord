@@ -17,5 +17,5 @@ if (process.env.NODE_ENV === 'production') {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
-  </React.StrictMode>
+  </React.StrictMode> // Реализация данных
 )

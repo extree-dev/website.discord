@@ -74,17 +74,8 @@ export const Login: React.FC<LoginProps> = ({
         throw new Error(data.error || "Failed to initiate Discord login");
       }
 
-      // Открываем окно OAuth
-      const width = 600;
-      const height = 700;
-      const left = (window.screen.width - width) / 2;
-      const top = (window.screen.height - height) / 2;
-
-      window.open(
-        data.authUrl,
-        "Discord Auth",
-        `width=${width},height=${height},left=${left},top=${top}`
-      );
+      // ЗАМЕНЯЕМ window.open на window.location.href для редиректа в ЭТОЙ ЖЕ ВКЛАДКЕ
+      window.location.href = data.authUrl;
 
     } catch (error) {
       console.error('Discord OAuth error:', error);
@@ -93,6 +84,7 @@ export const Login: React.FC<LoginProps> = ({
       setIsDiscordLoading(false);
     }
   };
+
   // Обычный логин (остается без изменений)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

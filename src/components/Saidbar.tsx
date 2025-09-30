@@ -12,7 +12,7 @@ import {
     Circle,
     LayoutDashboard,
 } from "lucide-react";
-import ThemeToggle from "./ThemeToggle";
+import ThemeToggle from "./ThemeToggle.js";
 import "../components/CSS/saidbar.css";
 
 /**

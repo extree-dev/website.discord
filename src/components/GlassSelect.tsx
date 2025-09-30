@@ -8,7 +8,7 @@ interface GlassSelectProps {
   value: string;
   onChange: (value: string) => void;
   options: Option[];
-  onOpenChange?: (open: boolean) => void; // ✅ новый проп
+  onOpenChange?: (open: boolean) => void;
 }
 
 export default function GlassSelect({ value, onChange, options, onOpenChange }: GlassSelectProps) {
@@ -20,13 +20,14 @@ export default function GlassSelect({ value, onChange, options, onOpenChange }: 
 
   const selectedLabel = options.find(o => o.value === value)?.label || "Select...";
 
+  // Уведомляем родителя об открытии/закрытии через useEffect
+  useEffect(() => {
+    onOpenChange?.(open);
+  }, [open, onOpenChange]);
+
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setOpen(o => {
-      const newState = !o;
-      onOpenChange?.(newState); // ✅ сообщаем родителю
-      return newState;
-    });
+    setOpen(prev => !prev);
   };
 
   useEffect(() => {
@@ -34,12 +35,11 @@ export default function GlassSelect({ value, onChange, options, onOpenChange }: 
       const t = e.target as Node;
       if (triggerRef.current?.contains(t)) return;
       if (listRef.current?.contains(t)) return;
-      if (open) onOpenChange?.(false); // ✅ при клике вне — сообщаем
-      setOpen(false);
+      if (open) setOpen(false);
     }
     document.addEventListener("mousedown", onDocDown);
     return () => document.removeEventListener("mousedown", onDocDown);
-  }, [open, onOpenChange]);
+  }, [open]);
 
   useEffect(() => {
     const updatePos = () => {
@@ -84,6 +84,10 @@ export default function GlassSelect({ value, onChange, options, onOpenChange }: 
         width: coords?.width ?? "auto",
         zIndex: 100000,
         pointerEvents: "auto",
+        maxHeight: "250px",       // ← ограничиваем высоту
+        overflowY: "auto",        // ← вертикальный скролл
+        boxShadow: "0 4px 12px rgba(0,0,0,0.15)", // для красоты
+        borderRadius: "8px",
       }}
       onClick={e => e.stopPropagation()}
     >
@@ -94,8 +98,7 @@ export default function GlassSelect({ value, onChange, options, onOpenChange }: 
           onClick={(e) => {
             e.stopPropagation();
             onChange(opt.value);
-            setOpen(false);
-            onOpenChange?.(false); // ✅ при выборе — закрываем
+            setOpen(false); // уведомление родителя произойдет через useEffect
           }}
         >
           {opt.label}

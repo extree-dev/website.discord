@@ -600,7 +600,6 @@ router.get("/oauth/discord", (req, res) => {
     response_type: 'code',
     scope: 'identify email',
     state: state,
-    prompt: 'none'
   });
 
   const authUrl = `https://discord.com/api/oauth2/authorize?${discordParams.toString()}`;

@@ -8,7 +8,8 @@ import './assets/fonts/fonts.css'
 if (process.env.NODE_ENV === 'production') {
   const observer = new PerformanceObserver((list) => {
     list.getEntries().forEach((entry) => {
-      console.log(`${entry.name}: ${entry.value}`)
+      const value = (entry as any).value !== undefined ? (entry as any).value : entry.duration;
+      console.log(`${entry.name}: ${value}`)
     })
   })
   observer.observe({ entryTypes: ['largest-contentful-paint', 'first-input', 'layout-shift'] })

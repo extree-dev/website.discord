@@ -8,8 +8,6 @@ import helmet from "helmet";
 import { securityLogger } from "../../utils/securityLogger";
 import { generateToken, verifyToken } from "@/utils/jwt";
 
-
-
 if (!process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_REDIRECT_URI) {
   console.error('Missing Discord OAuth environment variables');
   console.log('DISCORD_CLIENT_ID:', process.env.DISCORD_CLIENT_ID);
@@ -123,6 +121,36 @@ interface UserAuth {
   isActive: boolean;
 }
 
+interface UserWithProfile {
+  id: number;
+  name: string;
+  nickname: string;
+  email: string;
+  password: string | null;
+  discordId: string | null;
+  emailVerified: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  lastLogin: Date | null;
+  loginAttempts: number;
+  lockedUntil: Date | null;
+  isActive: boolean;
+  profile: {
+    id: number;
+    userId: number;
+    firstName: string | null;
+    lastName: string | null;
+    avatar: string | null;
+    discordRole: string | null;
+    profileCompleted: boolean;
+    sessionId: string | null;
+    country: string | null;
+    city: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  } | null;
+}
+
 // ==================== КОНФИГУРАЦИЯ БЕЗОПАСНОСТИ ====================
 
 // Конфигурация Argon2
@@ -195,6 +223,11 @@ const validatePassword = (password: string): { valid: boolean; error?: string } 
     return { valid: false, error: "Password must contain uppercase, lowercase, number and symbol" };
   }
   return { valid: true };
+};
+
+const getDiscordCreationDate = (discordId: string): string => {
+  const timestamp = (parseInt(discordId) / 4194304) + 1420070400000;
+  return new Date(timestamp).toISOString();
 };
 
 // Хеширование с перцем
@@ -565,6 +598,100 @@ interface DiscordUser {
   verified: boolean;
 }
 
+interface DiscordRole {
+  id: string;
+  name: string;
+  color: number;
+  position: number;
+}
+
+const DISCORD_SERVER_ID = '1343586237868544052';
+
+// Обновленная функция для получения ролей с цветами
+const getUserDiscordRolesWithColors = async (accessToken: string, discordId: string): Promise<DiscordRole[]> => {
+  try {
+    // Получаем информацию о участнике сервера
+    const response = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_SERVER_ID}/members/${discordId}`, {
+      headers: {
+        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        console.log(`User ${discordId} not found on server ${DISCORD_SERVER_ID}`);
+        return []; // Пользователь не на сервере
+      }
+      throw new Error(`Discord API error: ${response.status}`);
+    }
+
+    const memberData = await response.json();
+    const roleIds = memberData.roles || [];
+
+    // Если нет ролей, возвращаем пустой массив
+    if (roleIds.length === 0) {
+      return [];
+    }
+
+    // Получаем все роли сервера
+    const rolesResponse = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_SERVER_ID}/roles`, {
+      headers: {
+        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!rolesResponse.ok) {
+      throw new Error(`Discord roles API error: ${rolesResponse.status}`);
+    }
+
+    const serverRoles: DiscordRole[] = await rolesResponse.json();
+
+    // Находим роли пользователя с их цветами
+    const userRoles = serverRoles
+      .filter((role: DiscordRole) => roleIds.includes(role.id))
+      .map((role: DiscordRole) => ({
+        id: role.id,
+        name: role.name,
+        color: role.color,
+        position: role.position
+      }));
+
+    console.log(`User ${discordId} roles with colors:`, userRoles);
+    return userRoles;
+
+  } catch (error) {
+    console.error('Error fetching Discord roles:', error);
+    return []; // Fallback - пустой массив
+  }
+};
+
+// Обновленная функция для получения высшей роли с цветом
+const getHighestRoleWithColor = (userRoles: DiscordRole[]): { name: string; color: number } => {
+  if (userRoles.length === 0) {
+    return { name: '@everyone', color: 0 }; // Черный цвет по умолчанию
+  }
+
+  // Сортируем роли по позиции (чем выше позиция, тем выше роль в иерархии)
+  const sortedRoles = userRoles.sort((a, b) => b.position - a.position);
+  const highestRole = sortedRoles[0];
+
+  return {
+    name: highestRole.name,
+    color: highestRole.color
+  };
+};
+
+// Функция для преобразования Discord color в HEX
+const discordColorToHex = (color: number): string => {
+  if (!color || color === 0) return '#99AAB5'; // Discord default gray
+
+  // Discord color - десятичное число, нужно преобразовать в HEX
+  const hex = color.toString(16).padStart(6, '0');
+  return `#${hex}`;
+};
+
 // Генерация состояния для OAuth
 const generateOAuthState = (): string => {
   return crypto.randomBytes(32).toString('hex');
@@ -675,7 +802,37 @@ router.get("/oauth/discord/callback", async (req, res) => {
     if (!userResponse.ok) throw new Error(`Discord user API error: ${userResponse.status}`);
     const discordUser: DiscordUser = await userResponse.json();
 
+    const discordCreatedAt = getDiscordCreationDate(discordUser.id);
+
     if (!discordUser.id || !discordUser.email) throw new Error('Invalid user data from Discord');
+
+    // 3) Получаем роли пользователя с цветами
+    let userRoles: DiscordRole[] = [];
+    let highestRole = '@everyone';
+    let roleColor = 0;
+    let roleHexColor = '#99AAB5';
+
+    try {
+      userRoles = await getUserDiscordRolesWithColors(tokenData.access_token, discordUser.id);
+
+      if (userRoles.length > 0) {
+        const roleData = getHighestRoleWithColor(userRoles);
+        highestRole = roleData.name;
+        roleColor = roleData.color;
+        roleHexColor = discordColorToHex(roleColor);
+
+        console.log('User Discord roles with colors:', {
+          allRoles: userRoles.map(r => ({ name: r.name, color: r.color })),
+          highestRole: highestRole,
+          roleColor: roleColor,
+          roleHexColor: roleHexColor
+        });
+      } else {
+        console.log('User has no special roles, using @everyone');
+      }
+    } catch (roleError) {
+      console.error('Failed to fetch user roles:', roleError);
+    }
 
     // sanitize etc.
     const email = sanitizeInput(discordUser.email).toLowerCase();
@@ -684,14 +841,51 @@ router.get("/oauth/discord/callback", async (req, res) => {
     const globalName = sanitizeInput(discordUser.global_name || discordUser.username);
     const displayName = globalName || username;
 
-    // 3) transaction: ищем/создаём пользователя
+    // Создаем URL аватара
+    const avatarUrl = discordUser.avatar ?
+      `https://cdn.discordapp.com/avatars/${discordId}/${discordUser.avatar}.png` : null;
+
+    console.log('Discord user data:', {
+      discordId,
+      username,
+      email,
+      avatar: discordUser.avatar,
+      avatarUrl,
+      userRoles: userRoles.map(r => r.name),
+      highestRole,
+      roleColor,
+      roleHexColor
+    });
+
+    // 5) transaction: ищем/создаём пользователя
     const txResult = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // 3.a. Найти по discordId
-      let foundUser = await tx.user.findFirst({ where: { discordId } });
+      let foundUser = await tx.user.findFirst({
+        where: { discordId },
+        include: { profile: true }
+      }) as UserWithProfile | null;
 
       if (foundUser) {
-        const profileRow = await tx.profile.findFirst({ where: { userId: foundUser.id } });
-        const isProfileComplete = Boolean(foundUser.name && foundUser.email && profileRow?.firstName);
+        console.log('Found existing user by discordId:', foundUser.id);
+
+        // ОБНОВЛЯЕМ ПРОФИЛЬ с ролью Discord для существующего пользователя
+        await tx.profile.upsert({
+          where: { userId: foundUser.id },
+          create: {
+            userId: foundUser.id,
+            firstName: '',
+            lastName: '',
+            avatar: avatarUrl,
+            discordRole: highestRole,
+            profileCompleted: false
+          },
+          update: {
+            avatar: avatarUrl,
+            discordRole: highestRole
+          }
+        });
+
+        const isProfileComplete = Boolean(foundUser.name && foundUser.email && foundUser.profile?.firstName);
 
         const updatedUser = await tx.user.update({
           where: { id: foundUser.id },
@@ -706,7 +900,13 @@ router.get("/oauth/discord/callback", async (req, res) => {
           id: updatedUser.id,
           requiresCompletion: !isProfileComplete,
           email: updatedUser.email,
-          name: updatedUser.name
+          name: updatedUser.name,
+          discordId: updatedUser.discordId,
+          avatar: avatarUrl,
+          highestRole: highestRole,
+          roleColor: roleColor,
+          roleHexColor: roleHexColor,
+          allRoles: userRoles.map(r => r.name)
         };
       }
 
@@ -715,10 +915,30 @@ router.get("/oauth/discord/callback", async (req, res) => {
         where: {
           email,
           discordId: null
-        }
-      });
+        },
+        include: { profile: true }
+      }) as UserWithProfile | null;
 
       if (foundUser) {
+        console.log('Found existing user by email, linking discord:', foundUser.id);
+
+        // ОБНОВЛЯЕМ ПРОФИЛЬ с ролью Discord для существующего пользователя
+        await tx.profile.upsert({
+          where: { userId: foundUser.id },
+          create: {
+            userId: foundUser.id,
+            firstName: '',
+            lastName: '',
+            avatar: avatarUrl,
+            discordRole: highestRole,
+            profileCompleted: false
+          },
+          update: {
+            avatar: avatarUrl,
+            discordRole: highestRole
+          }
+        });
+
         const updated = await tx.user.update({
           where: { id: foundUser.id },
           data: {
@@ -728,17 +948,24 @@ router.get("/oauth/discord/callback", async (req, res) => {
             lockedUntil: null
           }
         });
-        const profileRow = await tx.profile.findFirst({ where: { userId: updated.id } });
-        const isProfileComplete = Boolean(updated.name && updated.email && profileRow?.firstName);
+
+        const isProfileComplete = Boolean(updated.name && updated.email && foundUser.profile?.firstName);
         return {
           id: updated.id,
           requiresCompletion: !isProfileComplete,
           email: updated.email,
-          name: updated.name
+          name: updated.name,
+          discordId: updated.discordId,
+          avatar: avatarUrl,
+          highestRole: highestRole,
+          roleColor: roleColor,
+          roleHexColor: roleHexColor,
+          allRoles: userRoles.map(r => r.name)
         };
       }
 
       // 3.c. Создать нового пользователя
+      console.log('Creating new user with discord');
       const randomPassword = generateSecureToken(32);
       const hashedPassword = await hashPassword(randomPassword);
 
@@ -768,35 +995,57 @@ router.get("/oauth/discord/callback", async (req, res) => {
         }
       });
 
+      // Создаем профиль с аватаром и ролью Discord
       await tx.profile.create({
         data: {
           userId: createdUser.id,
           firstName: '',
           lastName: '',
-          dateOfBirth: null,
-          avatar: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordId}/${discordUser.avatar}.png` : null
+          avatar: avatarUrl,
+          discordRole: highestRole,
+          profileCompleted: false
         }
       });
+
+      console.log('Created new user with avatar and role:', { avatarUrl, highestRole, roleHexColor });
 
       return {
         id: createdUser.id,
         requiresCompletion: true,
         email: createdUser.email,
-        name: createdUser.name
+        name: createdUser.name,
+        discordId: createdUser.discordId,
+        avatar: avatarUrl,
+        highestRole: highestRole,
+        roleColor: roleColor,
+        roleHexColor: roleHexColor,
+        allRoles: userRoles.map(r => r.name)
       };
     });
 
-    // 4) ГЕНЕРИРУЕМ JWT ТОКЕН вместо session token
+    console.log('OAuth transaction result:', txResult);
+
+    const savedProfile = await prisma.profile.findFirst({
+      where: { userId: txResult.id },
+      select: { discordRole: true }
+    });
+    console.log('Saved profile discordRole:', savedProfile?.discordRole);
+
+    // 6) ГЕНЕРИРУЕМ JWT ТОКЕН с ролью и цветом
     const jwtToken = generateToken({
       userId: txResult.id,
       email: txResult.email,
-      name: txResult.name
+      name: txResult.name,
+      role: txResult.highestRole,
+      roleColor: txResult.roleColor,
+      roleHexColor: txResult.roleHexColor,
+      allRoles: txResult.allRoles
     });
 
-    // 5) Редирект с JWT токеном
+    // 7) Редирект с JWT токеном
     let redirectPath = txResult.requiresCompletion ? '/complete-profile' : '/dashboard';
     const redirectUrl = new URL(`${process.env.FRONTEND_URL}${redirectPath}`);
-    redirectUrl.searchParams.set('token', jwtToken); // Используем JWT
+    redirectUrl.searchParams.set('token', jwtToken);
     redirectUrl.searchParams.set('userId', txResult.id.toString());
     redirectUrl.searchParams.set('method', 'discord');
     redirectUrl.searchParams.set('requiresCompletion', txResult.requiresCompletion.toString());
@@ -804,6 +1053,7 @@ router.get("/oauth/discord/callback", async (req, res) => {
     return res.redirect(redirectUrl.toString());
 
   } catch (err) {
+    console.error('Discord OAuth callback error:', err);
     securityLogger.logError('oauth_discord_callback_error', {
       error: (err as Error).message,
       ip: clientIP
@@ -837,6 +1087,8 @@ router.get("/oauth/discord/status", async (req, res) => {
   }
 });
 
+// ==================== ОБНОВЛЕННЫЙ ЭНДПОИНТ ДЛЯ ПОЛУЧЕНИЯ ДАННЫХ ПОЛЬЗОВАТЕЛЯ ====================
+
 router.get("/users/:userId/basic", async (req, res) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
   const userId = parseInt(req.params.userId);
@@ -846,10 +1098,8 @@ router.get("/users/:userId/basic", async (req, res) => {
   }
 
   try {
-    // Верифицируем JWT токен вместо проверки сессии
     const decoded = verifyToken(token);
 
-    // Проверяем, что userId в токене совпадает с запрошенным
     if (decoded.userId !== userId) {
       return res.status(403).json({ error: "Access denied" });
     }
@@ -860,7 +1110,15 @@ router.get("/users/:userId/basic", async (req, res) => {
         id: true,
         name: true,
         email: true,
-        nickname: true
+        nickname: true,
+        discordId: true,
+        emailVerified: true,
+        profile: {
+          select: {
+            avatar: true,
+            discordRole: true
+          }
+        }
       }
     });
 
@@ -868,7 +1126,38 @@ router.get("/users/:userId/basic", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    res.json(user);
+    const discordCreatedAt = user.discordId ? getDiscordCreationDate(user.discordId) : null;
+
+    // Получаем роль из токена с цветом
+    const highestRole = user.profile?.discordRole || decoded.role || '@everyone';
+    const roleColor = decoded.roleColor || 0;
+    const roleHexColor = decoded.roleHexColor || '#99AAB5';
+
+    const response = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      nickname: user.nickname,
+      discordId: user.discordId,
+      emailVerified: user.emailVerified,
+      discordCreatedAt: discordCreatedAt,
+      avatar: user.profile?.avatar,
+      highestRole: highestRole,
+      roleColor: roleColor,
+      roleHexColor: roleHexColor
+    };
+
+    console.log('User basic info response:', {
+      userId: user.id,
+      discordRoleFromDB: user.profile?.discordRole,
+      highestRoleInResponse: highestRole,
+      roleFromToken: decoded.role,
+      roleColor: roleColor,
+      roleHexColor: roleHexColor
+    });
+
+    res.json(response);
+
   } catch (error) {
     console.error('User info fetch error:', error);
     res.status(401).json({ error: "Invalid or expired token" });
@@ -943,6 +1232,8 @@ router.post("/logout", async (req, res) => {
   }
 });
 
+// ==================== ЗАВЕРШЕНИЕ ПРОФИЛЯ ====================
+
 router.post("/complete-profile", async (req, res) => {
   const clientIP = getClientIP(req);
   const token = req.headers.authorization?.replace('Bearer ', '');
@@ -952,63 +1243,64 @@ router.post("/complete-profile", async (req, res) => {
   }
 
   try {
-    // Проверяем сессию
-    const tokenHash = await hashPassword(token);
-    const session = await prisma.session.findFirst({
-      where: {
-        token: tokenHash,
-        expiresAt: { gt: new Date() }
-      },
-      include: { user: true }
+    // ВЕРИФИЦИРУЕМ JWT ТОКЕН вместо сессии
+    const decoded = verifyToken(token);
+    const userId = decoded.userId;
+
+    // Находим пользователя
+    const user = await prisma.user.findFirst({
+      where: { id: userId },
+      include: { profile: true }
     });
 
-    if (!session) {
-      return res.status(401).json({ error: "Invalid or expired session" });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
     }
 
-    const { firstName, lastName, dateOfBirth, phone, country, city } = req.body;
+    const { firstName, country, city } = req.body;
 
     // Валидация
-    if (!firstName?.trim() || !lastName?.trim()) {
-      return res.status(400).json({ error: "First name and last name are required" });
+    if (!firstName?.trim()) {
+      return res.status(400).json({ error: "First name is required" });
     }
+
+    const sessionId = 'SESS-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 
     // Обновляем профиль пользователя
     await prisma.user.update({
-      where: { id: session.user.id },
+      where: { id: user.id },
       data: {
-        name: `${firstName.trim()} ${lastName.trim()}`,
+        name: firstName.trim(),
       }
     });
 
-    // Upsert профиля отдельно
+    // Upsert профиля
     await prisma.profile.upsert({
-      where: { userId: session.user.id }, // предполагается уникальный индекс по userId
+      where: { userId: user.id },
       create: {
-        userId: session.user.id,
+        userId: user.id,
         firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
-        phone: phone?.trim() || null,
         country: country?.trim() || null,
         city: city?.trim() || null,
-        profileCompleted: true
+        sessionId: sessionId,
+        profileCompleted: true,
+        discordRole: user.profile?.discordRole || null // Сохраняем существующую роль Discord
       },
       update: {
         firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
-        phone: phone?.trim() || null,
         country: country?.trim() || null,
         city: city?.trim() || null,
+        sessionId: sessionId,
         profileCompleted: true
+        // discordRole не обновляем здесь, чтобы не перезаписать роль из Discord
       }
     });
 
-    securityLogger.logAuthAttempt(session.user.email, true, {
-      userId: session.user.id,
+    securityLogger.logAuthAttempt(user.email, true, {
+      userId: user.id,
       action: 'profile_completed',
-      ip: clientIP
+      ip: clientIP,
+      sessionId: sessionId // Логируем sessionId
     });
 
     res.json({
@@ -1016,8 +1308,14 @@ router.post("/complete-profile", async (req, res) => {
       message: "Profile completed successfully"
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Profile completion error:', error);
+
+    // Если ошибка верификации JWT
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
+
     res.status(500).json({ error: "Failed to complete profile" });
   }
 });

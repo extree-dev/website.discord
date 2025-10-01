@@ -1,15 +1,13 @@
 // CompleteProfile.tsx
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { MdVerified, MdWarning,  } from 'react-icons/md';
 import ThemeToggle from "./ThemeToggle.js";
 import CountrySelect from "./CountrySelect.js";
 import "./CSS/CompleteProfile.css";
 
 interface ProfileData {
     firstName: string;
-    lastName: string;
-    dateOfBirth: string;
-    phone: string;
     country: string;
     city: string;
     agreeTerms: boolean;
@@ -17,20 +15,27 @@ interface ProfileData {
 
 interface ProfileErrors {
     firstName?: string;
-    lastName?: string;
-    dateOfBirth?: string;
-    phone?: string;
     country?: string;
     city?: string;
     agreeTerms?: string;
 }
 
+// ОБНОВЛЕННЫЙ интерфейс userInfo с цветами
+interface UserInfo {
+    email: string;
+    name: string;
+    avatar?: string;
+    discordId?: string;
+    emailVerified?: boolean;
+    discordCreatedAt?: string;
+    highestRole?: string;
+    roleColor?: number;        // Добавьте это поле
+    roleHexColor?: string;     // Добавьте это поле
+}
+
 export const CompleteProfile: React.FC = () => {
     const [profileData, setProfileData] = useState<ProfileData>({
         firstName: '',
-        lastName: '',
-        dateOfBirth: '',
-        phone: '',
         country: '',
         city: '',
         agreeTerms: false
@@ -38,7 +43,7 @@ export const CompleteProfile: React.FC = () => {
 
     const [errors, setErrors] = useState<ProfileErrors>({});
     const [isLoading, setIsLoading] = useState(false);
-    const [userInfo, setUserInfo] = useState<{ email: string; name: string } | null>(null);
+    const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
     const [isCountryListOpen, setIsCountryListOpen] = useState(false);
 
     const countrySelectRef = useRef<HTMLDivElement>(null);
@@ -47,30 +52,52 @@ export const CompleteProfile: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
 
-    // Максимальная дата рождения (18 лет назад)
-    const today = new Date();
-    const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
-    const maxDateStr = eighteenYearsAgo.toISOString().split('T')[0]; // формат "YYYY-MM-DD"
+    // Функция для получения дефолтного аватара на основе имени
+    const getDefaultAvatar = (name: string) => {
+        const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'];
+        const color = colors[name.length % colors.length];
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${color.slice(1)}&color=fff&size=128&bold=true&rounded=true`;
+    };
 
-    const handleDateChange = (value: string) => {
-        const inputDate = new Date(value);
+    // Функция для форматирования даты
+    const formatDiscordDate = (timestamp?: string) => {
+        if (!timestamp) return 'Unknown';
+        const date = new Date(timestamp);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    };
 
-        if (isNaN(inputDate.getTime())) {
-            // Если ввели невалидное значение, очищаем
-            setProfileData(prev => ({ ...prev, dateOfBirth: '' }));
-            return;
-        }
+    // Функция для получения класса статуса email
+    const getEmailStatusClass = (verified?: boolean) => {
+        return verified ? 'email-verified' : 'email-unverified';
+    };
 
-        if (inputDate > eighteenYearsAgo) {
-            // Если пользователь младше 18, ставим максимально допустимую дату
-            setProfileData(prev => ({ ...prev, dateOfBirth: maxDateStr }));
-        } else {
-            setProfileData(prev => ({ ...prev, dateOfBirth: value }));
-        }
+    // Функция для получения текста статуса email
+    const getEmailStatusText = (verified?: boolean) => {
+        return verified
+            ? <><MdVerified className="email-status-icon verified" /> Email verified</>
+            : <><MdWarning className="email-status-icon unverified" /> Email not verified</>;
+    };
 
-        if (errors.dateOfBirth) {
-            setErrors(prev => ({ ...prev, dateOfBirth: undefined }));
-        }
+    // Функция для определения контрастного цвета текста
+    const getContrastColor = (hexColor: string): string => {
+        const hex = hexColor.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+
+        // Яркость по формуле
+        const brightness = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+
+        return brightness > 128 ? '#000000' : '#FFFFFF';
+    };
+
+    // Генерация ID сессии
+    const generateSessionId = () => {
+        return 'SESS-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
     };
 
     useEffect(() => {
@@ -111,6 +138,8 @@ export const CompleteProfile: React.FC = () => {
 
     const fetchUserInfo = async (userId: string, token: string) => {
         try {
+            console.log('Fetching user info with:', { userId, token: token.substring(0, 20) + '...' });
+
             const response = await fetch(`http://localhost:4000/api/users/${userId}/basic`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -118,27 +147,48 @@ export const CompleteProfile: React.FC = () => {
                 }
             });
 
-            const data = await response.json();
-            console.log('User data:', data);
+            console.log('Response status:', response.status);
 
-            setUserInfo(data);
+            if (response.status === 401) {
+                console.error('Token is invalid or expired');
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('userId');
+                navigate('/login');
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('User data received:', data);
+            console.log('Discord role from API:', data.highestRole);
+            console.log('Role color from API:', data.roleColor);
+            console.log('Role hex color from API:', data.roleHexColor);
+
+            // Генерируем ID сессии
+            const sessionId = generateSessionId();
+
+            // Устанавливаем userInfo с ВСЕМИ данными включая цвета
+            setUserInfo({
+                email: data.email,
+                name: data.name,
+                avatar: data.avatar,
+                discordId: data.discordId,
+                emailVerified: data.emailVerified,
+                discordCreatedAt: data.discordCreatedAt,
+                highestRole: data.highestRole,
+                roleColor: data.roleColor,           // Добавьте это
+                roleHexColor: data.roleHexColor      // Добавьте это
+            });
 
             if (data.name) {
                 const names = data.name.split(' ');
                 setProfileData(prev => ({
                     ...prev,
                     firstName: names[0] || '',
-                    lastName: names.slice(1).join(' ') || ''
                 }));
-            }
-
-            if (data.email) {
-                setUserInfo(prev => prev ? { ...prev, email: data.email } : { email: data.email, name: '' });
-            }
-
-            // <-- Вставляем сюда
-            if (data.phone) {
-                setProfileData(prev => ({ ...prev, phone: data.phone }));
             }
 
         } catch (error) {
@@ -149,25 +199,11 @@ export const CompleteProfile: React.FC = () => {
         }
     };
 
-
     const validateForm = (): boolean => {
         const newErrors: ProfileErrors = {};
 
         if (!profileData.firstName.trim()) newErrors.firstName = "First name is required";
         if (!profileData.agreeTerms) newErrors.agreeTerms = "You must agree to the terms and conditions";
-
-        if (profileData.dateOfBirth) {
-            const dob = new Date(profileData.dateOfBirth);
-            const age = today.getFullYear() - dob.getFullYear();
-            const monthDiff = today.getMonth() - dob.getMonth();
-            const dayDiff = today.getDate() - dob.getDate();
-            const isUnder18 = age < 18 || (age === 18 && (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)));
-            if (isUnder18) newErrors.dateOfBirth = "You must be at least 18 years old";
-        }
-
-        if (profileData.phone && !/^\(\d{3}\) \d{3}-\d{2}-\d{2}$/.test(profileData.phone)) {
-            newErrors.phone = "Please enter a valid phone number: (555) 123-45-67";
-        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -178,44 +214,54 @@ export const CompleteProfile: React.FC = () => {
         if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
     };
 
-    const handlePhoneChange = (value: string) => {
-        const numbers = value.replace(/\D/g, '').slice(0, 11);
-        let formatted = numbers;
-        if (numbers.length > 3 && numbers.length <= 6) formatted = `(${numbers.slice(0, 3)}) ${numbers.slice(3)}`;
-        else if (numbers.length > 6 && numbers.length <= 8) formatted = `(${numbers.slice(0, 3)}) ${numbers.slice(3, 6)}-${numbers.slice(6)}`;
-        else if (numbers.length > 8) formatted = `(${numbers.slice(0, 3)}) ${numbers.slice(3, 6)}-${numbers.slice(6, 8)}-${numbers.slice(8)}`;
-        handleInputChange('phone', formatted);
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validateForm()) return;
 
         setIsLoading(true);
         try {
+            const token = localStorage.getItem('authToken');
+            console.log('Submitting profile with token:', token?.substring(0, 20) + '...');
+            console.log('Profile data:', profileData);
+
+            const dataToSend = {
+                firstName: profileData.firstName,
+                country: profileData.country || null,
+                city: profileData.city || null,
+            };
+
+            console.log('Sending data:', dataToSend);
+
             const response = await fetch("http://localhost:4000/api/complete-profile", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${localStorage.getItem('authToken')}`
+                    "Authorization": `Bearer ${token}`
                 },
-                body: JSON.stringify(profileData)
+                body: JSON.stringify(dataToSend)
             });
+
+            console.log('Complete profile response status:', response.status);
 
             if (response.ok) {
                 navigate('/dashboard', { state: { message: "Profile completed successfully!" } });
+            } else if (response.status === 401) {
+                console.error('Complete profile: Unauthorized');
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
+                setErrors({ firstName: "Session expired. Please login again." });
             } else {
                 const errorData = await response.json();
+                console.error('Complete profile error:', errorData);
                 setErrors({ firstName: errorData.error || "Failed to complete profile" });
             }
-        } catch {
+        } catch (error) {
+            console.error('Network error:', error);
             setErrors({ firstName: "Network error. Please try again." });
         } finally {
             setIsLoading(false);
         }
     };
-
-    const countries = ["United States", "Canada", "Russia"].sort();
 
     if (!userInfo) return (
         <div className="loading-container">
@@ -231,7 +277,31 @@ export const CompleteProfile: React.FC = () => {
                     <div className="login-header-top"><ThemeToggle /></div>
                     <div className="complete-profile-header">
                         <h2 className="complete-profile-title">Complete Your Profile</h2>
-                        <p className="complete-profile-subtitle">Welcome, {userInfo.name}! Please provide some additional information to continue.</p>
+
+                        {/* Аватар пользователя */}
+                        <div className="user-avatar-container">
+                            {userInfo.avatar ? (
+                                <img
+                                    src={userInfo.avatar}
+                                    alt={`${userInfo.name}'s avatar`}
+                                    className="user-avatar"
+                                    onError={(e) => {
+                                        console.log('Avatar failed to load, using default');
+                                        e.currentTarget.src = getDefaultAvatar(userInfo.name);
+                                    }}
+                                />
+                            ) : (
+                                <img
+                                    src={getDefaultAvatar(userInfo.name)}
+                                    alt={`${userInfo.name}'s avatar`}
+                                    className="user-avatar"
+                                />
+                            )}
+                        </div>
+
+                        <p className="complete-profile-subtitle">
+                            Welcome, {userInfo.name}! Please provide some additional information to continue.
+                        </p>
                     </div>
 
                     <form className="complete-profile-form" onSubmit={handleSubmit}>
@@ -250,20 +320,15 @@ export const CompleteProfile: React.FC = () => {
                                 {errors.firstName && <p className="form-error">{errors.firstName}</p>}
                             </div>
                             <div className="form-group">
-                                <label htmlFor="lastName" className="form-label">Last Name</label>
+                                <label htmlFor="discordId" className="form-label">Discord ID</label>
                                 <input
-                                    id="lastName"
+                                    id="discordId"
                                     type="text"
-                                    value={profileData.lastName}
-                                    onChange={e => handleInputChange('lastName', e.target.value)}
-                                    className="form-input"
-                                    placeholder="Name"
-                                    disabled={isCountryListOpen}
+                                    value={userInfo.discordId || ''}
+                                    className="form-input form-input-disabled"
+                                    placeholder="Discord ID"
+                                    disabled
                                 />
-                                {/* Ошибка будет отображаться только если есть реально другая ошибка, но не пустое поле */}
-                                {errors.lastName && errors.lastName !== 'Required' && (
-                                    <p className="form-error">{errors.lastName}</p>
-                                )}
                             </div>
                         </div>
 
@@ -274,9 +339,43 @@ export const CompleteProfile: React.FC = () => {
                                 type="email"
                                 value={userInfo.email}
                                 disabled
-                                className="form-input form-input-disabled"
+                                className={`form-input form-input-disabled ${getEmailStatusClass(userInfo.emailVerified)}`}
                             />
+                            <div className={`email-status ${getEmailStatusClass(userInfo.emailVerified)}`}>
+                                {getEmailStatusText(userInfo.emailVerified)}
+                            </div>
                         </div>
+
+                        <div className="form-grid-2col">
+                            <div className="form-group">
+                                <label htmlFor="discordCreated" className="form-label">Discord Member Since</label>
+                                <input
+                                    id="discordCreated"
+                                    type="text"
+                                    value={formatDiscordDate(userInfo.discordCreatedAt)}
+                                    className="form-input form-input-disabled"
+                                    disabled
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label htmlFor="discordRole" className="form-label">Discord Role</label>
+                                <input
+                                    id="discordRole"
+                                    type="text"
+                                    value={userInfo.highestRole || '@everyone'}
+                                    className="form-input form-input-disabled"
+                                    style={{
+                                        backgroundColor: userInfo.roleHexColor || '#99AAB5',
+                                        color: userInfo.roleHexColor ? getContrastColor(userInfo.roleHexColor) : '#FFFFFF',
+                                        borderColor: userInfo.roleHexColor || '#99AAB5',
+                                        fontWeight: '600',
+                                        textShadow: '0 1px 1px rgba(0, 0, 0, 0.2)'
+                                    }}
+                                    disabled
+                                />
+                            </div>
+                        </div>
+
                         <div className="form-grid-2col">
                             <div className="form-group country-select-group">
                                 <label htmlFor="country" className="form-label">Country</label>

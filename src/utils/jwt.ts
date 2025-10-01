@@ -10,6 +10,10 @@ export interface JWTPayload {
     userId: number; // Изменено на number
     email: string;
     name?: string;
+    role?: string;
+    allRoles?: string[];
+    roleColor?: number;
+    roleHexColor?: string;
 }
 
 export function generateToken(payload: JWTPayload): string {

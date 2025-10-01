@@ -41,12 +41,12 @@ model Profile {
   user            User     @relation("UserProfile", fields: [userId], references: [id], onDelete: Cascade)
   firstName       String?
   lastName        String?
-  dateOfBirth     DateTime?
-  phone           String?
   country         String?
   city            String?
   avatar          String?
   profileCompleted Boolean @default(false)
+  sessionId       String?
+  discordRole     String?
 
   @@map("profiles")
 }

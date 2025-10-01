@@ -37,10 +37,32 @@
 }
 
 [data-theme="light"] .form-hint {
-    color: rgb(17 24 39);
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+    margin-bottom: 0;
 }
 
-form-hint
+.user-avatar-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+.user-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--border-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.user-avatar:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
 
 /* ----------------------------- Контейнер ----------------------------- */
 .complete-profile-container {
@@ -387,4 +409,93 @@ form-hint
 .submit-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.email-verified {
+    border-color: #10b981 !important;
+    background-color: #f0fdf4;
+}
+
+.email-unverified {
+    border-color: #f59e0b !important;
+    background-color: #fffbeb;
+}
+
+.email-status {
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+}
+
+.email-status.email-verified {
+    color: #065f46;
+    background-color: #d1fae5;
+}
+
+.email-status.email-unverified {
+    color: #92400e;
+    background-color: #fef3c7;
+}
+
+.role-admin {
+    border-color: #ef4444 !important;
+    background-color: #fef2f2;
+}
+
+.role-moderator {
+    border-color: #f59e0b !important;
+    background-color: #fffbeb;
+}
+
+.role-vip {
+    border-color: #8b5cf6 !important;
+    background-color: #faf5ff;
+}
+
+.role-premium {
+    border-color: #10b981 !important;
+    background-color: #f0fdf4;
+}
+
+.role-member {
+    border-color: #6b7280 !important;
+    background-color: #f9fafb;
+}
+
+.email-status-icon {
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+.email-status-icon.verified {
+    color: #10b981; /* Зеленый */
+}
+
+.email-status-icon.unverified {
+    color: #f59e0b; /* Оранжевый/желтый */
+}
+
+/* Или используйте существующие классы */
+.email-verified .email-status-icon {
+    color: #10b981;
+}
+
+.email-unverified .email-status-icon {
+    color: #f59e0b;
+}
+
+@media (max-width: 768px) {
+    .user-avatar {
+        width: 70px;
+        height: 70px;
+    }
+}
+
+@media (max-width: 480px) {
+    .user-avatar {
+        width: 60px;
+        height: 60px;
+    }
 }

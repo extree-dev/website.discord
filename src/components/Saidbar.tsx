@@ -11,6 +11,7 @@ import {
     Bell,
     Circle,
     LayoutDashboard,
+    Key,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle.js";
 import "../components/CSS/saidbar.css";
@@ -39,7 +40,8 @@ export type SidebarId =
     | "commands"
     | "bot"
     | "settings"
-    | "notification";
+    | "notification"
+    | "secret-codes";
 
 type MenuItem = {
     id: SidebarId;
@@ -73,6 +75,7 @@ const DEFAULT_MENU: MenuItem[] = [
     { id: "bot", title: "Bot", icon: <Server size={18} /> },
     { id: "settings", title: "Settings", icon: <Settings size={18} /> },
     { id: "notification", title: "Notifications", icon: <Bell size={18} />, badge: "3" },
+    { id: "secret-codes", title: "Secret Codes", icon: <Key size={18} /> },
 ];
 
 
@@ -118,20 +121,22 @@ const Sidebars: React.FC<SidebarProps> = ({
     // on navigate (internal + callback)
     function navigateTo(id: SidebarId) {
         if (externalActive === undefined) {
-          setActive(id);
+            setActive(id);
         }
         onNavigate?.(id);
-      
+
         if (id === "dashboard") {
-          window.location.href = "http://localhost:5173/dashboard/";
+            window.location.href = "http://localhost:5173/dashboard/";
         } else if (id === "settings") {
-          navigate("/dashboard/settings");
+            navigate("/dashboard/settings");
         } else if (id === "notification") {
-          navigate("/dashboard/notification");
+            navigate("/dashboard/notification");
+        } else if (id === "secret-codes") {
+            navigate("/dashboard/secret-codes");
         } else {
-          navigate(`/dashboard/${id}`);
+            navigate(`/dashboard/${id}`);
         }
-      }
+    }
 
     // keyboard handling
     useEffect(() => {

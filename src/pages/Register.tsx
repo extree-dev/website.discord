@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ThemeToggle from "@/components/ThemeToggle.js";
 import "../components/CSS/Register.css";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Key } from "lucide-react"; // ← Добавьте Key в импорт
 import { Toast } from "@/components/Toast.js";
 
 declare global {
@@ -17,6 +17,7 @@ export const Register = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [secretCode, setSecretCode] = useState(""); // ← Добавьте это состояние
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState("");
@@ -26,6 +27,7 @@ export const Register = () => {
         email?: string;
         password?: string;
         confirmPassword?: string;
+        secretCode?: string;
     }>({});
     const [isLoading, setIsLoading] = useState(false);
     const [passwordStrength, setPasswordStrength] = useState(0);
@@ -33,14 +35,76 @@ export const Register = () => {
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
     const [recaptchaToken, setRecaptchaToken] = useState("");
     const [isRecaptchaReady, setIsRecaptchaReady] = useState(false);
+    const [isValidatingCode, setIsValidatingCode] = useState(false);
+    const [codeValidation, setCodeValidation] = useState<{
+        isValid: boolean;
+        message: string;
+    } | null>(null);
 
     const navigate = useNavigate();
+
+    // Функция для проверки секретного кода
+    const validateSecretCode = async (code: string): Promise<boolean> => {
+        if (!code.trim()) return false;
+
+        setIsValidatingCode(true);
+        try {
+            const response = await fetch("http://localhost:4000/api/validate-secret-code", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ code: code.toUpperCase() })
+            });
+
+            const data = await response.json();
+
+            if (data.valid) {
+                setCodeValidation({
+                    isValid: true,
+                    message: "✓ Valid registration code"
+                });
+                return true;
+            } else {
+                setCodeValidation({
+                    isValid: false,
+                    message: data.error || "Invalid code"
+                });
+                return false;
+            }
+        } catch (error) {
+            console.error('Error validating secret code:', error);
+            setCodeValidation({
+                isValid: false,
+                message: "Error validating code"
+            });
+            return false;
+        } finally {
+            setIsValidatingCode(false);
+        }
+    };
+
+    const handleSecretCodeChange = async (value: string) => {
+        const upperValue = value.toUpperCase();
+        setSecretCode(upperValue);
+
+        if (errors.secretCode) {
+            setErrors(prev => ({ ...prev, secretCode: undefined }));
+        }
+
+        // Автоматическая проверка кода при вводе
+        if (upperValue.trim().length >= 4) {
+            await validateSecretCode(upperValue);
+        } else {
+            setCodeValidation(null);
+        }
+    };
 
     // Загрузка reCAPTCHA
     useEffect(() => {
         const loadRecaptcha = () => {
             const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
-            
+
             if (!recaptchaSiteKey) {
                 console.error('ReCAPTCHA site key is not defined');
                 return;
@@ -59,13 +123,13 @@ export const Register = () => {
             script.src = `https://www.google.com/recaptcha/api.js?render=${recaptchaSiteKey}`;
             script.async = true;
             script.defer = true;
-            
+
             script.onload = () => {
                 console.log('reCAPTCHA loaded');
                 setIsRecaptchaReady(true);
                 executeRecaptcha();
             };
-            
+
             script.onerror = () => {
                 console.error('Failed to load reCAPTCHA script');
                 setIsRecaptchaReady(false);
@@ -105,15 +169,15 @@ export const Register = () => {
 
     // Обновляем reCAPTCHA токен при изменении полей формы
     useEffect(() => {
-        if (isRecaptchaReady && (name || nickname || email || password)) {
+        if (isRecaptchaReady && (name || nickname || email || password || secretCode)) {
             refreshRecaptchaToken();
         }
-    }, [name, nickname, email, password, isRecaptchaReady]);
+    }, [name, nickname, email, password, secretCode, isRecaptchaReady]);
 
     const refreshRecaptchaToken = () => {
         if (window.grecaptcha && isRecaptchaReady) {
             const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
-            
+
             window.grecaptcha.ready(() => {
                 window.grecaptcha.execute(recaptchaSiteKey, {
                     action: 'register'
@@ -144,7 +208,7 @@ export const Register = () => {
         e.preventDefault();
         setError("");
         setErrors({});
-        
+
         // Проверяем готовность reCAPTCHA
         if (!isRecaptchaReady || !recaptchaToken) {
             setError("Security verification is not ready. Please wait...");
@@ -153,10 +217,20 @@ export const Register = () => {
             return;
         }
 
+        // Проверяем секретный код
+        const isCodeValid = await validateSecretCode(secretCode);
+        if (!isCodeValid) {
+            setErrors(prev => ({
+                ...prev,
+                secretCode: "Please provide a valid secret registration code"
+            }));
+            return;
+        }
+
         const newErrors: typeof errors = {};
         let valid = true;
 
-        // Валидация
+        // Валидация (добавляем проверку секретного кода)
         if (!name.trim()) { newErrors.name = "Full name is required"; valid = false; }
         if (!nickname.trim()) { newErrors.nickname = "Nickname is required"; valid = false; }
         else if (!validateNickname(nickname)) { newErrors.nickname = "3-20 chars, letters, numbers, underscores"; valid = false; }
@@ -166,26 +240,29 @@ export const Register = () => {
         else if (password.length < 12) { newErrors.password = "Password must be 12+ chars"; valid = false; }
         if (!confirmPassword) { newErrors.confirmPassword = "Confirm your password"; valid = false; }
         else if (password !== confirmPassword) { newErrors.confirmPassword = "Passwords do not match"; valid = false; }
+        if (!secretCode.trim()) { newErrors.secretCode = "Secret registration code is required"; valid = false; }
+        else if (codeValidation && !codeValidation.isValid) { newErrors.secretCode = codeValidation.message; valid = false; }
 
         setErrors(newErrors);
         if (!valid) return;
 
         setIsLoading(true);
-        
+
         try {
-            // Формируем объект для отправки с reCAPTCHA токеном
+            // Формируем объект для отправки с reCAPTCHA токеном и секретным кодом
             const payload = {
                 name: name.trim(),
                 nickname: nickname.trim(),
                 email: email.trim().toLowerCase(),
                 password,
-                confirmPassword: password, // Отправляем password дважды для бэкенда
-                recaptchaToken
+                confirmPassword: password,
+                recaptchaToken,
+                secretCode: secretCode.toUpperCase() // ← добавляем код
             };
 
             const res = await fetch("http://localhost:4000/api/register", {
                 method: "POST",
-                headers: { 
+                headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify(payload)
@@ -206,7 +283,9 @@ export const Register = () => {
             setEmail("");
             setPassword("");
             setConfirmPassword("");
+            setSecretCode("");
             setRecaptchaToken("");
+            setCodeValidation(null);
 
             // Переход на логин через 2 секунды
             setTimeout(() => {
@@ -217,7 +296,7 @@ export const Register = () => {
             const errorMessage = err instanceof Error ? err.message : "Registration failed";
             setError(errorMessage);
             setToast({ message: errorMessage, type: "error" });
-            
+
             // Обновляем reCAPTCHA токен после ошибки
             refreshRecaptchaToken();
         } finally {
@@ -236,10 +315,44 @@ export const Register = () => {
                     <h1>Create your account</h1>
                     <p>Get started with our platform</p>
                 </div>
-                
+
                 {error && <div className="register-error">{error}</div>}
-                
+
                 <form className="register-form" onSubmit={handleSubmit} noValidate>
+                    {/* Секретный код - добавляем первым полем */}
+                    <div className="register-input-group">
+                        <div className="floating-label-container">
+                            <div className="floating-label secret-code-group">
+                                <input
+                                    id="secretCode"
+                                    type="text"
+                                    value={secretCode}
+                                    onChange={(e) => handleSecretCodeChange(e.target.value)}
+                                    placeholder=" "
+                                    required
+                                    className={errors.secretCode ? "error" : codeValidation?.isValid ? "success" : ""}
+                                    disabled={isLoading}
+                                    style={{ textTransform: 'uppercase' }}
+                                />
+                                <label htmlFor="secretCode">
+                                    <Key size={16} className="inline-icon" />
+                                    Secret Registration Code
+                                </label>
+                            </div>
+                        </div>
+                        {isValidatingCode && (
+                            <div className="code-validation-loading">Validating code...</div>
+                        )}
+                        {codeValidation && !isValidatingCode && (
+                            <div className={`code-validation-message ${codeValidation.isValid ? 'valid' : 'invalid'}`}>
+                                {codeValidation.message}
+                            </div>
+                        )}
+                        {errors.secretCode && !isValidatingCode && (
+                            <div className="input-error">{errors.secretCode}</div>
+                        )}
+                    </div>
+
                     {/* Name */}
                     <div className="register-input-group">
                         <div className="floating-label-container">
@@ -378,9 +491,9 @@ export const Register = () => {
                         <div className="g-recaptcha" data-sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} data-size="invisible"></div>
                     </div>
 
-                    <button 
-                        type="submit" 
-                        className="register-btn" 
+                    <button
+                        type="submit"
+                        className="register-btn"
                         disabled={isLoading || !isRecaptchaReady}
                     >
                         {isLoading ? (
@@ -400,7 +513,7 @@ export const Register = () => {
                     </div>
                 )}
             </div>
-            
+
             {toast && (
                 <Toast
                     message={toast.message}

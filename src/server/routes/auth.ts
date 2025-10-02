@@ -7,6 +7,7 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { securityLogger } from "../../utils/securityLogger";
 import { generateToken, verifyToken } from "@/utils/jwt";
+import { secretCodeService } from "@/utils/secretCodes";
 
 if (!process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_REDIRECT_URI) {
   console.error('Missing Discord OAuth environment variables');
@@ -85,6 +86,16 @@ const checkObjectForSQLInjection = (obj: any, ip: string, path: string = ''): st
 
   for (const [key, value] of Object.entries(obj)) {
     const currentPath = path ? `${path}.${key}` : key;
+
+    // ИСКЛЮЧЕНИЯ для полей секретных кодов
+    if ((key === 'code' || key === 'secretCode') && typeof value === 'string') {
+      // Разрешаем только буквы, цифры, дефисы и подчеркивания в верхнем регистре
+      const codeRegex = /^[A-Z0-9\-_]+$/;
+      if (!codeRegex.test(value)) {
+        suspiciousFields.push(currentPath);
+      }
+      continue; // Пропускаем обычную проверку SQL-инъекций для кодов
+    }
 
     if (typeof value === 'string') {
       if (detectSQLInjection(value)) {
@@ -1257,11 +1268,35 @@ router.post("/complete-profile", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const { firstName, country, city } = req.body;
+    const { firstName, country, city, secretCode } = req.body; // ← ДОБАВЬТЕ secretCode
 
     // Валидация
     if (!firstName?.trim()) {
       return res.status(400).json({ error: "First name is required" });
+    }
+
+    // ВАЛИДАЦИЯ СЕКРЕТНОГО КОДА ← ДОБАВЬТЕ ЭТОТ БЛОК
+    if (!secretCode?.trim()) {
+      return res.status(400).json({ error: "Secret registration code is required" });
+    }
+
+    // Проверяем валидность кода
+    const codeValidation = await prisma.secretCode.findFirst({
+      where: {
+        code: secretCode.toUpperCase(),
+        used: false,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } }
+        ],
+        AND: [
+          { uses: { lt: prisma.secretCode.fields.maxUses } }
+        ]
+      }
+    });
+
+    if (!codeValidation) {
+      return res.status(400).json({ error: "Invalid or expired secret code" });
     }
 
     const sessionId = 'SESS-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
@@ -1271,6 +1306,7 @@ router.post("/complete-profile", async (req, res) => {
       where: { id: user.id },
       data: {
         name: firstName.trim(),
+        registrationCodeUsed: secretCode.toUpperCase() // ← Сохраняем использованный код
       }
     });
 
@@ -1284,7 +1320,7 @@ router.post("/complete-profile", async (req, res) => {
         city: city?.trim() || null,
         sessionId: sessionId,
         profileCompleted: true,
-        discordRole: user.profile?.discordRole || null // Сохраняем существующую роль Discord
+        discordRole: user.profile?.discordRole || null
       },
       update: {
         firstName: firstName.trim(),
@@ -1292,15 +1328,47 @@ router.post("/complete-profile", async (req, res) => {
         city: city?.trim() || null,
         sessionId: sessionId,
         profileCompleted: true
-        // discordRole не обновляем здесь, чтобы не перезаписать роль из Discord
       }
     });
+
+    // ОБНОВЛЯЕМ СЕКРЕТНЫЙ КОД КАК ИСПОЛЬЗОВАННЫЙ ← ВСТАВЬТЕ ЭТОТ БЛОК
+    try {
+      const usedCode = await prisma.secretCode.update({
+        where: {
+          code: secretCode.toUpperCase(),
+          used: false // Дополнительная защита от повторного использования
+        },
+        data: {
+          used: true,
+          usedBy: user.email,
+          usedAt: new Date(),
+          uses: { increment: 1 },
+          userId: user.id, // связываем с пользователем, который использовал код
+          // sessionId: session.id // если у вас есть сессия, раскомментируйте
+        }
+      });
+
+      console.log('Secret code marked as used:', {
+        codeId: usedCode.id,
+        usedBy: user.email,
+        userId: user.id
+      });
+    } catch (codeError) {
+      console.error('Error updating secret code:', codeError);
+      // Не прерываем выполнение, но логируем ошибку
+      securityLogger.logError('secret_code_update_error', {
+        userId: user.id,
+        code: secretCode,
+        error: codeError instanceof Error ? codeError.message : 'Unknown error'
+      });
+    }
 
     securityLogger.logAuthAttempt(user.email, true, {
       userId: user.id,
       action: 'profile_completed',
       ip: clientIP,
-      sessionId: sessionId // Логируем sessionId
+      sessionId: sessionId,
+      secretCode: secretCode // Логируем использованный код
     });
 
     res.json({
@@ -1317,6 +1385,223 @@ router.post("/complete-profile", async (req, res) => {
     }
 
     res.status(500).json({ error: "Failed to complete profile" });
+  }
+});
+
+// ==================== СЕКРЕТНЫЕ КОДЫ ====================
+
+router.post("/secret-codes", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const decoded = verifyToken(token);
+    const { code, expiresAt, maxUses } = req.body;
+
+    const secretCode = await prisma.secretCode.create({
+      data: {
+        code: code.toUpperCase(),
+        createdBy: decoded.name || 'System',
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        maxUses: maxUses || 1,
+        userId: decoded.userId // Связываем с пользователем, который создал код
+      },
+      include: {
+        user: {
+          select: {
+            email: true,
+            name: true,
+            discordId: true,
+            createdAt: true
+          }
+        }
+      }
+    });
+
+    res.json(secretCode);
+  } catch (error) {
+    console.error('Error creating secret code:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Получение всех секретных кодов
+router.get("/secret-codes", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    // Проверяем права доступа (только для модераторов/админов)
+    const decoded = verifyToken(token);
+    // Добавьте проверку ролей здесь если нужно
+
+    const includeUser = req.query.include === 'user';
+
+    const codes = await prisma.secretCode.findMany({
+      include: {
+        user: includeUser ? {
+          select: {
+            email: true,
+            name: true,
+            discordId: true,
+            createdAt: true
+          }
+        } : false
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    res.json(codes);
+  } catch (error) {
+    console.error('Error fetching secret codes:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.delete("/secret-codes/:id", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const { id } = req.params;
+
+    await prisma.secretCode.delete({
+      where: { id }
+    });
+
+    res.json({ success: true, message: "Code deleted successfully" });
+  } catch (error) {
+    console.error('Error deleting secret code:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Генерация случайного кода (опционально)
+router.post("/api/secret-codes/generate", async (req, res) => {
+  try {
+    const generateCode = () => {
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      let result = "";
+      for (let i = 0; i < 12; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+        if ((i + 1) % 4 === 0 && i !== 11) result += "-";
+      }
+      return result;
+    };
+
+    const code = generateCode();
+    res.json({ code });
+  } catch (error) {
+    console.error("Error generating code:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/validate-secret-code", async (req, res) => {
+  try {
+    const { code } = req.body;
+
+    if (!code) {
+      return res.status(400).json({
+        valid: false,
+        error: 'Secret code is required'
+      });
+    }
+
+    const secretCode = await prisma.secretCode.findFirst({
+      where: {
+        code: code.toUpperCase(),
+        used: false
+      },
+      include: {
+        user: {
+          select: {
+            email: true,
+            name: true,
+            discordId: true,
+            createdAt: true
+          }
+        }
+      }
+    });
+
+    if (!secretCode) {
+      return res.status(404).json({
+        valid: false,
+        error: 'Invalid secret code'
+      });
+    }
+
+    // Проверяем срок действия
+    if (secretCode.expiresAt && new Date() > secretCode.expiresAt) {
+      return res.status(400).json({
+        valid: false,
+        error: 'Secret code has expired'
+      });
+    }
+
+    // Проверяем максимальное количество использований
+    if (secretCode.uses >= secretCode.maxUses) {
+      return res.status(400).json({
+        valid: false,
+        error: 'Secret code has reached maximum usage limit'
+      });
+    }
+
+    res.json({
+      valid: true,
+      code: {
+        id: secretCode.id,
+        code: secretCode.code,
+        createdBy: secretCode.createdBy,
+        expiresAt: secretCode.expiresAt,
+        maxUses: secretCode.maxUses,
+        uses: secretCode.uses,
+        user: secretCode.user
+      }
+    });
+
+  } catch (error) {
+    console.error('Error validating secret code:', error);
+    res.status(500).json({
+      valid: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// Отметка кода как использованного
+router.post('/api/use-secret-code', async (req, res) => {
+  try {
+    const { codeId, usedBy } = req.body;
+
+    if (!codeId) {
+      return res.status(400).json({ error: 'Code ID is required' });
+    }
+
+    const updatedCode = await prisma.secretCode.update({
+      where: { id: codeId },
+      data: {
+        used: true,
+        usedBy: usedBy || 'Unknown',
+        usedAt: new Date(),
+        uses: { increment: 1 }
+      }
+    });
+
+    res.json({ success: true, code: updatedCode });
+
+  } catch (error) {
+    console.error('Error using secret code:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

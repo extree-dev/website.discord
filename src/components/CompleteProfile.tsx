@@ -1,7 +1,7 @@
 // CompleteProfile.tsx
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { MdVerified, MdWarning,  } from 'react-icons/md';
+import { MdVerified, MdWarning, MdKey } from 'react-icons/md';
 import ThemeToggle from "./ThemeToggle.js";
 import CountrySelect from "./CountrySelect.js";
 import "./CSS/CompleteProfile.css";
@@ -11,6 +11,7 @@ interface ProfileData {
     country: string;
     city: string;
     agreeTerms: boolean;
+    secretCode: string; // ← новое поле
 }
 
 interface ProfileErrors {
@@ -18,6 +19,7 @@ interface ProfileErrors {
     country?: string;
     city?: string;
     agreeTerms?: string;
+    secretCode?: string; // ← новое поле
 }
 
 // ОБНОВЛЕННЫЙ интерфейс userInfo с цветами
@@ -29,8 +31,8 @@ interface UserInfo {
     emailVerified?: boolean;
     discordCreatedAt?: string;
     highestRole?: string;
-    roleColor?: number;        // Добавьте это поле
-    roleHexColor?: string;     // Добавьте это поле
+    roleColor?: number;
+    roleHexColor?: string;
 }
 
 export const CompleteProfile: React.FC = () => {
@@ -38,13 +40,19 @@ export const CompleteProfile: React.FC = () => {
         firstName: '',
         country: '',
         city: '',
-        agreeTerms: false
+        agreeTerms: false,
+        secretCode: ''
     });
 
     const [errors, setErrors] = useState<ProfileErrors>({});
     const [isLoading, setIsLoading] = useState(false);
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
     const [isCountryListOpen, setIsCountryListOpen] = useState(false);
+    const [isValidatingCode, setIsValidatingCode] = useState(false);
+    const [codeValidation, setCodeValidation] = useState<{
+        isValid: boolean;
+        message: string;
+    } | null>(null);
 
     const countrySelectRef = useRef<HTMLDivElement>(null);
     const countryInputRef = useRef<HTMLInputElement>(null);
@@ -204,33 +212,54 @@ export const CompleteProfile: React.FC = () => {
 
         if (!profileData.firstName.trim()) newErrors.firstName = "First name is required";
         if (!profileData.agreeTerms) newErrors.agreeTerms = "You must agree to the terms and conditions";
+        if (!profileData.secretCode.trim()) newErrors.secretCode = "Secret registration code is required";
+        else if (codeValidation && !codeValidation.isValid) newErrors.secretCode = codeValidation.message;
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleInputChange = (field: keyof ProfileData, value: string | boolean) => {
+    const handleInputChange = async (field: keyof ProfileData, value: string | boolean) => {
         setProfileData(prev => ({ ...prev, [field]: value }));
+
         if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
+
+        // Автоматическая проверка кода при вводе
+        if (field === 'secretCode' && typeof value === 'string') {
+            if (value.trim().length >= 4) {
+                await validateSecretCode(value);
+            } else {
+                setCodeValidation(null);
+            }
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Проверяем код перед отправкой
+        const isCodeValid = await validateSecretCode(profileData.secretCode);
+        if (!isCodeValid) {
+            setErrors(prev => ({
+                ...prev,
+                secretCode: "Please provide a valid secret registration code"
+            }));
+            return;
+        }
+
         if (!validateForm()) return;
 
         setIsLoading(true);
         try {
             const token = localStorage.getItem('authToken');
             console.log('Submitting profile with token:', token?.substring(0, 20) + '...');
-            console.log('Profile data:', profileData);
 
             const dataToSend = {
                 firstName: profileData.firstName,
                 country: profileData.country || null,
                 city: profileData.city || null,
+                secretCode: profileData.secretCode.toUpperCase() // ← отправляем код
             };
-
-            console.log('Sending data:', dataToSend);
 
             const response = await fetch("http://localhost:4000/api/complete-profile", {
                 method: "POST",
@@ -241,18 +270,16 @@ export const CompleteProfile: React.FC = () => {
                 body: JSON.stringify(dataToSend)
             });
 
-            console.log('Complete profile response status:', response.status);
-
             if (response.ok) {
+                // Отмечаем код как использованный
+                await markCodeAsUsed(profileData.secretCode, userInfo?.email || 'Unknown');
+
                 navigate('/dashboard', { state: { message: "Profile completed successfully!" } });
             } else if (response.status === 401) {
-                console.error('Complete profile: Unauthorized');
                 const errorText = await response.text();
-                console.error('Error response:', errorText);
                 setErrors({ firstName: "Session expired. Please login again." });
             } else {
                 const errorData = await response.json();
-                console.error('Complete profile error:', errorData);
                 setErrors({ firstName: errorData.error || "Failed to complete profile" });
             }
         } catch (error) {
@@ -260,6 +287,76 @@ export const CompleteProfile: React.FC = () => {
             setErrors({ firstName: "Network error. Please try again." });
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const validateSecretCode = async (code: string): Promise<boolean> => {
+        if (!code.trim()) return false;
+
+        setIsValidatingCode(true);
+        try {
+            const response = await fetch("http://localhost:4000/api/validate-secret-code", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ code: code.toUpperCase() })
+            });
+
+            const data = await response.json();
+
+            if (data.valid) {
+                setCodeValidation({
+                    isValid: true,
+                    message: " Valid registration code"
+                });
+                return true;
+            } else {
+                setCodeValidation({
+                    isValid: false,
+                    message: data.error || "Invalid code"
+                });
+                return false;
+            }
+        } catch (error) {
+            console.error('Error validating secret code:', error);
+            setCodeValidation({
+                isValid: false,
+                message: "Error validating code"
+            });
+            return false;
+        } finally {
+            setIsValidatingCode(false);
+        }
+    };
+
+    const markCodeAsUsed = async (code: string, usedBy: string) => {
+        try {
+            // Сначала получаем ID кода
+            const validationResponse = await fetch("http://localhost:4000/api/validate-secret-code", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ code: code.toUpperCase() })
+            });
+
+            const validationData = await validationResponse.json();
+
+            if (validationData.valid && validationData.code) {
+                await fetch("http://localhost:4000/api/use-secret-code", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        codeId: validationData.code.id,
+                        usedBy: usedBy
+                    })
+                });
+            }
+        } catch (error) {
+            console.error('Error marking code as used:', error);
         }
     };
 
@@ -305,6 +402,55 @@ export const CompleteProfile: React.FC = () => {
                     </div>
 
                     <form className="complete-profile-form" onSubmit={handleSubmit}>
+                        <div className="form-group">
+                            <label htmlFor="secretCode" className="form-label">
+                                <MdKey className="inline-icon" />
+                                Secret Registration Code *
+                            </label>
+                            <input
+                                id="secretCode"
+                                type="text"
+                                value={profileData.secretCode}
+                                onChange={e => handleInputChange('secretCode', e.target.value.toUpperCase())}
+                                className={`form-input ${codeValidation?.isValid ? 'input-valid' :
+                                        codeValidation && !codeValidation.isValid ? 'input-error' : ''
+                                    } ${errors.secretCode ? 'input-error' : ''}`}
+                                placeholder="Enter code provided by administrator (e.g., ABCD-EFGH-IJKL)"
+                                disabled={isLoading || isCountryListOpen}
+                            />
+
+                            {/* Индикатор загрузки валидации */}
+                            {isValidatingCode && (
+                                <div className="validation-loading">
+                                    <div className="loading-spinner-small"></div>
+                                    Validating code...
+                                </div>
+                            )}
+
+                            {/* Сообщение о валидном коде */}
+                            {codeValidation?.isValid && !isValidatingCode && (
+                                <div className="code-validation validation-valid">
+                                    <MdVerified className="validation-icon" />
+                                    {codeValidation.message}
+                                </div>
+                            )}
+
+                            {/* Сообщение о невалидном коде */}
+                            {codeValidation && !codeValidation.isValid && !isValidatingCode && (
+                                <div className="code-validation validation-invalid">
+                                    <MdWarning className="validation-icon" />
+                                    {codeValidation.message}
+                                </div>
+                            )}
+
+                            {/* Общие ошибки формы */}
+                            {errors.secretCode && !isValidatingCode && (
+                                <p className="form-error">
+                                    <MdWarning className="error-icon" />
+                                    {errors.secretCode}
+                                </p>
+                            )}
+                        </div>
                         <div className="form-grid-2col">
                             <div className="form-group">
                                 <label htmlFor="firstName" className="form-label">First Name *</label>
@@ -419,8 +565,6 @@ export const CompleteProfile: React.FC = () => {
                         <button type="submit" disabled={isLoading || isCountryListOpen} className="submit-button">
                             {isLoading ? "Completing Profile..." : "Complete Profile"}
                         </button>
-
-                        <p className="required-hint">* Required fields</p>
                     </form>
                 </div>
             </div>

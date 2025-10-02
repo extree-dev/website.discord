@@ -15,22 +15,25 @@ datasource db {
 
 // ======= MODELS =======
 model User {
-  id            Int       @id @default(autoincrement())
+  id            Int           @id @default(autoincrement())
   name          String
-  nickname      String    @unique
-  email         String    @unique
+  nickname      String        @unique
+  email         String        @unique
   password      String?   
-  discordId     String?   @unique
-  emailVerified Boolean   @default(false)
+  discordId     String?       @unique
+  emailVerified Boolean       @default(false)
   posts         Post[]
   sessions      Session[]
-  profile       Profile?  @relation("UserProfile")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  profile       Profile?      @relation("UserProfile")
+  secretCodes   SecretCode[]  // Добавлено обратное отношение
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   lastLogin     DateTime?
-  loginAttempts Int       @default(0)
+  loginAttempts Int           @default(0)
   lockedUntil   DateTime?
-  isActive      Boolean   @default(true)
+  isActive      Boolean       @default(true)
+  // Новое поле для отслеживания использованного кода регистрации
+  registrationCodeUsed String?
 
   @@map("users")
 }
@@ -47,6 +50,8 @@ model Profile {
   profileCompleted Boolean @default(false)
   sessionId       String?
   discordRole     String?
+  // Новое поле для секретного кода при завершении профиля
+  registrationCode String?
 
   @@map("profiles")
 }
@@ -61,6 +66,7 @@ model Session {
   userAgent String
   loginMethod String @default("password")
   createdAt DateTime @default(now())
+  secretCodes SecretCode[]
 
   @@index([userId])
   @@index([expiresAt])
@@ -91,4 +97,27 @@ model SecurityLog {
   createdAt DateTime @default(now())
 
   @@map("security_logs")
+}
+
+model SecretCode {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  createdBy String
+  createdAt DateTime @default(now())
+  used      Boolean  @default(false)
+  usedBy    String?
+  usedAt    DateTime?
+  expiresAt DateTime?
+  maxUses   Int      @default(1)
+  uses      Int      @default(0)
+  
+  // Добавляем связь с пользователем
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  // Добавляем связь с сессией
+  sessionId Int?
+  session   Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  @@map("secret_codes")
 }

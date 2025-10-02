@@ -5,6 +5,7 @@ import crypto from "crypto";
 import validator from "validator";
 import rateLimit from "express-rate-limit";
 import axios from "axios";
+import { secretCodeService } from "@/utils/secretCodes";
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -39,6 +40,35 @@ const registerLimiter = rateLimit({
 
 // Применяем лимитер к регистрации
 router.use("/register", registerLimiter);
+
+// ==================== СИСТЕМА СЕКРЕТНЫХ КОДОВ ====================
+
+interface SecretCode {
+  id: string;
+  code: string;
+  createdBy: string;
+  createdAt: Date;
+  used: boolean;
+  usedBy?: string;
+  usedAt?: Date;
+  expiresAt?: Date;
+}
+
+// Функция для валидации секретного кода
+const validateSecretCode = async (code: string): Promise<{ valid: boolean; error?: string; codeData?: any }> => {
+  return await secretCodeService.validateCode(code);
+};
+
+// Функция для отметки кода как использованного
+const markCodeAsUsed = async (codeId: string, usedBy: string): Promise<boolean> => {
+  try {
+    await secretCodeService.markCodeAsUsed(codeId, usedBy);
+    return true;
+  } catch (error) {
+    console.error('Error marking code as used:', error);
+    return false;
+  }
+};
 
 // ==================== ЗАЩИТА ОТ SQL-ИНЪЕКЦИЙ ====================
 
@@ -104,6 +134,21 @@ const sanitizeForDatabase = {
         ip: ip
       });
       throw new Error('Nickname contains invalid characters');
+    }
+    
+    return sanitized;
+  },
+
+  secretCode: (input: string, fieldName: string, ip: string): string => {
+    const sanitized = validator.escape(validator.trim(input.toUpperCase()));
+    
+    if (!/^[A-Z0-9\-_]+$/.test(sanitized)) {
+      securityLogger.logSuspiciousActivity('invalid_secret_code_chars', {
+        field: fieldName,
+        input: sanitized,
+        ip: ip
+      });
+      throw new Error('Secret code contains invalid characters');
     }
     
     return sanitized;
@@ -205,6 +250,16 @@ const securityLogger = {
   
   logRegistration: (email: string, success: boolean, metadata: any) => {
     console.info(`[REGISTRATION] ${success ? 'SUCCESS' : 'FAILED'}`, {
+      email: email.substring(0, 3) + '***',
+      success,
+      ...metadata,
+      timestamp: new Date().toISOString()
+    });
+  },
+
+  logSecretCodeUsage: (code: string, email: string, success: boolean, metadata: any) => {
+    console.info(`[SECRET_CODE] ${success ? 'USED' : 'FAILED'}`, {
+      code: code.substring(0, 4) + '***',
       email: email.substring(0, 3) + '***',
       success,
       ...metadata,
@@ -324,7 +379,7 @@ const validateContentType = (req: express.Request, res: express.Response, next: 
 router.use(validateContentType);
 router.use(sqlInjectionProtection);
 
-// ==================== ОБНОВЛЕННАЯ РЕГИСТРАЦИЯ ====================
+// ==================== ОБНОВЛЕННАЯ РЕГИСТРАЦИЯ С СЕКРЕТНЫМИ КОДАМИ ====================
 
 router.post("/register", async (req, res) => {
   const startTime = Date.now();
@@ -332,13 +387,46 @@ router.post("/register", async (req, res) => {
   const userAgent = req.get('User-Agent') || 'unknown';
   
   try {
-    const { name, nickname, email, password, confirmPassword, recaptchaToken } = req.body;
+    const { name, nickname, email, password, confirmPassword, recaptchaToken, secretCode } = req.body;
+
+    // ==================== ПРОВЕРКА СЕКРЕТНОГО КОДА ====================
+    if (!secretCode) {
+      await constantTimeDelay();
+      securityLogger.logRegistration(email || 'unknown', false, {
+        reason: 'missing_secret_code',
+        ip: clientIP
+      });
+      return res.status(400).json({ 
+        error: "Secret registration code is required" 
+      });
+    }
+
+    // Санитизация секретного кода
+    const sanitizedSecretCode = sanitizeForDatabase.secretCode(secretCode, 'secretCode', clientIP);
+
+    // Валидация секретного кода
+    const codeValidation = await validateSecretCode(sanitizedSecretCode);
+    if (!codeValidation.valid) {
+      await constantTimeDelay();
+      securityLogger.logRegistration(email || 'unknown', false, {
+        reason: 'invalid_secret_code',
+        code: sanitizedSecretCode,
+        ip: clientIP,
+        error: codeValidation.error
+      });
+      return res.status(400).json({ 
+        error: codeValidation.error 
+      });
+    }
+
+    // ==================== ОСТАЛЬНЫЕ ПРОВЕРКИ ====================
 
     // Проверка reCAPTCHA
     if (RECAPTCHA_SECRET_KEY && (!recaptchaToken || !await verifyRecaptcha(recaptchaToken, clientIP))) {
       securityLogger.logSuspiciousActivity('recaptcha_failed', {
         ip: clientIP,
-        email: email
+        email: email,
+        secretCode: sanitizedSecretCode
       });
       return res.status(400).json({ error: "Bot verification failed" });
     }
@@ -348,7 +436,8 @@ router.post("/register", async (req, res) => {
       await constantTimeDelay();
       securityLogger.logRegistration(email || 'unknown', false, {
         reason: 'missing_fields',
-        ip: clientIP
+        ip: clientIP,
+        secretCode: sanitizedSecretCode
       });
       return res.status(400).json({ 
         error: "All fields are required and cannot be empty" 
@@ -360,7 +449,8 @@ router.post("/register", async (req, res) => {
       await constantTimeDelay();
       securityLogger.logRegistration(email, false, {
         reason: 'password_mismatch',
-        ip: clientIP
+        ip: clientIP,
+        secretCode: sanitizedSecretCode
       });
       return res.status(400).json({ 
         error: "Passwords do not match" 
@@ -378,7 +468,8 @@ router.post("/register", async (req, res) => {
       securityLogger.logRegistration(sanitizedEmail, false, {
         reason: 'invalid_name',
         name: sanitizedName,
-        ip: clientIP
+        ip: clientIP,
+        secretCode: sanitizedSecretCode
       });
       return res.status(400).json({ 
         error: "Name must be 2-50 characters long and contain only letters and spaces" 
@@ -390,7 +481,8 @@ router.post("/register", async (req, res) => {
       await constantTimeDelay();
       securityLogger.logRegistration(sanitizedEmail, false, {
         reason: 'invalid_email',
-        ip: clientIP
+        ip: clientIP,
+        secretCode: sanitizedSecretCode
       });
       return res.status(400).json({ 
         error: "Please provide a valid email address" 
@@ -403,7 +495,8 @@ router.post("/register", async (req, res) => {
       securityLogger.logRegistration(sanitizedEmail, false, {
         reason: 'invalid_nickname',
         nickname: sanitizedNickname,
-        ip: clientIP
+        ip: clientIP,
+        secretCode: sanitizedSecretCode
       });
       return res.status(400).json({ 
         error: "Nickname must be 3-20 characters long and contain only letters, numbers and underscores. Cannot contain restricted words." 
@@ -416,7 +509,8 @@ router.post("/register", async (req, res) => {
       await constantTimeDelay();
       securityLogger.logRegistration(sanitizedEmail, false, {
         reason: 'weak_password',
-        ip: clientIP
+        ip: clientIP,
+        secretCode: sanitizedSecretCode
       });
       return res.status(400).json({ 
         error: passwordValidation.error 
@@ -442,7 +536,8 @@ router.post("/register", async (req, res) => {
         email: sanitizedEmail,
         nickname: sanitizedNickname,
         ip: clientIP,
-        existingField: field
+        existingField: field,
+        secretCode: sanitizedSecretCode
       });
       
       await constantTimeDelay();
@@ -471,11 +566,27 @@ router.post("/register", async (req, res) => {
       }
     });
 
+    // ==================== ОТМЕТКА КОДА КАК ИСПОЛЬЗОВАННОГО ====================
+    if (codeValidation.codeData) {
+      const codeMarked = await markCodeAsUsed(codeValidation.codeData.id, sanitizedEmail);
+      
+      securityLogger.logSecretCodeUsage(sanitizedSecretCode, sanitizedEmail, codeMarked, {
+        userId: user.id,
+        codeId: codeValidation.codeData.id,
+        ip: clientIP
+      });
+
+      if (!codeMarked) {
+        console.warn(`Failed to mark secret code as used: ${codeValidation.codeData.id}`);
+      }
+    }
+
     // Логирование успешной регистрации
     securityLogger.logRegistration(sanitizedEmail, true, {
       userId: user.id,
       ip: clientIP,
-      userAgent: userAgent.substring(0, 100)
+      userAgent: userAgent.substring(0, 100),
+      secretCode: sanitizedSecretCode
     });
 
     // Постоянное время ответа

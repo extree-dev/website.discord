@@ -26,6 +26,7 @@ import Privacy from "@/pages/Privacy.js";
 import { OAuthSuccess } from "@/pages/OAuthSuccess.js";
 import { CompleteProfile } from "@/components/CompleteProfile.js";
 import AdminLogs from "@/pages/AdminLogs.js";
+import SecretCodesPage from "@/pages/SecretCodesPage.js";
 
 function App() {
   const [lockUntil, setLockUntil] = useState<number | null>(null);
@@ -61,6 +62,7 @@ function App() {
               <Route path="/dashboard/commands" element={<CommandsPage />} />
               <Route path="/dashboard/overview" element={<DashboardOverview />} />
               <Route path="/dashboard/notification" element={<NotificationPage />} />
+              <Route path="/dashboard/secret-codes" element={<SecretCodesPage />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/oauth/success" element={<OAuthSuccess />} />

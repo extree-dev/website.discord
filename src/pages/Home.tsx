@@ -11,7 +11,7 @@ import React, { useEffect, useRef, useCallback } from "react";
 import { FaDiscord } from "react-icons/fa";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import "../components/CSS/Home.css";
+import styles from "../module_pages/Home.module.scss";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -53,8 +53,8 @@ const Panel: React.FC<{
   panelRef?: (el: HTMLDivElement | null) => void;
 }> = ({ className = "", id, children, panelRef }) => {
   return (
-    <section className={`panel ${className}`} id={id} ref={panelRef}>
-      <div className="panel__wrap container">{children}</div>
+    <section className={`${styles.panel} ${className}`} id={id} ref={panelRef}>
+      <div className={`${styles.panel__wrap} ${styles.container}`}>{children}</div>
     </section>
   );
 };
@@ -126,11 +126,11 @@ const Home: React.FC = () => {
         // --- Panels animations ---
         if (isDesktop) {
           panelsRef.current.forEach((panel, index) => {
-            const title = panel.querySelector<HTMLElement>(".panel__title");
-            const subtitle = panel.querySelector<HTMLElement>(".panel__subtitle");
-            const body = panel.querySelector<HTMLElement>(".panel__body");
-            const cta = panel.querySelector<HTMLElement>(".panel__cta");
-            const deco = panel.querySelector<HTMLElement>(".panel__deco");
+            const title = panel.querySelector<HTMLElement>(`.${styles.panel__title}`);
+            const subtitle = panel.querySelector<HTMLElement>(`.${styles.panel__subtitle}`);
+            const body = panel.querySelector<HTMLElement>(`.${styles.panel__body}`);
+            const cta = panel.querySelector<HTMLElement>(`.${styles.panel__cta}`);
+            const deco = panel.querySelector<HTMLElement>(`.${styles.panel__deco}`);
 
             const tl = gsap.timeline({
               scrollTrigger: {
@@ -211,41 +211,41 @@ const Home: React.FC = () => {
      Render
      ---------------------- */
   return (
-    <div className="home-root" ref={rootRef}>
+    <div className={styles.root} ref={rootRef}>
       {/* Progress indicator */}
-      <div className="scroll-progress" aria-hidden>
-        <div className="scroll-progress__bar" ref={progressBarRef}></div>
+      <div className={styles.scrollProgress} aria-hidden>
+        <div className={styles.scrollProgress__bar} ref={progressBarRef}></div>
       </div>
 
       {/* Background layers (images or gradients) */}
-      <div className="bg-layer bg--far" ref={farRef} aria-hidden />
-      <div className="bg-layer bg--mid" ref={midRef} aria-hidden />
-      <div className="bg-layer bg--near" ref={nearRef} aria-hidden />
+      <div className={`${styles.bgLayer} ${styles.bgFar}`} ref={farRef} aria-hidden />
+      <div className={`${styles.bgLayer} ${styles.bgMid}`} ref={midRef} aria-hidden />
+      <div className={`${styles.bgLayer} ${styles.bgNear}`} ref={nearRef} aria-hidden />
 
       {/* =======================
           PANELS: 4 sections (Hero, Auth, Features, CTA)
          ======================= */}
       {/* HERO */}
-      <Panel className="panel--hero" panelRef={addPanelRef} id="hero">
-        <div className="panel__deco deco--hero" aria-hidden />
-        <h1 className="panel__title">
-          Sentinel <span className="panel__title--light">Dashboard</span>
+      <Panel className={styles.panelHero} panelRef={addPanelRef} id="hero">
+        <div className={`${styles.panel__deco} ${styles.decoHero}`} aria-hidden />
+        <h1 className={styles.panel__title}>
+          Sentinel <span className={styles.panel__titleLight}>Dashboard</span>
         </h1>
-        <p className="panel__subtitle">
+        <p className={styles.panel__subtitle}>
           Moderation tools, analytics, and automation for healthy communities.
         </p>
-        <div className="panel__body">
-          <p className="lead">
+        <div className={styles.panel__body}>
+          <p className={styles.lead}>
             A convenient and powerful control panel for moderating Discord communities:
             from automatic filters to detailed audit and integrations.
           </p>
         </div>
-        <div className="panel__cta">
-          <button className="btn btn--primary" onClick={handleDiscordLogin}>
+        <div className={styles.panel__cta}>
+          <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={handleDiscordLogin}>
             <FaDiscord /> Login with Discord
           </button>
           <button
-            className="btn btn--ghost"
+            className={`${styles.btn} ${styles.btnGhost}`}
             onClick={() => window.scrollTo({ top: window.innerHeight, behavior: "smooth" })}
           >
             Learn more
@@ -254,38 +254,38 @@ const Home: React.FC = () => {
       </Panel>
 
       {/* AUTH */}
-      <Panel className="panel--auth" panelRef={addPanelRef} id="auth">
-        <div className="panel__deco deco--card" aria-hidden />
+      <Panel className={styles.panelAuth} panelRef={addPanelRef} id="auth">
+        <div className={`${styles.panel__deco} ${styles.decoCard}`} aria-hidden />
 
-        <div className="panel__header">
-          <h2 className="panel__title">Fast and Secure Authorization</h2>
-          <p className="panel__subtitle">
+        <div className={styles.panel__header}>
+          <h2 className={styles.panel__title}>Fast and Secure Authorization</h2>
+          <p className={styles.panel__subtitle}>
             OAuth2 login via Discord with role and server selection.
           </p>
         </div>
 
-        <div className="panel__body auth-card">
-          <div className="auth-left">
-            <p className="hint">Reliable • Transparent • Safe</p>
-            <ul className="auth-features" aria-hidden>
+        <div className={`${styles.panel__body} ${styles.authCard}`}>
+          <div className={styles.authLeft}>
+            <p className={styles.hint}>Reliable • Transparent • Safe</p>
+            <ul className={styles.authFeatures} aria-hidden>
               <li>One-click login</li>
               <li>Role and server selection</li>
               <li>Automatic settings binding</li>
             </ul>
             <div style={{ marginTop: 14 }}></div>
           </div>
-          <div className="auth-right">
-            <div className="card-preview card">Preview — UI snapshot</div>
+          <div className={styles.authRight}>
+            <div className={`${styles.cardPreview} ${styles.card}`}>Preview — UI snapshot</div>
           </div>
         </div>
       </Panel>
 
       {/* FEATURES */}
-      <Panel className="panel--features" panelRef={addPanelRef} id="features">
-        <h2 className="panel__title">Key Features</h2>
-        <p className="panel__subtitle">Powerful moderation logic, flexible rules, and analytics.</p>
+      <Panel className={styles.panelFeatures} panelRef={addPanelRef} id="features">
+        <h2 className={styles.panel__title}>Key Features</h2>
+        <p className={styles.panel__subtitle}>Powerful moderation logic, flexible rules, and analytics.</p>
 
-        <div className="panel__body feature-grid" role="list">
+        <div className={`${styles.panel__body} ${styles.featureGrid}`} role="list">
           {[
             "Automatic moderation",
             "Customizable rules",
@@ -296,7 +296,7 @@ const Home: React.FC = () => {
           ].map((t, i) => (
             <div
               key={t}
-              className="feature-card staged"
+              className={`${styles.featureCard} ${styles.staged}`}
               style={{
                 transitionDelay: `${CONFIG.stagedDelayStep}ms`,
               }}
@@ -309,17 +309,17 @@ const Home: React.FC = () => {
       </Panel>
 
       {/* CTA */}
-      <Panel className="panel--cta" panelRef={addPanelRef} id="cta">
-        <h2 className="panel__title">Ready to get started?</h2>
-        <p className="panel__subtitle">
+      <Panel className={styles.panelCta} panelRef={addPanelRef} id="cta">
+        <h2 className={styles.panel__title}>Ready to get started?</h2>
+        <p className={styles.panel__subtitle}>
           Try it for free — set up and scale your community without extra hassle.
         </p>
-        <div className="panel__cta">
-          <button className="btn btn--ghost" onClick={() => window.open("/docs", "_self")}>
+        <div className={styles.panel__cta}>
+          <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => window.open("/docs", "_self")}>
             Documentation
           </button>
         </div>
-        <footer className="panel__footer"></footer>
+        <footer className={styles.panel__footer}></footer>
       </Panel>
     </div>
   );

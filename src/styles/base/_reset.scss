@@ -1,0 +1,49 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: ABCGintoDiscord, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+body {
+  margin: 0 auto;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+a {
+  font-weight: 500;
+  color: var(--accent-color);
+  text-decoration: inherit;
+  
+  &:hover {
+    color: var(--button-hover);
+  }
+}
+
+button {
+  @include button-base;
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  
+  &:hover {
+    background-color: var(--button-hover);
+  }
+  
+  &:focus,
+  &:focus-visible {
+    outline: 4px auto -webkit-focus-ring-color;
+  }
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+}

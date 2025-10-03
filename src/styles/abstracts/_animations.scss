@@ -1,0 +1,53 @@
+// Wave animation
+@keyframes waveExpand {
+  0% {
+    width: 4px;
+    height: 4px;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    width: 400vmax;
+    height: 400vmax;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+// Icon pulse
+@keyframes iconPulse {
+  0% { 
+    transform: scale(1); 
+  }
+  50% { 
+    transform: scale(1.2); 
+  }
+  100% { 
+    transform: scale(1); 
+  }
+}
+
+// Logo spin
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Fade in
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MdVerified, MdWarning, MdKey, MdVisibility, MdVisibilityOff } from 'react-icons/md';
-import ThemeToggle from "./ThemeToggle.js";
+import ThemeToggle from "./ThemeToggle/ThemeToggle.js";
 import CountrySelect from "./CountrySelect.js";
 import "./CSS/CompleteProfile.css";
 

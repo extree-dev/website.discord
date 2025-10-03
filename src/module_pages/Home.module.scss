@@ -1,0 +1,440 @@
+@use '../styles/abstracts/mixins' as *;
+@use '../styles/abstracts/animations' as *;
+
+.root {
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-color: var(--bg-primary);
+}
+
+// Progress Indicator
+.scrollProgress {
+  position: fixed;
+  top: 0;
+  right: 2rem;
+  width: 3px;
+  height: 100vh;
+  background: var(--border-color);
+  z-index: 1000;
+  opacity: 0.7;
+  
+  @include mobile {
+    right: 1rem;
+  }
+  
+  &__bar {
+    width: 100%;
+    background: linear-gradient(to bottom, var(--accent-color), var(--button-hover));
+    height: 0%;
+    transition: height 0.1s ease;
+  }
+}
+
+// Background Layers
+.bgLayer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 120%;
+  pointer-events: none;
+  z-index: -1;
+  
+  &.bgFar {
+    background: linear-gradient(
+      135deg,
+      var(--bg-primary) 0%,
+      var(--bg-secondary) 50%,
+      var(--bg-primary) 100%
+    );
+    opacity: 0.8;
+  }
+  
+  &.bgMid {
+    background: radial-gradient(
+      circle at 30% 20%,
+      rgba(88, 101, 242, 0.1) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 70% 80%,
+      rgba(139, 92, 246, 0.1) 0%,
+      transparent 50%
+    );
+    opacity: 0.6;
+  }
+  
+  &.bgNear {
+    background: linear-gradient(
+      45deg,
+      transparent 30%,
+      rgba(88, 101, 242, 0.05) 50%,
+      transparent 70%
+    );
+    opacity: 0.4;
+  }
+}
+
+// Panel Base Styles
+.panel {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  
+  &__wrap {
+    max-width: 1200px;
+    width: 100%;
+    position: relative;
+    z-index: 2;
+  }
+  
+  &__deco {
+    position: absolute;
+    pointer-events: none;
+    z-index: 1;
+    
+    &.decoHero {
+      top: 20%;
+      right: 10%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, var(--accent-color) 0%, transparent 70%);
+      opacity: 0.1;
+      border-radius: 50%;
+      
+      @include mobile {
+        width: 200px;
+        height: 200px;
+        top: 10%;
+        right: 5%;
+      }
+    }
+    
+    &.decoCard {
+      top: 50%;
+      left: 5%;
+      width: 200px;
+      height: 200px;
+      background: linear-gradient(45deg, var(--accent-color), var(--button-hover));
+      opacity: 0.05;
+      border-radius: 20px;
+      transform: rotate(15deg);
+    }
+  }
+  
+  &__title {
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0 0 1rem 0;
+    line-height: 1.1;
+    
+    &Light {
+      font-weight: 300;
+      background: linear-gradient(135deg, var(--accent-color), var(--button-hover));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+  }
+  
+  &__subtitle {
+    font-size: clamp(1.125rem, 2.5vw, 1.5rem);
+    color: var(--text-secondary);
+    margin: 0 0 2rem 0;
+    line-height: 1.4;
+    max-width: 600px;
+  }
+  
+  &__body {
+    margin-bottom: 2rem;
+    
+    .lead {
+      font-size: 1.25rem;
+      color: var(--text-primary);
+      line-height: 1.6;
+      max-width: 600px;
+      opacity: 0.9;
+    }
+  }
+  
+  &__cta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  
+  &__footer {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+  }
+}
+
+// Specific Panel Styles
+.panelHero {
+  text-align: center;
+  
+  .panel__wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+}
+
+.panelAuth {
+  .panel__header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+}
+
+.panelFeatures {
+  text-align: center;
+}
+
+.panelCta {
+  text-align: center;
+  min-height: 80vh;
+}
+
+// Auth Card Styles
+.authCard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: center;
+  
+  @include tablet {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+.authLeft {
+  .hint {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+  }
+}
+
+.authFeatures {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  
+  li {
+    padding: 0.5rem 0;
+    color: var(--text-primary);
+    position: relative;
+    padding-left: 1.5rem;
+    
+    &::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: var(--accent-color);
+      font-weight: bold;
+    }
+  }
+}
+
+.authRight {
+  display: flex;
+  justify-content: center;
+}
+
+.cardPreview {
+  width: 100%;
+  max-width: 300px;
+  height: 200px;
+  background: var(--modal-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+// Feature Grid
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 3rem;
+}
+
+.featureCard {
+  background: var(--modal-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-primary);
+  font-weight: 600;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border-color: var(--accent-color);
+  }
+  
+  &.staged {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+// Buttons
+.btn {
+  @include button-base;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  
+  &Primary {
+    background: linear-gradient(135deg, var(--accent-color), var(--button-hover));
+    color: white;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(88, 101, 242, 0.3);
+    }
+  }
+  
+  &Ghost {
+    background: transparent;
+    color: var(--text-primary);
+    border: 2px solid var(--border-color);
+    
+    &:hover {
+      background: var(--border-color);
+      transform: translateY(-2px);
+    }
+  }
+}
+
+// Container Utility
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+// Reduced Motion Support
+@media (prefers-reduced-motion: reduce) {
+  .bgLayer,
+  .panel__deco,
+  .featureCard,
+  .btn {
+    transition: none !important;
+    animation: none !important;
+  }
+  
+  .staged {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+// Mobile Optimizations
+@include mobile {
+  .panel {
+    padding: 2rem 1rem;
+    min-height: 90vh;
+    
+    &__cta {
+      justify-content: center;
+      
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  }
+  
+  .authCard {
+    gap: 2rem;
+  }
+  
+  .featureGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .featureCard {
+    padding: 1.5rem;
+  }
+  
+  .scrollProgress {
+    opacity: 0.5;
+  }
+}
+
+// Tablet Optimizations
+@include tablet {
+  .panel {
+    padding: 3rem 1.5rem;
+  }
+  
+  .authCard {
+    gap: 2rem;
+  }
+  
+  .featureGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+// Animation Classes for GSAP
+.gsapReveal {
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+// Loading States
+.loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+// Focus Styles for Accessibility
+.btn:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+// Print Styles
+@media print {
+  .bgLayer,
+  .scrollProgress,
+  .panel__deco,
+  .btn {
+    display: none !important;
+  }
+  
+  .panel {
+    min-height: auto;
+    page-break-inside: avoid;
+  }
+}

@@ -1,0 +1,313 @@
+@use '../styles/abstracts/mixins' as *;
+
+.container {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+}
+
+.contentArea {
+  flex: 1;
+  margin-left: 280px; // Ширина сайдбара
+}
+
+.fullscreen {
+  padding: 2rem;
+  min-height: 100vh;
+}
+
+.header {
+  margin-bottom: 2rem;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem 0;
+  
+  @include mobile {
+    font-size: 2rem;
+  }
+}
+
+.subtitle {
+  font-size: 1.125rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.card {
+  background: var(--modal-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+  
+  &__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.75rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+.help {
+  color: var(--text-secondary);
+  margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+  font-size: 0.875rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.toggleButton {
+  @include button-base;
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background-color: var(--button-hover);
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  // Состояние "включено"
+  &.active {
+    background-color: #22c55e;
+    
+    &:hover {
+      background-color: #16a34a;
+    }
+  }
+  
+  // Состояние "отключено"
+  &.inactive {
+    background-color: #6b7280;
+    
+    &:hover {
+      background-color: #4b5563;
+    }
+  }
+}
+
+.saveButton {
+  @include button-primary;
+  padding: 0.5rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(88, 101, 242, 0.3);
+  }
+}
+
+// Стили для списка истории уведомлений
+.historyList {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.historyItem {
+  background: var(--bg-secondary);
+  padding: 0.75rem;
+  border-radius: 6px;
+  border-left: 3px solid var(--accent-color);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  transition: background-color 0.2s ease;
+  
+  &:hover {
+    background-color: var(--border-color);
+  }
+}
+
+// Стили для LanguageSelect (кастомизация)
+.languageSelect {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.5rem;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  width: 100%;
+  max-width: 200px;
+  
+  &:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.1);
+  }
+}
+
+// Индикаторы статуса
+.statusIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  
+  &.statusEnabled {
+    background-color: #dcfce7;
+    color: #166534;
+    
+    [data-theme="dark"] & {
+      background-color: rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+    }
+  }
+  
+  &.statusDisabled {
+    background-color: #f3f4f6;
+    color: #374151;
+    
+    [data-theme="dark"] & {
+      background-color: rgba(107, 114, 128, 0.2);
+      color: #9ca3af;
+    }
+  }
+  
+  &.statusPending {
+    background-color: #fef3c7;
+    color: #92400e;
+    
+    [data-theme="dark"] & {
+      background-color: rgba(245, 158, 11, 0.2);
+      color: #f59e0b;
+    }
+  }
+}
+
+// Дополнительные информационные блоки
+.infoBlock {
+  background: var(--bg-secondary);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  border-left: 4px solid var(--accent-color);
+  
+  &__title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+  }
+  
+  &__content {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+}
+
+// Адаптивность
+@include tablet {
+  .contentArea {
+    margin-left: 0;
+  }
+  
+  .fullscreen {
+    padding: 1.5rem;
+  }
+  
+  .grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+  }
+  
+  .title {
+    font-size: 2rem;
+  }
+}
+
+@include mobile {
+  .fullscreen {
+    padding: 1rem;
+  }
+  
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .title {
+    font-size: 1.75rem;
+  }
+  
+  .card {
+    padding: 1rem;
+  }
+  
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+    
+    .toggleButton, .saveButton {
+      width: 100%;
+      text-align: center;
+    }
+  }
+  
+  .languageSelect {
+    max-width: 100%;
+  }
+}
+
+// Анимации для тестовых уведомлений
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.testing {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+// Иконки для карточек (можно добавить через React компоненты)
+.cardIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--accent-color);
+}

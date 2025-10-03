@@ -1,0 +1,66 @@
+import React, { useEffect, useState, useRef } from "react";
+import { Sun, Moon } from "lucide-react";
+import styles from './ThemeToggle.module.scss';
+
+const ThemeToggle: React.FC = () => {
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved) return saved === "dark";
+    return true;
+  });
+
+  const [isAnimating, setIsAnimating] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
+    localStorage.setItem("theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
+
+  const handleThemeToggle = (e: React.MouseEvent) => {
+    if (isAnimating) return;
+    
+    setIsAnimating(true);
+    
+    const wave = document.createElement('div');
+    const isSwitchingToLight = darkMode;
+    wave.className = `${styles.wave} ${isSwitchingToLight ? styles.toLight : styles.toDark}`;
+    
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    wave.style.left = `${x}px`;
+    wave.style.top = `${y}px`;
+    
+    document.body.appendChild(wave);
+    
+    setTimeout(() => {
+      wave.classList.add(styles.expanding);
+    }, 10);
+    
+    setTimeout(() => {
+      setDarkMode((prev) => !prev);
+    }, 400);
+    
+    setTimeout(() => {
+      setIsAnimating(false);
+      if (wave.parentNode) {
+        wave.parentNode.removeChild(wave);
+      }
+    }, 1000);
+  };
+
+  return (
+    <button
+      ref={buttonRef}
+      className={`${styles.toggle} ${isAnimating ? styles.animating : ''}`}
+      onClick={handleThemeToggle}
+      aria-label={darkMode ? "Switch to light theme" : "Switch to dark theme"}
+      disabled={isAnimating}
+    >
+      {darkMode ? <Sun size={18} className={styles.icon} /> : <Moon size={18} className={styles.icon} />}
+    </button>
+  );
+};
+
+export default ThemeToggle;

@@ -1,0 +1,52 @@
+// Theme variables
+$themes: (
+  light: (
+    bg-primary: #ffffff,
+    bg-secondary: #f9f9f9,
+    text-primary: #213547,
+    text-secondary: #6b7280,
+    accent-color: #747bff,
+    border-color: rgba(0, 0, 0, 0.1),
+    modal-bg: rgba(255, 255, 255, 0.9),
+    modal-border: rgba(0, 0, 0, 0.1),
+    button-bg: #5865F2,
+    button-hover: #4752c4,
+    button-text: #ffffff,
+    glass-bg: rgba(255, 255, 255, 0.35),
+    glass-border: rgba(255, 255, 255, 0.25)
+  ),
+  dark: (
+    bg-primary: #242424,
+    bg-secondary: #1a1a1a,
+    text-primary: rgba(255, 255, 255, 0.87),
+    text-secondary: rgba(255, 255, 255, 0.6),
+    accent-color: #646cff,
+    border-color: rgba(255, 255, 255, 0.1),
+    modal-bg: rgba(30, 31, 34, 0.7),
+    modal-border: rgba(255, 255, 255, 0.1),
+    button-bg: #5865F2,
+    button-hover: #4752c4,
+    button-text: #ffffff,
+    glass-bg: rgba(30, 31, 34, 0.7),
+    glass-border: rgba(255, 255, 255, 0.1)
+  )
+);
+
+// Theme mixin
+@mixin theme($property, $key, $theme: light) {
+  $theme-map: map-get($themes, $theme);
+  #{$property}: map-get($theme-map, $key);
+}
+
+// Generate CSS variables
+:root {
+  @each $key, $value in map-get($themes, light) {
+    --#{$key}: #{$value};
+  }
+}
+
+[data-theme="dark"] {
+  @each $key, $value in map-get($themes, dark) {
+    --#{$key}: #{$value};
+  }
+}

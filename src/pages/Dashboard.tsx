@@ -1,43 +1,43 @@
 import React from "react";
-import Saidbar from "../components/Saidbar"; // change path if needed
-import "../components/CSS/dashboard.css";
+import Saidbar from "../components/Saidbar.js";
+import styles from "../module_pages/Dashboard.module.scss";
 
 const Dashboard: React.FC = () => {
   return (
-    <div className="mp-layout">
+    <div className={styles.layout}>
       {/* Sidebar */}
       <Saidbar />
 
       {/* Main content */}
-      <main className="mp-main">
-        <header className="mp-header">
-          <h1 className="mp-header__title">Moderator Panel</h1>
-          <span className="mp-header__subtitle">
+      <main className={styles.main}>
+        <header className={styles.header}>
+          <h1 className={styles.header__title}>Moderator Panel</h1>
+          <span className={styles.header__subtitle}>
             Manage Discord server and bot
           </span>
         </header>
 
         {/* Statistics cards */}
-        <section className="mp-stats">
-          <div className="mp-card">
-            <h3 className="mp-card__title">Total Members</h3>
-            <p className="mp-card__value">1250</p>
+        <section className={styles.stats}>
+          <div className={styles.card}>
+            <h3 className={styles.card__title}>Total Members</h3>
+            <p className={styles.card__value}>1250</p>
           </div>
-          <div className="mp-card">
-            <h3 className="mp-card__title">Online</h3>
-            <p className="mp-card__value">312</p>
+          <div className={styles.card}>
+            <h3 className={styles.card__title}>Online</h3>
+            <p className={styles.card__value}>312</p>
           </div>
-          <div className="mp-card">
-            <h3 className="mp-card__title">Commands Today</h3>
-            <p className="mp-card__value">45</p>
+          <div className={styles.card}>
+            <h3 className={styles.card__title}>Commands Today</h3>
+            <p className={styles.card__value}>45</p>
           </div>
         </section>
 
         {/* Tables */}
-        <section className="mp-tables">
-          <div className="mp-table__block">
-            <h2 className="mp-table__title">Users</h2>
-            <table className="mp-table">
+        <section className={styles.tables}>
+          <div className={styles.table__block}>
+            <h2 className={styles.table__title}>Users</h2>
+            <table className={styles.table}>
               <thead>
                 <tr>
                   <th>Name</th>
@@ -69,9 +69,9 @@ const Dashboard: React.FC = () => {
             </table>
           </div>
 
-          <div className="mp-table__block">
-            <h2 className="mp-table__title">Command Log</h2>
-            <table className="mp-table">
+          <div className={styles.table__block}>
+            <h2 className={styles.table__title}>Command Log</h2>
+            <table className={styles.table}>
               <thead>
                 <tr>
                   <th>User</th>

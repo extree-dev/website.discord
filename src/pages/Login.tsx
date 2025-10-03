@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { FaDiscord } from "react-icons/fa";
-import { MdVisibility, MdVisibilityOff, MdWarning } from 'react-icons/md';
+import { MdVisibility, MdVisibilityOff, MdWarning, MdLock } from 'react-icons/md';
 import { useNavigate } from "react-router-dom";
-import ThemeToggle from "@/components/ThemeToggle.js";
+import ThemeToggle from "@/components/ThemeToggle/ThemeToggle.js";
 import { LockModal } from "@/components/LocalModal.js";
-import "../components/CSS/Login.css";
+import styles from "../module_pages/Login.module.scss";
 
 interface LoginProps {
   lockUntil: number | null;
@@ -138,27 +138,27 @@ export const Login: React.FC<LoginProps> = ({
   };
 
   return (
-    <div className="login-wrapper">
-      <div className="login-background"></div>
-      <div className="login-container">
-        <div className="login-card">
-          <div className="login-header-top"><ThemeToggle /></div>
+    <div className={styles.wrapper}>
+      <div className={styles.background}></div>
+      <div className={styles.container}>
+        <div className={styles.card}>
+          <div className={styles.headerTop}><ThemeToggle /></div>
 
-          <div className="login-header">
-            <h2 className="login-title">Welcome Back</h2>
-            <p className="login-subtitle">Log in to continue</p>
+          <div className={styles.header}>
+            <h2 className={styles.title}>Welcome Back</h2>
+            <p className={styles.subtitle}>Log in to continue</p>
           </div>
 
           {oauthError && (
-            <div className="global-error">
-              <MdWarning className="error-icon" />
+            <div className={styles.globalError}>
+              <MdWarning className={styles.errorIcon} />
               {oauthError}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="login-form" noValidate>
-            <div className="form-group">
-              <label htmlFor="identifier" className="form-label">
+          <form onSubmit={handleSubmit} className={styles.form} noValidate>
+            <div className={styles.formGroup}>
+              <label htmlFor="identifier" className={styles.formLabel}>
                 Email or Login
               </label>
               <input
@@ -166,35 +166,35 @@ export const Login: React.FC<LoginProps> = ({
                 type="text"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                className={`form-input ${errors.identifier ? 'input-error' : ''}`}
+                className={`${styles.formInput} ${errors.identifier ? styles.inputError : ''}`}
                 placeholder="Enter your email or username"
                 disabled={isLoading || isDiscordLoading}
               />
               {errors.identifier && (
-                <p className="form-error">
-                  <MdWarning className="error-icon" />
+                <p className={styles.formError}>
+                  <MdWarning className={styles.errorIcon} />
                   {errors.identifier}
                 </p>
               )}
             </div>
 
-            <div className="form-group">
-              <label htmlFor="password" className="form-label">
+            <div className={styles.formGroup}>
+              <label htmlFor="password" className={styles.formLabel}>
                 Password
               </label>
-              <div className="password-input-container">
+              <div className={styles.passwordInputContainer}>
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={`form-input ${errors.password ? 'input-error' : ''}`}
+                  className={`${styles.formInput} ${styles.passwordInput} ${errors.password ? styles.inputError : ''}`}
                   placeholder="Enter your password"
                   disabled={isLoading || isDiscordLoading}
                 />
                 <button
                   type="button"
-                  className="password-toggle"
+                  className={styles.passwordToggle}
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading || isDiscordLoading}
                 >
@@ -202,21 +202,26 @@ export const Login: React.FC<LoginProps> = ({
                 </button>
               </div>
               {errors.password && (
-                <p className="form-error">
-                  <MdWarning className="error-icon" />
+                <p className={styles.formError}>
+                  <MdWarning className={styles.errorIcon} />
                   {errors.password}
                 </p>
               )}
+
+              {/* Forgot Password Link */}
+              <div className={styles.forgotPassword}>
+                <a href="/forgot-password">Forgot password?</a>
+              </div>
             </div>
 
             <button
               type="submit"
-              className="submit-button"
+              className={styles.submitButton}
               disabled={isLoading || isDiscordLoading}
             >
               {isLoading ? (
                 <>
-                  <div className="loading-spinner-small"></div>
+                  <div className={styles.loadingSpinnerSmall}></div>
                   Loading...
                 </>
               ) : (
@@ -224,11 +229,11 @@ export const Login: React.FC<LoginProps> = ({
               )}
             </button>
 
-            <p className="login-register">
-              Don't have an account? <a href="/register" className="link-primary">Create an account</a>
+            <p className={styles.loginRegister}>
+              Don't have an account? <a href="/register" className={styles.linkPrimary}>Create an account</a>
             </p>
 
-            <div className="login-divider">
+            <div className={styles.loginDivider}>
               <span>Or continue with</span>
             </div>
 
@@ -236,22 +241,34 @@ export const Login: React.FC<LoginProps> = ({
             <button
               type="button"
               onClick={handleDiscordLogin}
-              className="discord-oauth-btn"
+              className={styles.discordOauthBtn}
               disabled={isLoading || isDiscordLoading}
             >
               {isDiscordLoading ? (
-                <div className="loading-spinner-small"></div>
+                <div className={styles.loadingSpinnerSmall}></div>
               ) : (
                 <>
-                  <FaDiscord className="discord-icon" />
+                  <FaDiscord className={styles.discordIcon} />
                   Continue with Discord
                 </>
               )}
             </button>
 
-            <p className="login-terms">
+            {/* Security Note */}
+            <div className={styles.securityNote}>
+              <div className={styles.securityNote__title}>
+                <MdLock size={14} style={{ marginRight: '0.5rem' }} />
+                Secure Authentication
+              </div>
+              <div className={styles.securityNote__content}>
+                Your login information is protected with industry-standard encryption.
+                We never store your password in plain text.
+              </div>
+            </div>
+
+            <p className={styles.loginTerms}>
               &copy; {new Date().getFullYear()} Sentinel LLC. By logging in, you agree to our{" "}
-              <a href="/terms" className="link-primary">Terms</a> and <a href="/privacy" className="link-primary">Privacy Policy</a>.
+              <a href="/terms" className={styles.linkPrimary}>Terms</a> and <a href="/privacy" className={styles.linkPrimary}>Privacy Policy</a>.
             </p>
           </form>
         </div>

@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { MdVisibility, MdVisibilityOff, MdKey, MdWarning, MdCheckCircle, MdError } from 'react-icons/md';
-import ThemeToggle from "@/components/ThemeToggle.js";
+import ThemeToggle from "@/components/ThemeToggle/ThemeToggle.js";
 import { Toast } from "@/components/Toast.js";
-import "../components/CSS/Register.css";
+import styles from "../module_pages/Register.module.scss"
 
 declare global {
     interface Window {
@@ -302,29 +302,29 @@ export const Register = () => {
     const getPasswordStrengthLabel = () => ["Very Weak", "Weak", "Medium", "Strong", "Very Strong"][passwordStrength] || "";
 
     return (
-        <div className="register-wrapper">
-            <div className="register-background"></div>
-            <div className="register-container">
-                <div className="register-card">
-                    <div className="register-header-top"><ThemeToggle /></div>
+        <div className={styles.wrapper}>
+            <div className={styles.background}></div>
+            <div className={styles.container}>
+                <div className={styles.card}>
+                    <div className={styles.headerTop}><ThemeToggle /></div>
 
-                    <div className="register-header">
-                        <h2 className="register-title">Create Your Account</h2>
-                        <p className="register-subtitle">Get started with our platform</p>
+                    <div className={styles.header}>
+                        <h2 className={styles.title}>Create Your Account</h2>
+                        <p className={styles.subtitle}>Get started with our platform</p>
                     </div>
 
                     {error && (
-                        <div className="global-error">
-                            <MdWarning className="error-icon" />
+                        <div className={styles.globalError}>
+                            <MdWarning className={styles.errorIcon} />
                             {error}
                         </div>
                     )}
 
-                    <form className="register-form" onSubmit={handleSubmit} noValidate>
+                    <form className={styles.form} onSubmit={handleSubmit} noValidate>
                         {/* Секретный код */}
-                        <div className="form-group">
-                            <label htmlFor="secretCode" className="form-label">
-                                <MdKey className="inline-icon" />
+                        <div className={styles.formGroup}>
+                            <label htmlFor="secretCode" className={styles.formLabel}>
+                                <MdKey className={styles.inlineIcon} />
                                 Secret Registration Code *
                             </label>
                             <input
@@ -332,7 +332,7 @@ export const Register = () => {
                                 type="text"
                                 value={secretCode}
                                 onChange={(e) => handleSecretCodeChange(e.target.value)}
-                                className={`form-input ${codeValidation?.isValid ? 'input-valid' : codeValidation && !codeValidation.isValid ? 'input-error' : ''} ${errors.secretCode ? 'input-error' : ''}`}
+                                className={`${styles.formInput} ${codeValidation?.isValid ? styles.inputValid : codeValidation && !codeValidation.isValid ? styles.inputError : ''} ${errors.secretCode ? styles.inputError : ''}`}
                                 placeholder="Enter code provided by administrator"
                                 disabled={isLoading}
                                 style={{ textTransform: 'uppercase' }}
@@ -340,41 +340,41 @@ export const Register = () => {
 
                             {/* Индикатор загрузки валидации */}
                             {isValidatingCode && (
-                                <div className="validation-loading">
-                                    <div className="loading-spinner-small"></div>
+                                <div className={styles.validationLoading}>
+                                    <div className={styles.loadingSpinnerSmall}></div>
                                     Validating code...
                                 </div>
                             )}
 
                             {/* Сообщение о валидном коде */}
                             {codeValidation?.isValid && !isValidatingCode && (
-                                <div className="code-validation validation-valid">
-                                    <MdCheckCircle className="validation-icon" />
+                                <div className={`${styles.codeValidation} ${styles.validationValid}`}>
+                                    <MdCheckCircle className={styles.validationIcon} />
                                     {codeValidation.message}
                                 </div>
                             )}
 
                             {/* Сообщение о невалидном коде */}
                             {codeValidation && !codeValidation.isValid && !isValidatingCode && (
-                                <div className="code-validation validation-invalid">
-                                    <MdError className="validation-icon" />
+                                <div className={`${styles.codeValidation} ${styles.validationInvalid}`}>
+                                    <MdError className={styles.validationIcon} />
                                     {codeValidation.message}
                                 </div>
                             )}
 
                             {/* Общие ошибки формы */}
                             {errors.secretCode && !isValidatingCode && (
-                                <p className="form-error">
-                                    <MdWarning className="error-icon" />
+                                <p className={styles.formError}>
+                                    <MdWarning className={styles.errorIcon} />
                                     {errors.secretCode}
                                 </p>
                             )}
                         </div>
 
                         {/* Основные поля формы */}
-                        <div className="form-grid-2col">
-                            <div className="form-group">
-                                <label htmlFor="name" className="form-label">
+                        <div className={styles.formGrid2col}>
+                            <div className={styles.formGroup}>
+                                <label htmlFor="name" className={styles.formLabel}>
                                     Full Name *
                                 </label>
                                 <input
@@ -382,21 +382,21 @@ export const Register = () => {
                                     type="text"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    className={`form-input ${errors.name ? 'input-error' : ''}`}
+                                    className={`${styles.formInput} ${errors.name ? styles.inputError : ''}`}
                                     placeholder="Enter your full name"
                                     autoComplete="name"
                                     disabled={isLoading}
                                 />
                                 {errors.name && (
-                                    <p className="form-error">
-                                        <MdWarning className="error-icon" />
+                                    <p className={styles.formError}>
+                                        <MdWarning className={styles.errorIcon} />
                                         {errors.name}
                                     </p>
                                 )}
                             </div>
 
-                            <div className="form-group">
-                                <label htmlFor="nickname" className="form-label">
+                            <div className={styles.formGroup}>
+                                <label htmlFor="nickname" className={styles.formLabel}>
                                     Nickname *
                                 </label>
                                 <input
@@ -404,22 +404,22 @@ export const Register = () => {
                                     type="text"
                                     value={nickname}
                                     onChange={(e) => setNickname(e.target.value)}
-                                    className={`form-input ${errors.nickname ? 'input-error' : ''}`}
+                                    className={`${styles.formInput} ${errors.nickname ? styles.inputError : ''}`}
                                     placeholder="Enter your nickname"
                                     autoComplete="username"
                                     disabled={isLoading}
                                 />
                                 {errors.nickname && (
-                                    <p className="form-error">
-                                        <MdWarning className="error-icon" />
+                                    <p className={styles.formError}>
+                                        <MdWarning className={styles.errorIcon} />
                                         {errors.nickname}
                                     </p>
                                 )}
                             </div>
                         </div>
 
-                        <div className="form-group">
-                            <label htmlFor="email" className="form-label">
+                        <div className={styles.formGroup}>
+                            <label htmlFor="email" className={styles.formLabel}>
                                 Email *
                             </label>
                             <input
@@ -427,38 +427,38 @@ export const Register = () => {
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className={`form-input ${errors.email ? 'input-error' : ''}`}
+                                className={`${styles.formInput} ${errors.email ? styles.inputError : ''}`}
                                 placeholder="Enter your email"
                                 autoComplete="email"
                                 disabled={isLoading}
                             />
                             {errors.email && (
-                                <p className="form-error">
-                                    <MdWarning className="error-icon" />
+                                <p className={styles.formError}>
+                                    <MdWarning className={styles.errorIcon} />
                                     {errors.email}
                                 </p>
                             )}
                         </div>
 
-                        <div className="form-grid-2col">
-                            <div className="form-group">
-                                <label htmlFor="password" className="form-label">
+                        <div className={styles.formGrid2col}>
+                            <div className={styles.formGroup}>
+                                <label htmlFor="password" className={styles.formLabel}>
                                     Password *
                                 </label>
-                                <div className="password-input-container">
+                                <div className={styles.passwordInputContainer}>
                                     <input
                                         id="password"
                                         type={showPassword ? "text" : "password"}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className={`form-input password-input ${errors.password ? 'input-error' : ''}`} // ← добавил password-input
+                                        className={`${styles.formInput} ${styles.passwordInput} ${errors.password ? styles.inputError : ''}`}
                                         placeholder="Create a strong password"
                                         autoComplete="new-password"
                                         disabled={isLoading}
                                     />
                                     <button
                                         type="button"
-                                        className="password-toggle"
+                                        className={styles.passwordToggle}
                                         onClick={() => setShowPassword(!showPassword)}
                                         disabled={isLoading}
                                     >
@@ -468,13 +468,13 @@ export const Register = () => {
 
                                 {/* Индикатор силы пароля */}
                                 {password.length > 0 && (
-                                    <div className="password-strength-indicator">
-                                        <div className="password-strength-text">
+                                    <div className={styles.passwordStrengthIndicator}>
+                                        <div className={styles.passwordStrengthText}>
                                             Strength: <span style={{ color: getPasswordStrengthColor() }}>{getPasswordStrengthLabel()}</span>
                                         </div>
-                                        <div className="password-strength-bar">
+                                        <div className={styles.passwordStrengthBar}>
                                             <div
-                                                className="password-strength-progress"
+                                                className={styles.passwordStrengthProgress}
                                                 style={{
                                                     width: `${(passwordStrength / 4) * 100}%`,
                                                     backgroundColor: getPasswordStrengthColor()
@@ -485,36 +485,36 @@ export const Register = () => {
                                 )}
 
                                 {errors.password && (
-                                    <p className="form-error">
-                                        <MdWarning className="error-icon" />
+                                    <p className={styles.formError}>
+                                        <MdWarning className={styles.errorIcon} />
                                         {errors.password}
                                     </p>
                                 )}
-                                <div className="password-hints">
+                                <div className={styles.passwordHints}>
                                     <small>• At least 12 characters</small>
                                     <small>• Uppercase & lowercase letters</small>
                                     <small>• Numbers & special characters</small>
                                 </div>
                             </div>
 
-                            <div className="form-group">
-                                <label htmlFor="confirmPassword" className="form-label">
+                            <div className={styles.formGroup}>
+                                <label htmlFor="confirmPassword" className={styles.formLabel}>
                                     Confirm Password *
                                 </label>
-                                <div className="password-input-container">
+                                <div className={styles.passwordInputContainer}>
                                     <input
                                         id="confirmPassword"
                                         type={showConfirmPassword ? "text" : "password"}
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
-                                        className={`form-input password-input ${errors.confirmPassword || (!passwordsMatch && confirmPassword) ? 'input-error' : ''}`} // ← добавил password-input
+                                        className={`${styles.formInput} ${styles.passwordInput} ${errors.confirmPassword || (!passwordsMatch && confirmPassword) ? styles.inputError : ''}`}
                                         placeholder="Repeat password"
                                         autoComplete="new-password"
                                         disabled={isLoading}
                                     />
                                     <button
                                         type="button"
-                                        className="password-toggle"
+                                        className={styles.passwordToggle}
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                         disabled={isLoading}
                                     >
@@ -522,14 +522,14 @@ export const Register = () => {
                                     </button>
                                 </div>
                                 {errors.confirmPassword && (
-                                    <p className="form-error">
-                                        <MdWarning className="error-icon" />
+                                    <p className={styles.formError}>
+                                        <MdWarning className={styles.errorIcon} />
                                         {errors.confirmPassword}
                                     </p>
                                 )}
                                 {!errors.confirmPassword && !passwordsMatch && confirmPassword && (
-                                    <p className="form-error">
-                                        <MdWarning className="error-icon" />
+                                    <p className={styles.formError}>
+                                        <MdWarning className={styles.errorIcon} />
                                         Passwords do not match
                                     </p>
                                 )}
@@ -543,12 +543,12 @@ export const Register = () => {
 
                         <button
                             type="submit"
-                            className="submit-button"
+                            className={styles.submitButton}
                             disabled={isLoading || !isRecaptchaReady}
                         >
                             {isLoading ? (
                                 <>
-                                    <div className="loading-spinner-small"></div>
+                                    <div className={styles.loadingSpinnerSmall}></div>
                                     Creating Account...
                                 </>
                             ) : !isRecaptchaReady ? (
@@ -558,18 +558,18 @@ export const Register = () => {
                             )}
                         </button>
 
-                        <p className="register-login">
-                            Already have an account? <a href="/login" className="link-primary">Log in here</a>
+                        <p className={styles.registerLogin}>
+                            Already have an account? <a href="/login" className={styles.linkPrimary}>Log in here</a>
                         </p>
 
-                        <p className="register-terms">
+                        <p className={styles.registerTerms}>
                             &copy; {new Date().getFullYear()} Sentinel LLC. By creating an account, you agree to our{" "}
-                            <a href="/terms" className="link-primary">Terms</a> and <a href="/privacy" className="link-primary">Privacy Policy</a>.
+                            <a href="/terms" className={styles.linkPrimary}>Terms</a> and <a href="/privacy" className={styles.linkPrimary}>Privacy Policy</a>.
                         </p>
                     </form>
 
                     {!isRecaptchaReady && (
-                        <div className="recaptcha-loading">
+                        <div className={styles.recaptchaLoading}>
                             <small>Loading security verification...</small>
                         </div>
                     )}

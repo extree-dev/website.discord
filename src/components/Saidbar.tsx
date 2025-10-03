@@ -13,7 +13,7 @@ import {
     LayoutDashboard,
     Key,
 } from "lucide-react";
-import ThemeToggle from "./ThemeToggle.js";
+import ThemeToggle from "./ThemeToggle/ThemeToggle.js";
 import "../components/CSS/saidbar.css";
 
 /**

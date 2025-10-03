@@ -1,0 +1,438 @@
+@use '../styles/abstracts/mixins' as *;
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+}
+
+.overviewPage {
+  flex: 1;
+  margin-left: 280px;
+  padding: 2rem;
+  min-height: 100vh;
+  
+  @include tablet {
+    margin-left: 0;
+    padding: 1.5rem;
+  }
+  
+  @include mobile {
+    padding: 1rem;
+  }
+}
+
+.header {
+  margin-bottom: 2rem;
+  
+  h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+    
+    @include mobile {
+      font-size: 2rem;
+    }
+  }
+}
+
+.subtitle {
+  font-size: 1.125rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+// Основная статистика
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.card {
+  background: var(--modal-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+  
+  &Icon {
+    width: 3rem;
+    height: 3rem;
+    margin: 0 auto 1rem;
+    padding: 0.75rem;
+    border-radius: 50%;
+    background: var(--bg-secondary);
+    color: var(--accent-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: 0 0 0.5rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  
+  p {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+  }
+}
+
+// Контейнер статуса
+.statusContainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  
+  @include tablet {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+// Секции
+.section {
+  background: var(--modal-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  
+  h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 1.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    
+    svg {
+      color: var(--accent-color);
+    }
+  }
+}
+
+// Статус бота
+.botStatus, .versionInfo {
+  .statusContainer {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin: 0;
+    
+    @include mobile {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+.statusColumn {
+  text-align: center;
+  
+  p {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 0 0 0.5rem 0;
+    font-weight: 500;
+  }
+  
+  span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--text-primary);
+    font-weight: 600;
+    
+    small {
+      font-weight: 400;
+      color: var(--text-secondary);
+    }
+  }
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  
+  &.online {
+    background-color: #22c55e;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
+  }
+  
+  &.offline {
+    background-color: #ef4444;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
+  }
+  
+  &.idle {
+    background-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+  }
+}
+
+.statusValue {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+// Таблица гильдий
+.guildsTable {
+  width: 100%;
+  border-collapse: collapse;
+  
+  th {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    font-weight: 600;
+    text-align: left;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  
+  td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+  }
+  
+  tr {
+    transition: background-color 0.2s ease;
+    
+    &:hover {
+      background-color: var(--bg-secondary);
+    }
+    
+    &:last-child {
+      td {
+        border-bottom: none;
+      }
+    }
+  }
+}
+
+.guildToggle {
+  @include button-base;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 9999px;
+  transition: all 0.3s ease;
+  
+  &.on {
+    background-color: #22c55e;
+    color: white;
+    
+    &:hover {
+      background-color: #16a34a;
+    }
+  }
+  
+  &.off {
+    background-color: #6b7280;
+    color: white;
+    
+    &:hover {
+      background-color: #4b5563;
+    }
+  }
+}
+
+// Логи
+.logsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.logItem {
+  background: var(--bg-secondary);
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid var(--border-color);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  transition: background-color 0.2s ease;
+  
+  &:hover {
+    background-color: var(--border-color);
+  }
+  
+  .time {
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-right: 0.5rem;
+  }
+  
+  // Типы логов
+  &.error {
+    border-left-color: #ef4444;
+    background: rgba(239, 68, 68, 0.05);
+    
+    [data-theme="dark"] & {
+      background: rgba(239, 68, 68, 0.1);
+    }
+  }
+  
+  &.warn {
+    border-left-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.05);
+    
+    [data-theme="dark"] & {
+      background: rgba(245, 158, 11, 0.1);
+    }
+  }
+  
+  &.info {
+    border-left-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+    
+    [data-theme="dark"] & {
+      background: rgba(59, 130, 246, 0.1);
+    }
+  }
+}
+
+// Дополнительные стили для улучшения UX
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-secondary);
+  
+  &Icon {
+    width: 4rem;
+    height: 4rem;
+    margin: 0 auto 1rem;
+    color: var(--text-secondary);
+    opacity: 0.5;
+  }
+  
+  &Title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+  }
+  
+  &Description {
+    color: var(--text-secondary);
+  }
+}
+
+// Адаптивность
+@include tablet {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .statusContainer {
+    grid-template-columns: 1fr;
+  }
+  
+  .guildsTable {
+    display: block;
+    overflow-x: auto;
+    
+    th, td {
+      padding: 0.75rem 0.5rem;
+    }
+  }
+}
+
+@include mobile {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .card {
+    padding: 1rem;
+    
+    p {
+      font-size: 1.75rem;
+    }
+  }
+  
+  .section {
+    padding: 1rem;
+  }
+  
+  .botStatus, .versionInfo {
+    .statusContainer {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  .statusColumn {
+    text-align: left;
+    
+    span {
+      justify-content: flex-start;
+    }
+  }
+}
+
+// Анимации
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.updating {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+// Утилитарные классы
+.textSuccess {
+  color: #22c55e;
+}
+
+.textWarning {
+  color: #f59e0b;
+}
+
+.textError {
+  color: #ef4444;
+}
+
+.textMuted {
+  color: var(--text-secondary);
+}

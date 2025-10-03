@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.js'
-import './index.css'
+import './styles/main.scss' // Заменяем index.css на main.scss
 import './assets/fonts/fonts.css'
 
 // Инициализация мониторинга производительности

@@ -1,0 +1,221 @@
+@use '../styles/abstracts/mixins' as *;
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+}
+
+.main {
+  flex: 1;
+  padding: 2rem;
+  margin-left: 280px; // Ширина сайдбара
+}
+
+.header {
+  margin-bottom: 2rem;
+  
+  &__title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  &__subtitle {
+    font-size: 1.125rem;
+    color: var(--text-secondary);
+    margin: 0;
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.card {
+  background: var(--modal-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+  
+  &__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 1.5rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-color);
+  
+  &:last-child {
+    border-bottom: none;
+  }
+  
+  label {
+    font-weight: 500;
+    color: var(--text-primary);
+    flex: 1;
+  }
+}
+
+.toggleButton {
+  @include button-base;
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  min-width: 80px;
+  
+  &:hover {
+    background-color: var(--button-hover);
+  }
+}
+
+// Стили для чекбоксов
+.checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-color);
+  cursor: pointer;
+  
+  &:focus {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+  }
+}
+
+// Стили для LanguageSelect (если нужны кастомные)
+.languageSelect {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.5rem;
+  color: var(--text-primary);
+  min-width: 120px;
+  
+  &:focus {
+    outline: none;
+    border-color: var(--accent-color);
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.saveButton {
+  @include button-primary;
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(88, 101, 242, 0.3);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// Адаптивность
+@include tablet {
+  .main {
+    margin-left: 0;
+    padding: 1.5rem;
+  }
+  
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .header {
+    &__title {
+      font-size: 2rem;
+    }
+  }
+}
+
+@include mobile {
+  .main {
+    padding: 1rem;
+  }
+  
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .card {
+    padding: 1rem;
+  }
+  
+  .row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 1rem 0;
+    
+    label {
+      margin-bottom: 0.25rem;
+    }
+  }
+  
+  .header {
+    &__title {
+      font-size: 1.75rem;
+    }
+    
+    &__subtitle {
+      font-size: 1rem;
+    }
+  }
+  
+  .actions {
+    justify-content: stretch;
+    
+    .saveButton {
+      width: 100%;
+    }
+  }
+}
+
+// Дополнительные стили для разных состояний
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.success {
+  border-color: #22c55e !important;
+}
+
+.error {
+  border-color: #ef4444 !important;
+}

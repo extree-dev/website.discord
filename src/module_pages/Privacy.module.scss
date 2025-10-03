@@ -1,0 +1,234 @@
+@use '../styles/abstracts/mixins' as *;
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+}
+
+.main {
+  flex: 1;
+  padding: 2rem;
+  margin-left: 280px; // Ширина сайдбара
+  
+  &.privacyPage {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+}
+
+.header {
+  margin-bottom: 2rem;
+  text-align: center;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 1.5rem;
+  
+  h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    
+    @include mobile {
+      font-size: 2rem;
+    }
+  }
+}
+
+.content {
+  line-height: 1.7;
+  color: var(--text-primary);
+}
+
+.intro {
+  font-size: 1.125rem;
+  margin-bottom: 2.5rem;
+  padding: 1.5rem;
+  background: var(--modal-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  
+  p {
+    margin: 0;
+    color: var(--text-primary);
+  }
+}
+
+.section {
+  margin-bottom: 2.5rem;
+  padding: 1.5rem;
+  background: var(--modal-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  transition: transform 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 1rem 0;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+  }
+  
+  p {
+    margin: 0 0 1rem 0;
+    color: var(--text-primary);
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+  
+  ul {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+    
+    li {
+      margin-bottom: 0.5rem;
+      color: var(--text-primary);
+      line-height: 1.6;
+      position: relative;
+      
+      &::before {
+        content: "•";
+        color: var(--accent-color);
+        font-weight: bold;
+        display: inline-block;
+        width: 1em;
+        margin-left: -1em;
+      }
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+}
+
+.link {
+  color: var(--accent-color);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+  
+  &:hover {
+    color: var(--button-hover);
+    text-decoration: underline;
+  }
+}
+
+.footer {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+  
+  p {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin: 0;
+  }
+}
+
+// Дополнительные стили для улучшения читаемости
+.section:nth-child(even) {
+  background: var(--bg-secondary);
+}
+
+.section:last-of-type {
+  margin-bottom: 0;
+}
+
+// Адаптивность
+@include tablet {
+  .main {
+    margin-left: 0;
+    padding: 1.5rem;
+    
+    &.privacyPage {
+      padding: 1.5rem;
+    }
+  }
+  
+  .header {
+    h1 {
+      font-size: 2rem;
+    }
+  }
+}
+
+@include mobile {
+  .main {
+    padding: 1rem;
+    
+    &.privacyPage {
+      padding: 1rem;
+    }
+  }
+  
+  .header {
+    h1 {
+      font-size: 1.75rem;
+    }
+  }
+  
+  .section {
+    padding: 1rem;
+    
+    h2 {
+      font-size: 1.25rem;
+    }
+  }
+  
+  .intro {
+    padding: 1rem;
+    font-size: 1rem;
+  }
+  
+  .content {
+    ul {
+      padding-left: 1rem;
+    }
+  }
+}
+
+// Специфические стили для Privacy Policy
+.privacyHighlight {
+  background: linear-gradient(120deg, var(--accent-color) 0%, var(--button-hover) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 600;
+}
+
+.contactInfo {
+  background: var(--bg-secondary);
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid var(--accent-color);
+  margin: 1rem 0;
+  
+  p {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+.legalNote {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+  margin-top: 2rem;
+}

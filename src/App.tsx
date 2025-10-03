@@ -28,60 +28,67 @@ import { CompleteProfile } from "@/components/CompleteProfile.js";
 import AdminLogs from "@/pages/AdminLogs.js";
 import SecretCodesPage from "@/pages/SecretCodesPage.js";
 
+// Стили
+import styles from './App.module.scss';
+
 function App() {
   const [lockUntil, setLockUntil] = useState<number | null>(null);
   const [lockMessage, setLockMessage] = useState<string>("");
 
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Страницы без Layout */}
-            <Route
-              path="/login"
-              element={
-                <Login
-                  lockUntil={lockUntil}
-                  lockMessage={lockMessage}
-                  setLockUntil={setLockUntil}
-                  setLockMessage={setLockMessage}
+    <div className={styles.app}>
+      <AuthProvider>
+        <ThemeProvider>
+          <BrowserRouter>
+            <div className={styles.mainContent}>
+              <Routes>
+                {/* Страницы без Layout */}
+                <Route
+                  path="/login"
+                  element={
+                    <Login
+                      lockUntil={lockUntil}
+                      lockMessage={lockMessage}
+                      setLockUntil={setLockUntil}
+                      setLockMessage={setLockMessage}
+                    />
+                  }
                 />
-              }
-            />
-            <Route path="/register" element={<Register />} />
+                <Route path="/register" element={<Register />} />
 
-            {/* Страницы с Layout */}
-            <Route element={<Layout />}>
-              <Route path="/" element={<Home />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/moderation" element={<Moderation />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/dashboard/settings" element={<SettingsPage />} />
-              <Route path="/dashboard/bot" element={<BotDashboard />} />
-              <Route path="/dashboard/commands" element={<CommandsPage />} />
-              <Route path="/dashboard/overview" element={<DashboardOverview />} />
-              <Route path="/dashboard/notification" element={<NotificationPage />} />
-              <Route path="/dashboard/secret-codes" element={<SecretCodesPage />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/oauth/success" element={<OAuthSuccess />} />
-              <Route path="/complete-profile" element={<CompleteProfile />} />
-              <Route path="/admin/logs" element={<AdminLogs />} />
-              <Route path="/complete-profile" element={<CompleteProfile />} />
-            </Route>
-          </Routes>
+                {/* Страницы с Layout */}
+                <Route element={<Layout />}>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
+                  <Route path="/moderation" element={<Moderation />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/dashboard/settings" element={<SettingsPage />} />
+                  <Route path="/dashboard/bot" element={<BotDashboard />} />
+                  <Route path="/dashboard/commands" element={<CommandsPage />} />
+                  <Route path="/dashboard/overview" element={<DashboardOverview />} />
+                  <Route path="/dashboard/notification" element={<NotificationPage />} />
+                  <Route path="/dashboard/secret-codes" element={<SecretCodesPage />} />
+                  <Route path="/terms" element={<Terms />} />
+                  <Route path="/privacy" element={<Privacy />} />
+                  <Route path="/oauth/success" element={<OAuthSuccess />} />
+                  <Route path="/complete-profile" element={<CompleteProfile />} />
+                  <Route path="/admin/logs" element={<AdminLogs />} />
+                  <Route path="/complete-profile" element={<CompleteProfile />} />
+                </Route>
+              </Routes>
+            </div>
 
-          {/* LockModal глобально */}
-          {lockUntil && (
-            <LockModal
-              message={lockMessage}
-              onClose={() => setLockUntil(null)}
-            />
-          )}
-        </BrowserRouter>
-      </ThemeProvider>
-    </AuthProvider>
+            {/* LockModal глобально */}
+            {lockUntil && (
+              <LockModal
+                message={lockMessage}
+                onClose={() => setLockUntil(null)}
+              />
+            )}
+          </BrowserRouter>
+        </ThemeProvider>
+      </AuthProvider>
+    </div>
   );
 }
 

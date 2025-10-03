@@ -1,0 +1,27 @@
+@use '../../styles/abstracts/mixins' as *;
+
+.layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 1rem 2rem;
+  @include flex-between;
+}
+
+.main {
+  flex: 1;
+  padding: 2rem;
+}
+
+.footer {
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  padding: 1rem 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+}

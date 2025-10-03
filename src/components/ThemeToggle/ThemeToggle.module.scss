@@ -1,0 +1,68 @@
+@use '../../styles/abstracts/mixins' as *;
+@use '../../styles/abstracts/animations' as *;
+
+.toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  @include flex-center;
+  position: relative;
+  overflow: visible;
+  z-index: 1000;
+  width: 42px;
+  height: 42px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-color);
+
+  &:hover:not(.animating) {
+    transform: scale(1.1);
+    background-color: var(--accent-color);
+    color: white;
+  }
+
+  &.animating {
+    transform: scale(0.95);
+  }
+}
+
+.wave {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+
+  &.toLight {
+    background: white;
+  }
+
+  &.toDark {
+    background: #242424;
+  }
+
+  &.expanding {
+    animation: waveExpand 0.8s ease-out forwards;
+  }
+}
+
+.icon {
+  transition: transform 0.3s ease;
+  position: relative;
+  z-index: 1001;
+
+  .toggle:hover:not(.animating) & {
+    transform: rotate(15deg);
+  }
+
+  .toggle.animating & {
+    animation: iconPulse 0.6s ease-in-out;
+  }
+}

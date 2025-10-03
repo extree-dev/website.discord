@@ -1,24 +1,25 @@
 import React from 'react';
-import '../components/CSS/Privacy.css';
+import { Link } from 'react-router-dom';
+import styles from '../module_pages/Privacy.module.scss';
 
 const Privacy: React.FC = () => {
     const currentYear = new Date().getFullYear();
 
     return (
-        <div className="mp-layout">
-            <main className="mp-main privacy-page">
-                <header className="mp-header">
+        <div className={styles.layout}>
+            <main className={`${styles.main} ${styles.privacyPage}`}>
+                <header className={styles.header}>
                     <h1>Privacy Policy - Sentinel LLC Moderator Panels</h1>
                 </header>
 
-                <div className="privacy-content">
-                    <div className="privacy-intro">
+                <div className={styles.content}>
+                    <div className={styles.intro}>
                         <p>
                             Your privacy is important to Sentinel LLC. This Privacy Policy outlines how we collect, use, store, and protect your personal information when accessing and using the Moderator Panel. By using the Panel, you consent to the practices described herein.
                         </p>
                     </div>
 
-                    <div className="privacy-section">
+                    <div className={styles.section}>
                         <h2>1. Information We Collect</h2>
                         <p>We may collect the following data:</p>
                         <ul>
@@ -30,7 +31,7 @@ const Privacy: React.FC = () => {
                         </ul>
                     </div>
 
-                    <div className="privacy-section">
+                    <div className={styles.section}>
                         <h2>2. How We Use Your Information</h2>
                         <p>Your data is processed strictly for:</p>
                         <ul>
@@ -42,34 +43,34 @@ const Privacy: React.FC = () => {
                         </ul>
                     </div>
 
-                    <div className="privacy-section">
+                    <div className={styles.section}>
                         <h2>3. Data Storage & Security</h2>
                         <p>
                             We implement industry-standard technical and organizational measures to protect your data against unauthorized access, disclosure, alteration, and destruction. Data is stored securely in compliant servers located in jurisdictions aligned with GDPR and Russian law.
                         </p>
                     </div>
 
-                    <div className="privacy-section">
+                    <div className={styles.section}>
                         <h2>4. Sharing of Information</h2>
                         <p>
                             Personal information is shared only under the following circumstances:
                         </p>
                         <ul>
                             <li>When legally required by governmental or law enforcement authorities.</li>
-                            <li>To protect Sentinel LLC’s legal rights or property.</li>
+                            <li>To protect Sentinel LLC's legal rights or property.</li>
                             <li>With explicit user consent.</li>
                             <li>Third-party service providers under strict confidentiality agreements (e.g., hosting, analytics, security services).</li>
                         </ul>
                     </div>
 
-                    <div className="privacy-section">
+                    <div className={styles.section}>
                         <h2>5. Cookies & Tracking</h2>
                         <p>
                             The Panel may use cookies, local storage, and analytics tools to enhance functionality and monitor system performance. No personally identifiable information is sold or disclosed via tracking. You may manage cookie preferences through your browser settings.
                         </p>
                     </div>
 
-                    <div className="privacy-section">
+                    <div className={styles.section}>
                         <h2>6. Rights of Users</h2>
                         <p>
                             In accordance with GDPR and applicable law, you have the right to:
@@ -83,35 +84,43 @@ const Privacy: React.FC = () => {
                         </ul>
                     </div>
 
-                    <div className="privacy-section">
+                    <div className={styles.section}>
                         <h2>7. Data Retention</h2>
                         <p>
                             Personal data is retained only as long as necessary for moderation, legal compliance, or resolving disputes. Obsolete data is securely deleted or anonymized.
                         </p>
                     </div>
 
-                    <div className="privacy-section">
-                        <h2>8. Children’s Privacy</h2>
+                    <div className={styles.section}>
+                        <h2>8. Children's Privacy</h2>
                         <p>
                             The Panel is not intended for users under 13 years old. We do not knowingly collect personal data from children. If you are under 13, please do not use the Panel.
                         </p>
                     </div>
 
-                    <div className="privacy-section">
+                    <div className={styles.section}>
                         <h2>9. Updates to This Policy</h2>
                         <p>
                             We may update this Privacy Policy periodically. All changes will be posted on this page. Continued use of the Panel constitutes acceptance of the revised Privacy Policy.
                         </p>
                     </div>
 
-                    <div className="privacy-section">
+                    <div className={styles.section}>
                         <h2>10. Contact Information</h2>
+                        <div className={styles.contactInfo}>
+                            <p>
+                                If you have any questions or concerns regarding this Privacy Policy or the handling of your data, please contact us at <a href="mailto:privacy@sentinel.com" className={styles.link}>privacy@sentinel.com</a>.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className={styles.legalNote}>
                         <p>
-                            If you have any questions or concerns regarding this Privacy Policy or the handling of your data, please contact us at <a href="mailto:privacy@sentinel.com" className="privacy-link">privacy@sentinel.com</a>.
+                            This Privacy Policy complies with the European Union's General Data Protection Regulation (GDPR) and Russian Federal Law No. 152-FZ "On Personal Data".
                         </p>
                     </div>
 
-                    <footer className="privacy-footer">
+                    <footer className={styles.footer}>
                         <p>© {currentYear} Sentinel LLC. All rights reserved.</p>
                     </footer>
                 </div>

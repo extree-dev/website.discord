@@ -13,22 +13,15 @@
   z-index: 1000;
   width: 42px;
   height: 42px;
-}
-
-[data-theme="light"] .theme-toggle {
-  background-color: rgba(0, 0, 0, 0.05);
-  color: #1e293b;
-  border: 2px solid rgba(0, 0, 0, 0.1);
-}
-
-[data-theme="dark"] .theme-toggle {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #e2e8f0;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-color);
 }
 
 .theme-toggle:hover:not(.animating) {
   transform: scale(1.1);
+  background-color: var(--accent-color);
+  color: white;
 }
 
 .theme-toggle.animating {
@@ -38,8 +31,8 @@
 /* Стили для волны */
 .theme-wave {
   position: fixed;
-  top: var(--wave-y, 50%);
-  left: var(--wave-x, 50%);
+  top: 0;
+  left: 0;
   width: 4px;
   height: 4px;
   border-radius: 50%;
@@ -51,42 +44,15 @@
 /* Белая волна (при переключении на светлую тему) */
 .theme-wave.to-light {
   background: white;
-  box-shadow: 0 0 0 0 white;
 }
-
-.theme-wave.to-light.expanding {
-  animation: waveExpandLight 1s ease-out forwards;
-}
-
-@keyframes waveExpandLight {
-  0% {
-    width: 4px;
-    height: 4px;
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-    box-shadow: 0 0 0 0 white;
-  }
-  50% {
-    opacity: 0.8;
-  }
-  100% {
-    width: 400vmax;
-    height: 400vmax;
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(1);
-    box-shadow: 0 0 0 2000px white; /* Белый фон покрывает всю страницу */
-  }
-}
-
 
 /* Черная волна (при переключении на темную тему) */
 .theme-wave.to-dark {
   background: #242424;
-  box-shadow: 0 0 0 0 #242424;
 }
 
 .theme-wave.expanding {
-  animation: waveExpand 1s ease-out forwards;
+  animation: waveExpand 0.8s ease-out forwards;
 }
 
 @keyframes waveExpand {
@@ -95,39 +61,15 @@
     height: 4px;
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
-    box-shadow: 0 0 0 0 white;
-  }
-  100% {
-    width: 400vmax;
-    height: 300vmax;
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(1);
-    box-shadow: 0 0 0 1000px white;
-  }
-}
-
-/* Для темной волны */
-.theme-wave.to-dark.expanding {
-  animation: waveExpandDark 1s ease-out forwards;
-}
-
-@keyframes waveExpandDark {
-  0% {
-    width: 4px;
-    height: 4px;
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-    box-shadow: 0 0 0 0 #242424;
   }
   50% {
-    opacity: 0.8;
+    opacity: 0.7;
   }
   100% {
     width: 400vmax;
     height: 400vmax;
     opacity: 0;
     transform: translate(-50%, -50%) scale(1);
-    box-shadow: 0 0 0 2000px #242424; /* Темный фон покрывает всю страницу */
   }
 }
 

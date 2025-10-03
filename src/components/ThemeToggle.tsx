@@ -19,38 +19,30 @@ const ThemeToggle: React.FC = () => {
 
   const handleThemeToggle = (e: React.MouseEvent) => {
     if (isAnimating) return;
-
+    
     setIsAnimating(true);
-
-    // Создаем элемент волны
+    
     const wave = document.createElement('div');
-
-    // Определяем цвет волны в зависимости от направления смены темы
     const isSwitchingToLight = darkMode;
     wave.className = `theme-wave ${isSwitchingToLight ? 'to-light' : 'to-dark'}`;
-
-    // Получаем позицию клика относительно ВИДПОРТА (окна браузера)
+    
+    // Позиция относительно viewport
     const x = e.clientX;
     const y = e.clientY;
-
-    // Устанавливаем позицию волны относительно viewport
+    
     wave.style.left = `${x}px`;
     wave.style.top = `${y}px`;
-
-    // Добавляем волну в body
+    
     document.body.appendChild(wave);
-
-    // Запускаем анимацию волны
+    
     setTimeout(() => {
       wave.classList.add('expanding');
     }, 10);
-
-    // Меняем тему в середине анимации волны
+    
     setTimeout(() => {
       setDarkMode((prev) => !prev);
-    }, 300);
-
-    // Завершаем анимацию и удаляем волну
+    }, 400);
+    
     setTimeout(() => {
       setIsAnimating(false);
       if (wave.parentNode) {

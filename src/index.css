@@ -1,4 +1,3 @@
-/* index.css */
 :root {
   font-family: ABCGintoDiscord, sans-serif;
   line-height: 1.5;
@@ -12,18 +11,64 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
 
-/* Темная тема */
-[data-theme="dark"] {
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /* CSS переменные для темной темы по умолчанию */
+  --bg-primary: #242424;
+  --bg-secondary: #1a1a1a;
+  --text-primary: rgba(255, 255, 255, 0.87);
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --accent-color: #646cff;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --modal-bg: rgba(30, 31, 34, 0.7);
+  --modal-border: rgba(255, 255, 255, 0.1);
+  --button-bg: #5865F2;
+  --button-hover: #4752c4;
+  --button-text: #ffffff;
 }
 
 /* Светлая тема */
 [data-theme="light"] {
   color: #213547;
   background-color: #ffffff;
+
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9f9f9;
+  --text-primary: #213547;
+  --text-secondary: #6b7280;
+  --accent-color: #747bff;
+  --border-color: rgba(0, 0, 0, 0.1);
+  --modal-bg: rgba(255, 255, 255, 0.9);
+  --modal-border: rgba(0, 0, 0, 0.1);
+  --button-bg: #5865F2;
+  --button-hover: #4752c4;
+  --button-text: #ffffff;
+}
+
+/* Темная тема */
+[data-theme="dark"] {
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  --bg-primary: #242424;
+  --bg-secondary: #1a1a1a;
+  --text-primary: rgba(255, 255, 255, 0.87);
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --accent-color: #646cff;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --modal-bg: rgba(30, 31, 34, 0.7);
+  --modal-border: rgba(255, 255, 255, 0.1);
+  --button-bg: #5865F2;
+  --button-hover: #4752c4;
+  --button-text: #ffffff;
+}
+
+a {
+  font-weight: 500;
+  color: var(--accent-color);
+  text-decoration: inherit;
+}
+a:hover {
+  color: var(--button-hover);
 }
 
 body {
@@ -31,7 +76,35 @@ body {
   min-width: 320px;
   min-height: 100vh;
   outline: none;
-  transition: background-color 0.5s ease, color 0.5s ease; /* Увеличил время transition */
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* УДАЛИ все остальные body[data-theme] стили которые конфликтуют */
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  cursor: pointer;
+  transition: border-color 0.25s, background-color 0.3s ease;
+}
+button:hover {
+  background-color: var(--button-hover);
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+/* Убери все медиа-запросы и дополнительные стили для body[data-theme] */

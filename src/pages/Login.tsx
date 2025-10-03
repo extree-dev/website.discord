@@ -1,8 +1,8 @@
-// Login.tsx - ОБНОВЛЯЕМ КОМПОНЕНТ
+// Login.tsx - ОБНОВЛЕННЫЙ КОМПОНЕНТ В СТИЛЕ COMPLETEPROFILE
 
 import { useState, useEffect } from "react";
 import { FaDiscord } from "react-icons/fa";
-import { Eye, EyeOff } from "lucide-react";
+import { MdVisibility, MdVisibilityOff, MdWarning } from 'react-icons/md';
 import { useNavigate } from "react-router-dom";
 import ThemeToggle from "@/components/ThemeToggle.js";
 import { LockModal } from "@/components/LocalModal.js";
@@ -85,7 +85,7 @@ export const Login: React.FC<LoginProps> = ({
     }
   };
 
-  // Обычный логин (остается без изменений)
+  // Обычный логин
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
@@ -139,95 +139,122 @@ export const Login: React.FC<LoginProps> = ({
 
   return (
     <div className="login-wrapper">
-      <div className="login-card">
-        <div className="login-header-top"><ThemeToggle /></div>
-        <div className="login-header">
-          <h1>Welcome Back</h1>
-          <p>Log in to continue</p>
-        </div>
+      <div className="login-background"></div>
+      <div className="login-container">
+        <div className="login-card">
+          <div className="login-header-top"><ThemeToggle /></div>
 
-        {oauthError && (
-          <div className="login-error global-error">
-            {oauthError}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="login-form" noValidate>
-          {/* Поля для обычного логина */}
-          <div className="login-input-group floating-label">
-            <input
-              id="identifier"
-              type="text"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              placeholder=" "
-              className={errors.identifier ? "error" : ""}
-              disabled={isLoading || isDiscordLoading}
-            />
-            <label htmlFor="identifier">Email or Login</label>
-            {errors.identifier && <div className="input-error">{errors.identifier}</div>}
+          <div className="login-header">
+            <h2 className="login-title">Welcome Back</h2>
+            <p className="login-subtitle">Log in to continue</p>
           </div>
 
-          <div className="login-input-group floating-label password-group">
-            <div className="password-wrapper">
+          {oauthError && (
+            <div className="global-error">
+              <MdWarning className="error-icon" />
+              {oauthError}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="login-form" noValidate>
+            <div className="form-group">
+              <label htmlFor="identifier" className="form-label">
+                Email or Login
+              </label>
               <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder=" "
-                className={errors.password ? "error" : ""}
+                id="identifier"
+                type="text"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                className={`form-input ${errors.identifier ? 'input-error' : ''}`}
+                placeholder="Enter your email or username"
                 disabled={isLoading || isDiscordLoading}
               />
-              <label htmlFor="password">Password</label>
-              <button
-                type="button"
-                className="password-toggle-btn"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={isLoading || isDiscordLoading}
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
+              {errors.identifier && (
+                <p className="form-error">
+                  <MdWarning className="error-icon" />
+                  {errors.identifier}
+                </p>
+              )}
             </div>
-            {errors.password && <div className="input-error">{errors.password}</div>}
-          </div>
 
-          <button
-            type="submit"
-            className="login-btn"
-            disabled={isLoading || isDiscordLoading}
-          >
-            {isLoading ? "Loading..." : "Log in"}
-          </button>
+            <div className="form-group">
+              <label htmlFor="password" className="form-label">
+                Password
+              </label>
+              <div className="password-input-container">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`form-input ${errors.password ? 'input-error' : ''}`}
+                  placeholder="Enter your password"
+                  disabled={isLoading || isDiscordLoading}
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading || isDiscordLoading}
+                >
+                  {showPassword ? <MdVisibilityOff /> : <MdVisibility />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="form-error">
+                  <MdWarning className="error-icon" />
+                  {errors.password}
+                </p>
+              )}
+            </div>
 
-          <p className="login-register">
-            Don't have an account? <a href="/register">Create an account</a>
-          </p>
+            <button
+              type="submit"
+              className="submit-button"
+              disabled={isLoading || isDiscordLoading}
+            >
+              {isLoading ? (
+                <>
+                  <div className="loading-spinner-small"></div>
+                  Loading...
+                </>
+              ) : (
+                "Log in"
+              )}
+            </button>
 
-          <div className="login-divider">Or continue with</div>
+            <p className="login-register">
+              Don't have an account? <a href="/register" className="link-primary">Create an account</a>
+            </p>
 
-          {/* Discord OAuth кнопка */}
-          <button
-            type="button"
-            onClick={handleDiscordLogin}
-            className="discord-oauth-btn"
-            disabled={isLoading || isDiscordLoading}
-          >
-            {isDiscordLoading ? (
-              <div className="loading-spinner-small"></div>
-            ) : (
-              <>
-                <FaDiscord size={20} />
-                Continue with Discord
-              </>
-            )}
-          </button>
+            <div className="login-divider">
+              <span>Or continue with</span>
+            </div>
 
-          <p className="login-terms">
-            &copy; {new Date().getFullYear()} Sentinel LLC. By logging in, you agree to our{" "}
-            <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.
-          </p>
-        </form>
+            {/* Discord OAuth кнопка */}
+            <button
+              type="button"
+              onClick={handleDiscordLogin}
+              className="discord-oauth-btn"
+              disabled={isLoading || isDiscordLoading}
+            >
+              {isDiscordLoading ? (
+                <div className="loading-spinner-small"></div>
+              ) : (
+                <>
+                  <FaDiscord className="discord-icon" />
+                  Continue with Discord
+                </>
+              )}
+            </button>
+
+            <p className="login-terms">
+              &copy; {new Date().getFullYear()} Sentinel LLC. By logging in, you agree to our{" "}
+              <a href="/terms" className="link-primary">Terms</a> and <a href="/privacy" className="link-primary">Privacy Policy</a>.
+            </p>
+          </form>
+        </div>
       </div>
 
       {lockUntil && (

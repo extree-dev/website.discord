@@ -18,8 +18,6 @@ html, body, #root {
   flex-direction: column;
   position: relative;
   overflow: hidden;
-  /* Основной фон страницы — единственный источник правды */
-  background: linear-gradient(135deg, #0e1118, #1b1f2a);
 }
 
 /* Мягкие световые пятна на всю страницу (как в home.css) */

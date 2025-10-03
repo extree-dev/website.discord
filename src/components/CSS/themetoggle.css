@@ -1,30 +1,153 @@
-/* Светлая тема */
-[data-theme="light"] {
-  --mp-bg: #ffffff;
-  --mp-surface: #f9f9f9;
-  --mp-ink: #5865f2;      /* основной текст */
-  --mp-muted: #6a6d7c;
-  --mp-accent: #5865f2;
-  --mp-success: #43b581;
-  --mp-error: #f04747;
-  --mp-warning: #faa61a;
-  --mp-divider: rgba(0,0,0,0.1);
-  --mp-radius: 10px;
-  --mp-bachground-color: #e0e3ff;
+.theme-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: visible;
+  z-index: 1000;
+  width: 42px;
+  height: 42px;
 }
 
-/* Тёмная тема */
-[data-theme="dark"] {
-  --mp-bg: #1e1f22;
-  --mp-surface: #2b2d31;
-  --mp-ink: #e0e3ff;      /* основной текст */
-  --mp-muted: #9ca3af;
-  --mp-accent: #e0e3ff;
-  --mp-success: #43b581;
-  --mp-error: #f04747;
-  --mp-warning: #faa61a;
-  --mp-divider: rgba(255,255,255,0.1);
-  --mp-radius: 10px;
-  --mp-button-text: #000000;
-  --mp-accents: #5865f2;
+[data-theme="light"] .theme-toggle {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #1e293b;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .theme-toggle {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.theme-toggle:hover:not(.animating) {
+  transform: scale(1.1);
+}
+
+.theme-toggle.animating {
+  transform: scale(0.95);
+}
+
+/* Стили для волны */
+.theme-wave {
+  position: fixed;
+  top: var(--wave-y, 50%);
+  left: var(--wave-x, 50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+}
+
+/* Белая волна (при переключении на светлую тему) */
+.theme-wave.to-light {
+  background: white;
+  box-shadow: 0 0 0 0 white;
+}
+
+.theme-wave.to-light.expanding {
+  animation: waveExpandLight 1s ease-out forwards;
+}
+
+@keyframes waveExpandLight {
+  0% {
+    width: 4px;
+    height: 4px;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 0 0 0 white;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    width: 400vmax;
+    height: 400vmax;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 0 0 2000px white; /* Белый фон покрывает всю страницу */
+  }
+}
+
+
+/* Черная волна (при переключении на темную тему) */
+.theme-wave.to-dark {
+  background: #242424;
+  box-shadow: 0 0 0 0 #242424;
+}
+
+.theme-wave.expanding {
+  animation: waveExpand 1s ease-out forwards;
+}
+
+@keyframes waveExpand {
+  0% {
+    width: 4px;
+    height: 4px;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 0 0 0 white;
+  }
+  100% {
+    width: 400vmax;
+    height: 300vmax;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 0 0 1000px white;
+  }
+}
+
+/* Для темной волны */
+.theme-wave.to-dark.expanding {
+  animation: waveExpandDark 1s ease-out forwards;
+}
+
+@keyframes waveExpandDark {
+  0% {
+    width: 4px;
+    height: 4px;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 0 0 0 #242424;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    width: 400vmax;
+    height: 400vmax;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 0 0 2000px #242424; /* Темный фон покрывает всю страницу */
+  }
+}
+
+/* Анимация иконки */
+.theme-toggle svg {
+  transition: transform 0.3s ease;
+  position: relative;
+  z-index: 1001;
+}
+
+.theme-toggle:hover:not(.animating) svg {
+  transform: rotate(15deg);
+}
+
+.theme-toggle.animating svg {
+  animation: iconPulse 0.6s ease-in-out;
+}
+
+@keyframes iconPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
 }

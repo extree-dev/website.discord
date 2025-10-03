@@ -1,7 +1,7 @@
 // CompleteProfile.tsx
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { MdVerified, MdWarning, MdKey } from 'react-icons/md';
+import { MdVerified, MdWarning, MdKey, MdVisibility, MdVisibilityOff } from 'react-icons/md';
 import ThemeToggle from "./ThemeToggle.js";
 import CountrySelect from "./CountrySelect.js";
 import "./CSS/CompleteProfile.css";
@@ -11,7 +11,9 @@ interface ProfileData {
     country: string;
     city: string;
     agreeTerms: boolean;
-    secretCode: string; // ← новое поле
+    secretCode: string;
+    password: string;
+    confirmPassword: string;
 }
 
 interface ProfileErrors {
@@ -19,10 +21,11 @@ interface ProfileErrors {
     country?: string;
     city?: string;
     agreeTerms?: string;
-    secretCode?: string; // ← новое поле
+    secretCode?: string;
+    password?: string;
+    confirmPassword?: string;
 }
 
-// ОБНОВЛЕННЫЙ интерфейс userInfo с цветами
 interface UserInfo {
     email: string;
     name: string;
@@ -41,7 +44,9 @@ export const CompleteProfile: React.FC = () => {
         country: '',
         city: '',
         agreeTerms: false,
-        secretCode: ''
+        secretCode: '',
+        password: '',
+        confirmPassword: ''
     });
 
     const [errors, setErrors] = useState<ProfileErrors>({});
@@ -53,12 +58,20 @@ export const CompleteProfile: React.FC = () => {
         isValid: boolean;
         message: string;
     } | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [passwordStrength, setPasswordStrength] = useState(0);
 
     const countrySelectRef = useRef<HTMLDivElement>(null);
     const countryInputRef = useRef<HTMLInputElement>(null);
 
+    const getPasswordStrengthColor = () => ["#ff4444", "#ff8800", "#ffbb33", "#00C851", "#007E33"][passwordStrength] || "#666";
+    const getPasswordStrengthLabel = () => ["Very Weak", "Weak", "Fair", "Strong", "Very Strong"][passwordStrength] || "";
+
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+
+    // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 
     // Функция для получения дефолтного аватара на основе имени
     const getDefaultAvatar = (name: string) => {
@@ -107,6 +120,17 @@ export const CompleteProfile: React.FC = () => {
     const generateSessionId = () => {
         return 'SESS-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
     };
+
+    // ========== ОСНОВНЫЕ ФУНКЦИИ ==========
+
+    useEffect(() => {
+        let strength = 0;
+        if (profileData.password.length >= 12) strength += 1;
+        if (/[A-Z]/.test(profileData.password)) strength += 1;
+        if (/\d/.test(profileData.password)) strength += 1;
+        if (/[^A-Za-z0-9]/.test(profileData.password)) strength += 1;
+        setPasswordStrength(strength);
+    }, [profileData.password]);
 
     useEffect(() => {
         const token = searchParams.get('token');
@@ -175,9 +199,6 @@ export const CompleteProfile: React.FC = () => {
             console.log('Role color from API:', data.roleColor);
             console.log('Role hex color from API:', data.roleHexColor);
 
-            // Генерируем ID сессии
-            const sessionId = generateSessionId();
-
             // Устанавливаем userInfo с ВСЕМИ данными включая цвета
             setUserInfo({
                 email: data.email,
@@ -187,8 +208,8 @@ export const CompleteProfile: React.FC = () => {
                 emailVerified: data.emailVerified,
                 discordCreatedAt: data.discordCreatedAt,
                 highestRole: data.highestRole,
-                roleColor: data.roleColor,           // Добавьте это
-                roleHexColor: data.roleHexColor      // Добавьте это
+                roleColor: data.roleColor,
+                roleHexColor: data.roleHexColor
             });
 
             if (data.name) {
@@ -215,6 +236,22 @@ export const CompleteProfile: React.FC = () => {
         if (!profileData.secretCode.trim()) newErrors.secretCode = "Secret registration code is required";
         else if (codeValidation && !codeValidation.isValid) newErrors.secretCode = codeValidation.message;
 
+        // Валидация пароля
+        if (!profileData.password.trim()) {
+            newErrors.password = "Password is required";
+        } else if (profileData.password.length < 12) {
+            newErrors.password = "Password must be at least 12 characters long";
+        } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(profileData.password)) {
+            newErrors.password = "Password must contain uppercase, lowercase, number and special character";
+        }
+
+        // Валидация подтверждения пароля
+        if (!profileData.confirmPassword.trim()) {
+            newErrors.confirmPassword = "Please confirm your password";
+        } else if (profileData.password !== profileData.confirmPassword) {
+            newErrors.confirmPassword = "Passwords do not match";
+        }
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -231,6 +268,11 @@ export const CompleteProfile: React.FC = () => {
             } else {
                 setCodeValidation(null);
             }
+        }
+
+        // Очистка ошибок подтверждения пароля при изменении основного пароля
+        if (field === 'password' && errors.confirmPassword) {
+            setErrors(prev => ({ ...prev, confirmPassword: undefined }));
         }
     };
 
@@ -258,7 +300,8 @@ export const CompleteProfile: React.FC = () => {
                 firstName: profileData.firstName,
                 country: profileData.country || null,
                 city: profileData.city || null,
-                secretCode: profileData.secretCode.toUpperCase() // ← отправляем код
+                secretCode: profileData.secretCode.toUpperCase(),
+                password: profileData.password
             };
 
             const response = await fetch("http://localhost:4000/api/complete-profile", {
@@ -413,9 +456,9 @@ export const CompleteProfile: React.FC = () => {
                                 value={profileData.secretCode}
                                 onChange={e => handleInputChange('secretCode', e.target.value.toUpperCase())}
                                 className={`form-input ${codeValidation?.isValid ? 'input-valid' :
-                                        codeValidation && !codeValidation.isValid ? 'input-error' : ''
+                                    codeValidation && !codeValidation.isValid ? 'input-error' : ''
                                     } ${errors.secretCode ? 'input-error' : ''}`}
-                                placeholder="Enter code provided by administrator (e.g., ABCD-EFGH-IJKL)"
+                                placeholder="Enter code provided by administrator"
                                 disabled={isLoading || isCountryListOpen}
                             />
 
@@ -451,6 +494,96 @@ export const CompleteProfile: React.FC = () => {
                                 </p>
                             )}
                         </div>
+
+                        {/* Поля для пароля */}
+                        <div className="form-grid-2col">
+                            <div className="form-group">
+                                <label htmlFor="password" className="form-label">
+                                    Password *
+                                </label>
+                                <div className="password-input-container">
+                                    <input
+                                        id="password"
+                                        type={showPassword ? "text" : "password"}
+                                        value={profileData.password}
+                                        onChange={e => handleInputChange('password', e.target.value)}
+                                        className={`form-input password-input ${errors.password ? 'input-error' : ''}`}
+                                        placeholder="Create a strong password"
+                                        disabled={isLoading || isCountryListOpen}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="password-toggle"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        disabled={isLoading || isCountryListOpen}
+                                    >
+                                        {showPassword ? <MdVisibilityOff /> : <MdVisibility />}
+                                    </button>
+                                </div>
+
+                                {profileData.password.length > 0 && ( // ← измените password на profileData.password
+                                    <div className="password-strength-indicator">
+                                        <div className="password-strength-text">
+                                            Strength: <span style={{ color: getPasswordStrengthColor() }}>{getPasswordStrengthLabel()}</span>
+                                        </div>
+                                        <div className="password-strength-bar">
+                                            <div
+                                                className="password-strength-progress"
+                                                style={{
+                                                    width: `${(passwordStrength / 4) * 100}%`,
+                                                    backgroundColor: getPasswordStrengthColor()
+                                                }}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {errors.password && (
+                                    <p className="form-error">
+                                        <MdWarning className="error-icon" />
+                                        {errors.password}
+                                    </p>
+                                )}
+                                <div className="password-hints">
+                                    <small>• At least 12 characters</small>
+                                    <small>• Uppercase & lowercase letters</small>
+                                    <small>• Numbers & special characters</small>
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="confirmPassword" className="form-label">
+                                    Confirm Password *
+                                </label>
+
+                                <div className="password-input-container">
+                                    <input
+                                        id="confirmPassword"
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        value={profileData.confirmPassword}
+                                        onChange={e => handleInputChange('confirmPassword', e.target.value)}
+                                        className={`form-input password-input ${errors.confirmPassword ? 'input-error' : ''}`} // ← добавил password-input
+                                        placeholder="Repeat password"
+                                        disabled={isLoading || isCountryListOpen}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="password-toggle"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        disabled={isLoading || isCountryListOpen}
+                                    >
+                                        {showConfirmPassword ? <MdVisibilityOff /> : <MdVisibility />}
+                                    </button>
+                                </div>
+                                {errors.confirmPassword && (
+                                    <p className="form-error">
+                                        <MdWarning className="error-icon" />
+                                        {errors.confirmPassword}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
                         <div className="form-grid-2col">
                             <div className="form-group">
                                 <label htmlFor="firstName" className="form-label">First Name *</label>
@@ -521,32 +654,6 @@ export const CompleteProfile: React.FC = () => {
                                 />
                             </div>
                         </div>
-
-                        <div className="form-grid-2col">
-                            <div className="form-group country-select-group">
-                                <label htmlFor="country" className="form-label">Country</label>
-                                <div className="command-param-select-wrapper" ref={countrySelectRef}>
-                                    <CountrySelect
-                                        value={profileData.country}
-                                        onChange={val => handleInputChange('country', val)}
-                                        onOpenChange={setIsCountryListOpen}
-                                    />
-                                </div>
-                            </div>
-                            <div className="form-group">
-                                <label htmlFor="city" className="form-label">City</label>
-                                <input
-                                    id="city"
-                                    type="text"
-                                    value={profileData.city}
-                                    onChange={e => handleInputChange('city', e.target.value)}
-                                    className="form-input"
-                                    placeholder="City"
-                                    disabled={isCountryListOpen}
-                                />
-                            </div>
-                        </div>
-
                         <div className="checkbox-group">
                             <input
                                 id="agreeTerms"
@@ -562,8 +669,12 @@ export const CompleteProfile: React.FC = () => {
                         </div>
                         {errors.agreeTerms && <p className="form-error">{errors.agreeTerms}</p>}
 
-                        <button type="submit" disabled={isLoading || isCountryListOpen} className="submit-button">
-                            {isLoading ? "Completing Profile..." : "Complete Profile"}
+                        <button
+                            type="submit"
+                            disabled={isLoading || isCountryListOpen || !profileData.agreeTerms}
+                            className="submit-button"
+                        >
+                            {isLoading ? "Completing Registrathion..." : "Completing Registrathion"}
                         </button>
                     </form>
                 </div>

@@ -1,9 +1,11 @@
+// Register.tsx - ОБНОВЛЕННЫЙ КОМПОНЕНТ В СТИЛЕ COMPLETEPROFILE
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { MdVisibility, MdVisibilityOff, MdKey, MdWarning, MdCheckCircle, MdError } from 'react-icons/md';
 import ThemeToggle from "@/components/ThemeToggle.js";
-import "../components/CSS/Register.css";
-import { Eye, EyeOff, Key } from "lucide-react"; // ← Добавьте Key в импорт
 import { Toast } from "@/components/Toast.js";
+import "../components/CSS/Register.css";
 
 declare global {
     interface Window {
@@ -17,7 +19,7 @@ export const Register = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    const [secretCode, setSecretCode] = useState(""); // ← Добавьте это состояние
+    const [secretCode, setSecretCode] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState("");
@@ -57,12 +59,16 @@ export const Register = () => {
                 body: JSON.stringify({ code: code.toUpperCase() })
             });
 
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
             const data = await response.json();
 
             if (data.valid) {
                 setCodeValidation({
                     isValid: true,
-                    message: "✓ Valid registration code"
+                    message: "Valid registration code"
                 });
                 return true;
             } else {
@@ -110,7 +116,6 @@ export const Register = () => {
                 return;
             }
 
-            // Проверяем, не загружен ли уже скрипт
             if (document.querySelector(`script[src*="recaptcha"]`)) {
                 if (window.grecaptcha) {
                     setIsRecaptchaReady(true);
@@ -158,16 +163,13 @@ export const Register = () => {
 
         loadRecaptcha();
 
-        // Очистка при размонтировании
         return () => {
             if (recaptchaToken && window.grecaptcha) {
-                // Сбрасываем reCAPTCHA при размонтировании компонента
                 window.grecaptcha.reset();
             }
         };
     }, []);
 
-    // Обновляем reCAPTCHA токен при изменении полей формы
     useEffect(() => {
         if (isRecaptchaReady && (name || nickname || email || password || secretCode)) {
             refreshRecaptchaToken();
@@ -209,7 +211,6 @@ export const Register = () => {
         setError("");
         setErrors({});
 
-        // Проверяем готовность reCAPTCHA
         if (!isRecaptchaReady || !recaptchaToken) {
             setError("Security verification is not ready. Please wait...");
             setToast({ message: "Security verification is not ready. Please wait...", type: "error" });
@@ -217,7 +218,6 @@ export const Register = () => {
             return;
         }
 
-        // Проверяем секретный код
         const isCodeValid = await validateSecretCode(secretCode);
         if (!isCodeValid) {
             setErrors(prev => ({
@@ -230,7 +230,6 @@ export const Register = () => {
         const newErrors: typeof errors = {};
         let valid = true;
 
-        // Валидация (добавляем проверку секретного кода)
         if (!name.trim()) { newErrors.name = "Full name is required"; valid = false; }
         if (!nickname.trim()) { newErrors.nickname = "Nickname is required"; valid = false; }
         else if (!validateNickname(nickname)) { newErrors.nickname = "3-20 chars, letters, numbers, underscores"; valid = false; }
@@ -249,7 +248,6 @@ export const Register = () => {
         setIsLoading(true);
 
         try {
-            // Формируем объект для отправки с reCAPTCHA токеном и секретным кодом
             const payload = {
                 name: name.trim(),
                 nickname: nickname.trim(),
@@ -257,7 +255,7 @@ export const Register = () => {
                 password,
                 confirmPassword: password,
                 recaptchaToken,
-                secretCode: secretCode.toUpperCase() // ← добавляем код
+                secretCode: secretCode.toUpperCase()
             };
 
             const res = await fetch("http://localhost:4000/api/register", {
@@ -277,7 +275,6 @@ export const Register = () => {
             setError("");
             setToast({ message: "Registration successful! Redirecting to login...", type: "success" });
 
-            // Очищаем форму
             setName("");
             setNickname("");
             setEmail("");
@@ -287,7 +284,6 @@ export const Register = () => {
             setRecaptchaToken("");
             setCodeValidation(null);
 
-            // Переход на логин через 2 секунды
             setTimeout(() => {
                 navigate("/login");
             }, 2000);
@@ -296,8 +292,6 @@ export const Register = () => {
             const errorMessage = err instanceof Error ? err.message : "Registration failed";
             setError(errorMessage);
             setToast({ message: errorMessage, type: "error" });
-
-            // Обновляем reCAPTCHA токен после ошибки
             refreshRecaptchaToken();
         } finally {
             setIsLoading(false);
@@ -309,209 +303,277 @@ export const Register = () => {
 
     return (
         <div className="register-wrapper">
-            <div className="register-card">
-                <div className="register-header-top"><ThemeToggle /></div>
-                <div className="register-header">
-                    <h1>Create your account</h1>
-                    <p>Get started with our platform</p>
-                </div>
+            <div className="register-background"></div>
+            <div className="register-container">
+                <div className="register-card">
+                    <div className="register-header-top"><ThemeToggle /></div>
 
-                {error && <div className="register-error">{error}</div>}
-
-                <form className="register-form" onSubmit={handleSubmit} noValidate>
-                    {/* Секретный код - добавляем первым полем */}
-                    <div className="register-input-group">
-                        <div className="floating-label-container">
-                            <div className="floating-label secret-code-group">
-                                <input
-                                    id="secretCode"
-                                    type="text"
-                                    value={secretCode}
-                                    onChange={(e) => handleSecretCodeChange(e.target.value)}
-                                    placeholder=" "
-                                    required
-                                    className={errors.secretCode ? "error" : codeValidation?.isValid ? "success" : ""}
-                                    disabled={isLoading}
-                                    style={{ textTransform: 'uppercase' }}
-                                />
-                                <label htmlFor="secretCode">
-                                    <Key size={16} className="inline-icon" />
-                                    Secret Registration Code
-                                </label>
-                            </div>
-                        </div>
-                        {isValidatingCode && (
-                            <div className="code-validation-loading">Validating code...</div>
-                        )}
-                        {codeValidation && !isValidatingCode && (
-                            <div className={`code-validation-message ${codeValidation.isValid ? 'valid' : 'invalid'}`}>
-                                {codeValidation.message}
-                            </div>
-                        )}
-                        {errors.secretCode && !isValidatingCode && (
-                            <div className="input-error">{errors.secretCode}</div>
-                        )}
+                    <div className="register-header">
+                        <h2 className="register-title">Create Your Account</h2>
+                        <p className="register-subtitle">Get started with our platform</p>
                     </div>
 
-                    {/* Name */}
-                    <div className="register-input-group">
-                        <div className="floating-label-container">
-                            <div className="floating-label">
+                    {error && (
+                        <div className="global-error">
+                            <MdWarning className="error-icon" />
+                            {error}
+                        </div>
+                    )}
+
+                    <form className="register-form" onSubmit={handleSubmit} noValidate>
+                        {/* Секретный код */}
+                        <div className="form-group">
+                            <label htmlFor="secretCode" className="form-label">
+                                <MdKey className="inline-icon" />
+                                Secret Registration Code *
+                            </label>
+                            <input
+                                id="secretCode"
+                                type="text"
+                                value={secretCode}
+                                onChange={(e) => handleSecretCodeChange(e.target.value)}
+                                className={`form-input ${codeValidation?.isValid ? 'input-valid' : codeValidation && !codeValidation.isValid ? 'input-error' : ''} ${errors.secretCode ? 'input-error' : ''}`}
+                                placeholder="Enter code provided by administrator"
+                                disabled={isLoading}
+                                style={{ textTransform: 'uppercase' }}
+                            />
+
+                            {/* Индикатор загрузки валидации */}
+                            {isValidatingCode && (
+                                <div className="validation-loading">
+                                    <div className="loading-spinner-small"></div>
+                                    Validating code...
+                                </div>
+                            )}
+
+                            {/* Сообщение о валидном коде */}
+                            {codeValidation?.isValid && !isValidatingCode && (
+                                <div className="code-validation validation-valid">
+                                    <MdCheckCircle className="validation-icon" />
+                                    {codeValidation.message}
+                                </div>
+                            )}
+
+                            {/* Сообщение о невалидном коде */}
+                            {codeValidation && !codeValidation.isValid && !isValidatingCode && (
+                                <div className="code-validation validation-invalid">
+                                    <MdError className="validation-icon" />
+                                    {codeValidation.message}
+                                </div>
+                            )}
+
+                            {/* Общие ошибки формы */}
+                            {errors.secretCode && !isValidatingCode && (
+                                <p className="form-error">
+                                    <MdWarning className="error-icon" />
+                                    {errors.secretCode}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Основные поля формы */}
+                        <div className="form-grid-2col">
+                            <div className="form-group">
+                                <label htmlFor="name" className="form-label">
+                                    Full Name *
+                                </label>
                                 <input
                                     id="name"
                                     type="text"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    placeholder=" "
-                                    required
+                                    className={`form-input ${errors.name ? 'input-error' : ''}`}
+                                    placeholder="Enter your full name"
                                     autoComplete="name"
-                                    className={errors.name ? "error" : ""}
                                     disabled={isLoading}
                                 />
-                                <label htmlFor="name">Full Name</label>
+                                {errors.name && (
+                                    <p className="form-error">
+                                        <MdWarning className="error-icon" />
+                                        {errors.name}
+                                    </p>
+                                )}
                             </div>
-                        </div>
-                        {errors.name && <div className="input-error">{errors.name}</div>}
-                    </div>
 
-                    {/* Nickname */}
-                    <div className="register-input-group">
-                        <div className="floating-label-container">
-                            <div className="floating-label">
+                            <div className="form-group">
+                                <label htmlFor="nickname" className="form-label">
+                                    Nickname *
+                                </label>
                                 <input
                                     id="nickname"
                                     type="text"
                                     value={nickname}
                                     onChange={(e) => setNickname(e.target.value)}
-                                    placeholder=" "
-                                    required
+                                    className={`form-input ${errors.nickname ? 'input-error' : ''}`}
+                                    placeholder="Enter your nickname"
                                     autoComplete="username"
-                                    className={errors.nickname ? "error" : ""}
                                     disabled={isLoading}
                                 />
-                                <label htmlFor="nickname">Nickname</label>
+                                {errors.nickname && (
+                                    <p className="form-error">
+                                        <MdWarning className="error-icon" />
+                                        {errors.nickname}
+                                    </p>
+                                )}
                             </div>
                         </div>
-                        {errors.nickname && <div className="input-error">{errors.nickname}</div>}
-                    </div>
 
-                    {/* Email */}
-                    <div className="register-input-group">
-                        <div className="floating-label-container">
-                            <div className="floating-label">
-                                <input
-                                    id="email"
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder=" "
-                                    required
-                                    autoComplete="email"
-                                    className={errors.email ? "error" : ""}
-                                    disabled={isLoading}
-                                />
-                                <label htmlFor="email">Email</label>
-                            </div>
+                        <div className="form-group">
+                            <label htmlFor="email" className="form-label">
+                                Email *
+                            </label>
+                            <input
+                                id="email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className={`form-input ${errors.email ? 'input-error' : ''}`}
+                                placeholder="Enter your email"
+                                autoComplete="email"
+                                disabled={isLoading}
+                            />
+                            {errors.email && (
+                                <p className="form-error">
+                                    <MdWarning className="error-icon" />
+                                    {errors.email}
+                                </p>
+                            )}
                         </div>
-                        {errors.email && <div className="input-error">{errors.email}</div>}
-                    </div>
 
-                    {/* Password */}
-                    <div className="register-input-group floating-label password-group">
-                        <div className="floating-label-container">
-                            <div className="password-wrapper">
-                                <input
-                                    id="password"
-                                    type={showPassword ? "text" : "password"}
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder=" "
-                                    required
-                                    autoComplete="new-password"
-                                    className={errors.password ? "error" : ""}
-                                    disabled={isLoading}
-                                />
-                                <label htmlFor="password">Password</label>
-                                {password.length > 0 && (
+                        <div className="form-grid-2col">
+                            <div className="form-group">
+                                <label htmlFor="password" className="form-label">
+                                    Password *
+                                </label>
+                                <div className="password-input-container">
+                                    <input
+                                        id="password"
+                                        type={showPassword ? "text" : "password"}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className={`form-input password-input ${errors.password ? 'input-error' : ''}`} // ← добавил password-input
+                                        placeholder="Create a strong password"
+                                        autoComplete="new-password"
+                                        disabled={isLoading}
+                                    />
                                     <button
                                         type="button"
-                                        className="password-toggle-btn"
+                                        className="password-toggle"
                                         onClick={() => setShowPassword(!showPassword)}
                                         disabled={isLoading}
                                     >
-                                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                        {showPassword ? <MdVisibilityOff /> : <MdVisibility />}
                                     </button>
-                                )}
-                            </div>
-                        </div>
-                        {errors.password && <div className="input-error">{errors.password}</div>}
-                        {password.length > 0 && !errors.password && (
-                            <div className="password-strength" style={{ color: getPasswordStrengthColor() }}>
-                                Strength: {getPasswordStrengthLabel()}
-                            </div>
-                        )}
-                    </div>
+                                </div>
 
-                    {/* Confirm Password */}
-                    <div className="register-input-group floating-label password-group">
-                        <div className="floating-label-container">
-                            <div className="password-wrapper">
-                                <input
-                                    id="confirmPassword"
-                                    type={showConfirmPassword ? "text" : "password"}
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    placeholder=" "
-                                    required
-                                    autoComplete="new-password"
-                                    className={errors.confirmPassword || (!passwordsMatch && confirmPassword) ? "error" : ""}
-                                    disabled={isLoading}
-                                />
-                                <label htmlFor="confirmPassword">Confirm Password</label>
-                                {confirmPassword.length > 0 && (
+                                {/* Индикатор силы пароля */}
+                                {password.length > 0 && (
+                                    <div className="password-strength-indicator">
+                                        <div className="password-strength-text">
+                                            Strength: <span style={{ color: getPasswordStrengthColor() }}>{getPasswordStrengthLabel()}</span>
+                                        </div>
+                                        <div className="password-strength-bar">
+                                            <div
+                                                className="password-strength-progress"
+                                                style={{
+                                                    width: `${(passwordStrength / 4) * 100}%`,
+                                                    backgroundColor: getPasswordStrengthColor()
+                                                }}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {errors.password && (
+                                    <p className="form-error">
+                                        <MdWarning className="error-icon" />
+                                        {errors.password}
+                                    </p>
+                                )}
+                                <div className="password-hints">
+                                    <small>• At least 12 characters</small>
+                                    <small>• Uppercase & lowercase letters</small>
+                                    <small>• Numbers & special characters</small>
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="confirmPassword" className="form-label">
+                                    Confirm Password *
+                                </label>
+                                <div className="password-input-container">
+                                    <input
+                                        id="confirmPassword"
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className={`form-input password-input ${errors.confirmPassword || (!passwordsMatch && confirmPassword) ? 'input-error' : ''}`} // ← добавил password-input
+                                        placeholder="Repeat password"
+                                        autoComplete="new-password"
+                                        disabled={isLoading}
+                                    />
                                     <button
                                         type="button"
-                                        className="password-toggle-btn"
+                                        className="password-toggle"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                         disabled={isLoading}
                                     >
-                                        {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                        {showConfirmPassword ? <MdVisibilityOff /> : <MdVisibility />}
                                     </button>
+                                </div>
+                                {errors.confirmPassword && (
+                                    <p className="form-error">
+                                        <MdWarning className="error-icon" />
+                                        {errors.confirmPassword}
+                                    </p>
+                                )}
+                                {!errors.confirmPassword && !passwordsMatch && confirmPassword && (
+                                    <p className="form-error">
+                                        <MdWarning className="error-icon" />
+                                        Passwords do not match
+                                    </p>
                                 )}
                             </div>
                         </div>
-                        {errors.confirmPassword && <div className="input-error">{errors.confirmPassword}</div>}
-                        {!errors.confirmPassword && !passwordsMatch && confirmPassword && (
-                            <div className="input-error">Passwords do not match</div>
-                        )}
-                    </div>
 
-                    {/* Invisible reCAPTCHA - скрытый элемент */}
-                    <div style={{ display: 'none' }}>
-                        <div className="g-recaptcha" data-sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} data-size="invisible"></div>
-                    </div>
+                        {/* Hidden reCAPTCHA */}
+                        <div style={{ display: 'none' }}>
+                            <div className="g-recaptcha" data-sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} data-size="invisible"></div>
+                        </div>
 
-                    <button
-                        type="submit"
-                        className="register-btn"
-                        disabled={isLoading || !isRecaptchaReady}
-                    >
-                        {isLoading ? (
-                            <span className="loading-spinner"></span>
-                        ) : !isRecaptchaReady ? (
-                            "Loading Security..."
-                        ) : (
-                            "Create account"
-                        )}
-                    </button>
-                </form>
+                        <button
+                            type="submit"
+                            className="submit-button"
+                            disabled={isLoading || !isRecaptchaReady}
+                        >
+                            {isLoading ? (
+                                <>
+                                    <div className="loading-spinner-small"></div>
+                                    Creating Account...
+                                </>
+                            ) : !isRecaptchaReady ? (
+                                "Loading Security..."
+                            ) : (
+                                "Create Account"
+                            )}
+                        </button>
 
-                {/* Индикатор загрузки reCAPTCHA */}
-                {!isRecaptchaReady && (
-                    <div className="recaptcha-loading">
-                        <small>Loading security verification...</small>
-                    </div>
-                )}
+                        <p className="register-login">
+                            Already have an account? <a href="/login" className="link-primary">Log in here</a>
+                        </p>
+
+                        <p className="register-terms">
+                            &copy; {new Date().getFullYear()} Sentinel LLC. By creating an account, you agree to our{" "}
+                            <a href="/terms" className="link-primary">Terms</a> and <a href="/privacy" className="link-primary">Privacy Policy</a>.
+                        </p>
+                    </form>
+
+                    {!isRecaptchaReady && (
+                        <div className="recaptcha-loading">
+                            <small>Loading security verification...</small>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {toast && (

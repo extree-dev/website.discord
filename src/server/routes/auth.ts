@@ -287,14 +287,58 @@ const validateContentType = (req: express.Request, res: express.Response, next: 
 
 router.use(validateContentType);
 
-// ==================== РЕГИСТРАЦИЯ ====================
+// ==================== РЕГИСТРАЦИЯ С СЕКРЕТНЫМИ КОДАМИ ====================
 
 router.post("/register", async (req, res) => {
   const startTime = Date.now();
   const clientIP = getClientIP(req);
 
   try {
-    const { name, nickname, email, password } = req.body;
+    const { name, nickname, email, password, secretCode } = req.body; // ← Добавлен secretCode
+
+    // ==================== ПРОВЕРКА СЕКРЕТНОГО КОДА ====================
+    if (!secretCode) {
+      console.log('❌ Missing secret code');
+      await constantTimeDelay();
+      return res.status(400).json({
+        error: "Secret registration code is required"
+      });
+    }
+
+    // Санитизация секретного кода
+    const sanitizedSecretCode = validator.escape(validator.trim(secretCode.toUpperCase()));
+
+    if (!/^[A-Z0-9\-_]+$/.test(sanitizedSecretCode)) {
+      await constantTimeDelay();
+      return res.status(400).json({
+        error: "Secret code contains invalid characters"
+      });
+    }
+
+    // Валидация секретного кода
+    const codeValidation = await prisma.secretCode.findFirst({
+      where: {
+        code: sanitizedSecretCode,
+        used: false,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } }
+        ],
+        uses: { lt: prisma.secretCode.fields.maxUses }
+      }
+    });
+
+    if (!codeValidation) {
+      console.log('❌ Invalid secret code:', sanitizedSecretCode);
+      await constantTimeDelay();
+      return res.status(400).json({
+        error: "Invalid, expired, or already used registration code"
+      });
+    }
+
+    console.log('✅ Secret code validated:', codeValidation.id);
+
+    // ==================== ОСТАЛЬНЫЕ ПРОВЕРКИ ====================
 
     // Базовая валидация наличия полей
     if (!name?.trim() || !nickname?.trim() || !email?.trim() || !password) {
@@ -332,9 +376,10 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // ИСПРАВЛЕННАЯ ТРАНЗАКЦИЯ
-    const existingUser = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      return await tx.user.findFirst({
+    // ИСПРАВЛЕННАЯ ТРАНЗАКЦИЯ С ОБНОВЛЕНИЕМ СЕКРЕТНОГО КОДА
+    const result = await prisma.$transaction(async (tx) => {
+      // Проверка уникальности пользователя
+      const existingUser = await tx.user.findFirst({
         where: {
           OR: [
             { email: sanitizedEmail },
@@ -343,43 +388,78 @@ router.post("/register", async (req, res) => {
         },
         select: { id: true, email: true, nickname: true }
       });
-    }) as UserBasic | null; // Явная типизация
 
-    if (existingUser) {
-      const field = existingUser.email === sanitizedEmail ? "email" : "nickname";
-      securityLogger.logSuspiciousActivity('duplicate_registration_attempt', {
-        email: sanitizedEmail,
-        nickname: sanitizedNickname,
-        ip: clientIP
-      });
-
-      await constantTimeDelay();
-      return res.status(409).json({
-        error: `User with this ${field} already exists`
-      });
-    }
-
-    // Хеширование пароля
-    const hashedPassword = await hashPassword(password);
-
-    // Создание пользователя
-    const user = await prisma.user.create({
-      data: {
-        name: sanitizedName,
-        nickname: sanitizedNickname,
-        email: sanitizedEmail,
-        password: hashedPassword,
-      },
-      select: {
-        id: true,
-        name: true,
-        nickname: true,
-        email: true,
-        createdAt: true
+      if (existingUser) {
+        const field = existingUser.email === sanitizedEmail ? "email" : "nickname";
+        securityLogger.logSuspiciousActivity('duplicate_registration_attempt', {
+          email: sanitizedEmail,
+          nickname: sanitizedNickname,
+          ip: clientIP,
+          secretCode: sanitizedSecretCode
+        });
+        throw new Error(`User with this ${field} already exists`);
       }
+
+      // Хеширование пароля
+      const hashedPassword = await hashPassword(password);
+
+      // Создание пользователя
+      const user = await tx.user.create({
+        data: {
+          name: sanitizedName,
+          nickname: sanitizedNickname,
+          email: sanitizedEmail,
+          password: hashedPassword,
+          registrationCodeUsed: sanitizedSecretCode // Сохраняем использованный код
+        },
+        select: {
+          id: true,
+          name: true,
+          nickname: true,
+          email: true,
+          createdAt: true,
+          registrationCodeUsed: true
+        }
+      });
+
+      console.log('✅ User created:', user.id);
+
+      // ==================== ОБНОВЛЕНИЕ СЕКРЕТНОГО КОДА ====================
+      console.log('🔄 Updating secret code...', {
+        codeId: codeValidation.id,
+        userId: user.id
+      });
+
+      // Обновляем секретный код
+      const updatedCode = await tx.secretCode.update({
+        where: {
+          id: codeValidation.id,
+          used: false // Защита от повторного использования
+        },
+        data: {
+          used: true,
+          usedAt: new Date(),
+          userId: user.id,
+          usedBy: user.id.toString(),
+          uses: { increment: 1 }
+        }
+      });
+
+      if (!updatedCode) {
+        throw new Error("Failed to update secret code - may have been already used");
+      }
+
+      console.log('✅ Secret code updated:', updatedCode.id);
+
+      return user;
     });
 
-    securityLogger.logAuthAttempt(sanitizedEmail, true, { type: 'registration', ip: clientIP });
+    securityLogger.logAuthAttempt(sanitizedEmail, true, {
+      type: 'registration',
+      ip: clientIP,
+      userId: result.id,
+      secretCode: sanitizedSecretCode
+    });
 
     // Постоянное время ответа
     const elapsed = Date.now() - startTime;
@@ -388,7 +468,7 @@ router.post("/register", async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "User registered successfully",
-      user: user
+      user: result
     });
 
   } catch (err: unknown) {
@@ -402,14 +482,34 @@ router.post("/register", async (req, res) => {
 
     await constantTimeDelay();
 
-    // Обработка ошибок Prisma
-    if (err instanceof Error && 'code' in err) {
-      const prismaError = err as { code: string };
-
-      if (prismaError.code === 'P2002') {
+    // Обработка ошибок Prisma и пользовательских ошибок
+    if (err instanceof Error) {
+      if (err.message.includes('already exists')) {
         return res.status(409).json({
-          error: "User with this email or nickname already exists"
+          error: err.message
         });
+      }
+
+      if (err.message.includes('secret code')) {
+        return res.status(400).json({
+          error: "Secret code is invalid or has already been used"
+        });
+      }
+
+      if ('code' in err) {
+        const prismaError = err as { code: string };
+
+        if (prismaError.code === 'P2002') {
+          return res.status(409).json({
+            error: "User with this email or nickname already exists"
+          });
+        }
+
+        if (prismaError.code === 'P2025') {
+          return res.status(400).json({
+            error: "Secret code is invalid or has already been used"
+          });
+        }
       }
     }
 
@@ -1254,11 +1354,9 @@ router.post("/complete-profile", async (req, res) => {
   }
 
   try {
-    // ВЕРИФИЦИРУЕМ JWT ТОКЕН вместо сессии
     const decoded = verifyToken(token);
     const userId = decoded.userId;
 
-    // Находим пользователя
     const user = await prisma.user.findFirst({
       where: { id: userId },
       include: { profile: true }
@@ -1268,16 +1366,23 @@ router.post("/complete-profile", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const { firstName, country, city, secretCode } = req.body; // ← ДОБАВЬТЕ secretCode
+    const { firstName, country, city, secretCode, password } = req.body; // ← добавлен password
 
     // Валидация
     if (!firstName?.trim()) {
       return res.status(400).json({ error: "First name is required" });
     }
 
-    // ВАЛИДАЦИЯ СЕКРЕТНОГО КОДА ← ДОБАВЬТЕ ЭТОТ БЛОК
     if (!secretCode?.trim()) {
       return res.status(400).json({ error: "Secret registration code is required" });
+    }
+
+    // Валидация пароля (если предоставлен)
+    if (password) {
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ error: passwordValidation.error });
+      }
     }
 
     // Проверяем валидность кода
@@ -1301,12 +1406,19 @@ router.post("/complete-profile", async (req, res) => {
 
     const sessionId = 'SESS-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 
-    // Обновляем профиль пользователя
+    // Хешируем пароль если он предоставлен
+    let hashedPassword = user.password;
+    if (password) {
+      hashedPassword = await hashPassword(password);
+    }
+
+    // Обновляем пользователя с возможным новым паролем
     await prisma.user.update({
       where: { id: user.id },
       data: {
         name: firstName.trim(),
-        registrationCodeUsed: secretCode.toUpperCase() // ← Сохраняем использованный код
+        registrationCodeUsed: secretCode.toUpperCase(),
+        password: hashedPassword // ← обновляем пароль если предоставлен
       }
     });
 
@@ -1331,20 +1443,19 @@ router.post("/complete-profile", async (req, res) => {
       }
     });
 
-    // ОБНОВЛЯЕМ СЕКРЕТНЫЙ КОД КАК ИСПОЛЬЗОВАННЫЙ ← ВСТАВЬТЕ ЭТОТ БЛОК
+    // Обновляем секретный код как использованный
     try {
       const usedCode = await prisma.secretCode.update({
         where: {
           code: secretCode.toUpperCase(),
-          used: false // Дополнительная защита от повторного использования
+          used: false
         },
         data: {
           used: true,
           usedBy: user.email,
           usedAt: new Date(),
           uses: { increment: 1 },
-          userId: user.id, // связываем с пользователем, который использовал код
-          // sessionId: session.id // если у вас есть сессия, раскомментируйте
+          userId: user.id,
         }
       });
 
@@ -1355,7 +1466,6 @@ router.post("/complete-profile", async (req, res) => {
       });
     } catch (codeError) {
       console.error('Error updating secret code:', codeError);
-      // Не прерываем выполнение, но логируем ошибку
       securityLogger.logError('secret_code_update_error', {
         userId: user.id,
         code: secretCode,
@@ -1368,18 +1478,19 @@ router.post("/complete-profile", async (req, res) => {
       action: 'profile_completed',
       ip: clientIP,
       sessionId: sessionId,
-      secretCode: secretCode // Логируем использованный код
+      secretCode: secretCode,
+      passwordSet: !!password // ← логируем установку пароля
     });
 
     res.json({
       success: true,
-      message: "Profile completed successfully"
+      message: "Profile completed successfully",
+      passwordSet: !!password // ← информируем фронтенд
     });
 
   } catch (error: any) {
     console.error('Profile completion error:', error);
 
-    // Если ошибка верификации JWT
     if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
       return res.status(401).json({ error: "Invalid or expired token" });
     }
@@ -1390,43 +1501,6 @@ router.post("/complete-profile", async (req, res) => {
 
 // ==================== СЕКРЕТНЫЕ КОДЫ ====================
 
-router.post("/secret-codes", async (req, res) => {
-  try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(401).json({ error: "Authentication required" });
-    }
-
-    const decoded = verifyToken(token);
-    const { code, expiresAt, maxUses } = req.body;
-
-    const secretCode = await prisma.secretCode.create({
-      data: {
-        code: code.toUpperCase(),
-        createdBy: decoded.name || 'System',
-        expiresAt: expiresAt ? new Date(expiresAt) : null,
-        maxUses: maxUses || 1,
-        userId: decoded.userId // Связываем с пользователем, который создал код
-      },
-      include: {
-        user: {
-          select: {
-            email: true,
-            name: true,
-            discordId: true,
-            createdAt: true
-          }
-        }
-      }
-    });
-
-    res.json(secretCode);
-  } catch (error) {
-    console.error('Error creating secret code:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
 // Получение всех секретных кодов
 router.get("/secret-codes", async (req, res) => {
   try {
@@ -1435,18 +1509,34 @@ router.get("/secret-codes", async (req, res) => {
       return res.status(401).json({ error: "Authentication required" });
     }
 
-    // Проверяем права доступа (только для модераторов/админов)
+    // Проверяем токен
     const decoded = verifyToken(token);
-    // Добавьте проверку ролей здесь если нужно
+    console.log('🔑 Token decoded for secret codes access:', { userId: decoded.userId, email: decoded.email });
 
+    // Параметры запроса
     const includeUser = req.query.include === 'user';
+    const usedFilter = req.query.used;
+
+    // Строим условия where
+    let whereCondition: any = {};
+
+    if (usedFilter === 'true') {
+      whereCondition.used = true;
+    } else if (usedFilter === 'false') {
+      whereCondition.used = false;
+    }
+
+    console.log('📋 Fetching secret codes with filter:', whereCondition);
 
     const codes = await prisma.secretCode.findMany({
+      where: whereCondition,
       include: {
         user: includeUser ? {
           select: {
+            id: true,
             email: true,
             name: true,
+            nickname: true,
             discordId: true,
             createdAt: true
           }
@@ -1457,13 +1547,110 @@ router.get("/secret-codes", async (req, res) => {
       }
     });
 
-    res.json(codes);
-  } catch (error) {
-    console.error('Error fetching secret codes:', error);
+    console.log(`✅ Found ${codes.length} secret codes`);
+
+    // Форматируем ответ
+    const formattedCodes = codes.map(code => ({
+      id: code.id,
+      code: code.code,
+      createdBy: code.createdBy,
+      createdAt: code.createdAt,
+      used: code.used,
+      usedBy: code.usedBy,
+      usedAt: code.usedAt,
+      expiresAt: code.expiresAt,
+      maxUses: code.maxUses,
+      uses: code.uses,
+      userId: code.userId,
+      user: code.user || null
+    }));
+
+    res.json(formattedCodes);
+
+  } catch (error: unknown) {
+    console.error('❌ Error fetching secret codes:', error);
+
+    // Детальная обработка ошибок
+    if (error instanceof Error) {
+      if (error.name === 'JsonWebTokenError') {
+        return res.status(401).json({ error: "Invalid token" });
+      }
+
+      if (error.name === 'TokenExpiredError') {
+        return res.status(401).json({ error: "Token expired" });
+      }
+    }
+
+    res.status(500).json({
+      error: "Internal server error",
+      details: process.env.NODE_ENV === 'development' && error instanceof Error ? error.message : undefined
+    });
+  }
+});
+
+// Создание секретного кода
+router.post("/secret-codes", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const decoded = verifyToken(token);
+    const { code, expiresAt, maxUses } = req.body;
+
+    if (!code) {
+      return res.status(400).json({ error: "Code is required" });
+    }
+
+    // Валидация формата кода
+    const codeRegex = /^[A-Z0-9\-_]+$/;
+    if (!codeRegex.test(code.toUpperCase())) {
+      return res.status(400).json({ error: "Code can only contain uppercase letters, numbers, hyphens and underscores" });
+    }
+
+    console.log('🆕 Creating new secret code:', { code: code.toUpperCase(), createdBy: decoded.email });
+
+    const secretCode = await prisma.secretCode.create({
+      data: {
+        code: code.toUpperCase(),
+        createdBy: decoded.name || decoded.email || 'System',
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        maxUses: maxUses || 1,
+        userId: decoded.userId
+      },
+      include: {
+        user: {
+          select: {
+            email: true,
+            name: true,
+            nickname: true,
+            discordId: true,
+            createdAt: true
+          }
+        }
+      }
+    });
+
+    console.log('✅ Secret code created:', secretCode.id);
+    res.status(201).json(secretCode);
+
+  } catch (error: unknown) {
+    console.error('❌ Error creating secret code:', error);
+
+    // Проверяем Prisma ошибки
+    if (error instanceof Error && 'code' in error) {
+      const prismaError = error as { code: string };
+      if (prismaError.code === 'P2002') {
+        return res.status(409).json({ error: "Code already exists" });
+      }
+    }
+
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
+// Удаление секретного кода
 router.delete("/secret-codes/:id", async (req, res) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
@@ -1472,21 +1659,35 @@ router.delete("/secret-codes/:id", async (req, res) => {
     }
 
     const { id } = req.params;
+    console.log('🗑️ Deleting secret code:', id);
 
     await prisma.secretCode.delete({
       where: { id }
     });
 
+    console.log('✅ Secret code deleted:', id);
     res.json({ success: true, message: "Code deleted successfully" });
-  } catch (error) {
-    console.error('Error deleting secret code:', error);
+
+  } catch (error: unknown) {
+    console.error('❌ Error deleting secret code:', error);
+
+    // Проверяем Prisma ошибки
+    if (error instanceof Error && 'code' in error) {
+      const prismaError = error as { code: string };
+      if (prismaError.code === 'P2025') {
+        return res.status(404).json({ error: "Code not found" });
+      }
+    }
+
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Генерация случайного кода (опционально)
-router.post("/api/secret-codes/generate", async (req, res) => {
+// Генерация случайного кода
+router.post("/secret-codes/generate", async (req, res) => {
   try {
+    console.log('🎲 Generating random secret code');
+
     const generateCode = () => {
       const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
       let result = "";
@@ -1498,13 +1699,17 @@ router.post("/api/secret-codes/generate", async (req, res) => {
     };
 
     const code = generateCode();
+    console.log('✅ Generated code:', code);
+
     res.json({ code });
-  } catch (error) {
-    console.error("Error generating code:", error);
+
+  } catch (error: unknown) {
+    console.error("❌ Error generating code:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
+// Валидация секретного кода
 router.post("/validate-secret-code", async (req, res) => {
   try {
     const { code } = req.body;
@@ -1516,16 +1721,24 @@ router.post("/validate-secret-code", async (req, res) => {
       });
     }
 
+    const sanitizedCode = code.toUpperCase().trim();
+    console.log('🔍 Validating secret code:', sanitizedCode);
+
     const secretCode = await prisma.secretCode.findFirst({
       where: {
-        code: code.toUpperCase(),
-        used: false
+        code: sanitizedCode,
+        used: false,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } }
+        ]
       },
       include: {
         user: {
           select: {
             email: true,
             name: true,
+            nickname: true,
             discordId: true,
             createdAt: true
           }
@@ -1534,28 +1747,23 @@ router.post("/validate-secret-code", async (req, res) => {
     });
 
     if (!secretCode) {
+      console.log('❌ Code not found or already used:', sanitizedCode);
       return res.status(404).json({
         valid: false,
-        error: 'Invalid secret code'
-      });
-    }
-
-    // Проверяем срок действия
-    if (secretCode.expiresAt && new Date() > secretCode.expiresAt) {
-      return res.status(400).json({
-        valid: false,
-        error: 'Secret code has expired'
+        error: 'Invalid or expired secret code'
       });
     }
 
     // Проверяем максимальное количество использований
     if (secretCode.uses >= secretCode.maxUses) {
+      console.log('❌ Code reached usage limit:', sanitizedCode);
       return res.status(400).json({
         valid: false,
         error: 'Secret code has reached maximum usage limit'
       });
     }
 
+    console.log('✅ Code is valid:', secretCode.id);
     res.json({
       valid: true,
       code: {
@@ -1569,8 +1777,8 @@ router.post("/validate-secret-code", async (req, res) => {
       }
     });
 
-  } catch (error) {
-    console.error('Error validating secret code:', error);
+  } catch (error: unknown) {
+    console.error('❌ Error validating secret code:', error);
     res.status(500).json({
       valid: false,
       error: 'Internal server error'
@@ -1579,13 +1787,15 @@ router.post("/validate-secret-code", async (req, res) => {
 });
 
 // Отметка кода как использованного
-router.post('/api/use-secret-code', async (req, res) => {
+router.post('/use-secret-code', async (req, res) => {
   try {
     const { codeId, usedBy } = req.body;
 
     if (!codeId) {
       return res.status(400).json({ error: 'Code ID is required' });
     }
+
+    console.log('🔄 Marking code as used:', { codeId, usedBy });
 
     const updatedCode = await prisma.secretCode.update({
       where: { id: codeId },
@@ -1597,10 +1807,65 @@ router.post('/api/use-secret-code', async (req, res) => {
       }
     });
 
+    console.log('✅ Code marked as used:', updatedCode.id);
     res.json({ success: true, code: updatedCode });
 
+  } catch (error: unknown) {
+    console.error('❌ Error using secret code:', error);
+
+    // Проверяем Prisma ошибки
+    if (error instanceof Error && 'code' in error) {
+      const prismaError = error as { code: string };
+      if (prismaError.code === 'P2025') {
+        return res.status(404).json({ error: "Code not found" });
+      }
+    }
+
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Получение статистики по кодам
+router.get("/secret-codes/stats", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const decoded = verifyToken(token);
+
+    const totalCodes = await prisma.secretCode.count();
+    const usedCodes = await prisma.secretCode.count({ where: { used: true } });
+    const activeCodes = await prisma.secretCode.count({
+      where: {
+        used: false,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } }
+        ]
+      }
+    });
+    const expiredCodes = await prisma.secretCode.count({
+      where: {
+        used: false,
+        expiresAt: { lt: new Date() }
+      }
+    });
+
+    const stats = {
+      total: totalCodes,
+      used: usedCodes,
+      active: activeCodes,
+      expired: expiredCodes,
+      usageRate: totalCodes > 0 ? (usedCodes / totalCodes) * 100 : 0
+    };
+
+    console.log('📊 Secret codes stats:', stats);
+    res.json(stats);
+
   } catch (error) {
-    console.error('Error using secret code:', error);
+    console.error('❌ Error fetching secret codes stats:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -1,522 +1,513 @@
-/* Login.css - с поддержкой светлой и тёмной темы */
+/* Login.css - ОБНОВЛЕННЫЙ В СТИЛЕ COMPLETEPROFILE */
 
+/* ----------------------------- Обертка и фон ----------------------------- */
 .login-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(to bottom, var(--bg-start), var(--bg-end));
-  transition: background 0.3s ease;
+  padding: 3rem 1rem;
 }
 
-.login-header-top {
+.login-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: inherit;
+  z-index: 1;
+}
+
+[data-theme="light"] .login-background {
+  background-color: var(--mp-bg);
+}
+
+[data-theme="dark"] .login-background {
+  background-color: #000000;
+}
+
+/* ----------------------------- Контейнер ----------------------------- */
+.login-container {
+  position: relative;
+  z-index: 2;
+  width: 100%;
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 1rem;
+  align-items: center;
+  justify-content: center;
 }
 
+.login-card {
+  max-width: 28rem;
+  width: 100%;
+  margin: 0 auto;
+  position: relative;
+  z-index: 3;
+  font-family: ABCGintoDiscord, sans-serif;
+}
+
+/* ----------------------------- Заголовки ----------------------------- */
 .login-header {
   text-align: center;
   margin-bottom: 2rem;
 }
 
-.login-header h1 {
+.login-title {
+  margin-top: 1.5rem;
   font-size: 1.875rem;
-  font-weight: 700;
-  color: var(--text-color);
-  margin-bottom: 0.5rem;
-  transition: color 0.3s ease;
+  font-weight: 800;
 }
 
-.login-header p {
+[data-theme="light"] .login-title {
+  color: rgb(17 24 39);
+}
+
+[data-theme="dark"] .login-title {
+  color: rgb(255 255 255);
+}
+
+.login-subtitle {
+  margin-top: 0.5rem;
   font-size: 0.875rem;
-  color: var(--text-secondary);
-  transition: color 0.3s ease;
 }
 
-.login-error {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: var(--error-color);
-  padding: 0.75rem;
-  border-radius: 0.5rem;
-  margin-bottom: 1rem;
-  text-align: center;
-  font-size: 0.875rem;
-  transition: background-color 0.3s ease, color 0.3s ease;
+[data-theme="light"] .login-subtitle {
+  color: rgb(75 85 99);
 }
 
+[data-theme="dark"] .login-subtitle {
+  color: rgb(156 163 175);
+}
+
+/* ----------------------------- Форма ----------------------------- */
 .login-form {
+  margin-top: 2rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-.login-input-group {
+/* ----------------------------- Form Elements ----------------------------- */
+.form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  position: relative;
 }
 
-.login-input-group label {
+.form-label {
+  display: block;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--text-color);
-  transition: color 0.3s ease;
+  margin-bottom: 0.5rem;
 }
 
-.login-input-group input {
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
+[data-theme="light"] .form-label {
+  color: rgb(55 65 81);
+}
+
+[data-theme="dark"] .form-label {
+  color: rgb(209 213 219);
+}
+
+.form-input {
+  display: block;
+  width: 100%;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   font-size: 0.875rem;
-  transition: all 0.2s;
-  background-color: var(--card-background);
-  color: var(--text-color);
-  font-family: 'ABCGintoDiscord', sans-serif;
+  border: 1px solid;
+  transition: all 0.3s ease-in-out;
 }
 
-.login-input-group input:focus {
+[data-theme="light"] .form-input {
+  border-color: rgb(209 213 219);
+  background-color: rgb(255 255 255);
+  color: rgb(17 24 39);
+}
+
+[data-theme="dark"] .form-input {
+  border-color: rgb(75 85 99);
+  background-color: rgb(0, 0, 0);
+  color: rgb(255 255 255);
+}
+
+.form-input:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  border-color: rgb(59 130 246);
 }
 
-.password-group {
+[data-theme="light"] .form-input:focus {
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+}
+
+[data-theme="dark"] .form-input:focus {
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+}
+
+.form-input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+[data-theme="light"] .form-input:disabled {
+  background-color: rgb(243 244 246);
+}
+
+[data-theme="dark"] .form-input:disabled {
+  background-color: rgb(55 65 81);
+}
+
+/* ----------------------------- Password Input ----------------------------- */
+.password-input-container {
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
-.password-toggle-btn {
+.password-toggle {
   position: absolute;
-  right: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
+  right: 12px;
   background: none;
   border: none;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
   cursor: pointer;
-  color: var(--primary-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  outline: none;
+}
+
+[data-theme="light"] .password-toggle {
+  color: #666;
+  background-color: transparent;
+}
+
+[data-theme="dark"] .password-toggle {
+  color: #aaa;
+  background-color: transparent;
+}
+
+.password-toggle:hover:not(:disabled) {
+  transform: scale(1.1);
+}
+
+[data-theme="light"] .password-toggle:hover:not(:disabled) {
+  color: #333;
+  background-color: #f5f5f5;
+}
+
+[data-theme="dark"] .password-toggle:hover:not(:disabled) {
+  color: #fff;
+  background-color: #333;
+}
+
+.password-toggle:disabled {
+  cursor: not-allowed;
+}
+
+[data-theme="light"] .password-toggle:disabled {
+  color: #ccc;
+}
+
+[data-theme="dark"] .password-toggle:disabled {
+  color: #555;
+}
+
+/* ----------------------------- Buttons ----------------------------- */
+.submit-button {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(255 255 255);
+  transition: all 0.3s ease-in-out;
+  cursor: pointer;
+  gap: 0.5rem;
+}
+
+[data-theme="light"] .submit-button {
+  background-color: rgb(37 99 235);
+}
+
+[data-theme="dark"] .submit-button {
+  background-color: rgb(59 130 246);
+}
+
+.submit-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.submit-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ----------------------------- Discord OAuth Button ----------------------------- */
+.discord-oauth-btn {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border: 1px solid;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 0.3s ease-in-out;
+  cursor: pointer;
+  gap: 0.75rem;
+}
+
+[data-theme="light"] .discord-oauth-btn {
+  border-color: rgb(209 213 219);
+  background-color: rgb(255 255 255);
+  color: rgb(17 24 39);
+}
+
+[data-theme="dark"] .discord-oauth-btn {
+  border-color: rgb(75 85 99);
+  background-color: rgb(31 41 55);
+  color: rgb(255 255 255);
+}
+
+.discord-oauth-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .discord-oauth-btn:hover:not(:disabled) {
+  background-color: rgb(249 250 251);
+}
+
+[data-theme="dark"] .discord-oauth-btn:hover:not(:disabled) {
+  background-color: rgb(55 65 81);
+}
+
+.discord-oauth-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.discord-icon {
+  width: 20px;
+  height: 20px;
+  color: #5865F2;
+}
+
+/* ----------------------------- Links and Text ----------------------------- */
+.login-register {
+  text-align: center;
+  font-size: 0.875rem;
+}
+
+[data-theme="light"] .login-register {
+  color: rgb(75 85 99);
+}
+
+[data-theme="dark"] .login-register {
+  color: rgb(156 163 175);
+}
+
+.link-primary {
+  color: rgb(37 99 235);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.link-primary:hover {
+  text-decoration: underline;
+}
+
+[data-theme="dark"] .link-primary {
+  color: rgb(59 130 246);
 }
 
 .login-divider {
   display: flex;
   align-items: center;
   text-align: center;
-  margin: 2rem 0;
-  color: var(--text-secondary);
   font-size: 0.875rem;
-  transition: color 0.3s ease;
+  color: rgb(156 163 175);
+  margin: 1rem 0;
 }
 
 .login-divider::before,
 .login-divider::after {
-  content: "";
+  content: '';
   flex: 1;
-  height: 1px;
-  background-color: var(--border-color);
-  margin: 0 0.75rem;
-  transition: background-color 0.3s ease;
-}
-
-.social-login {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-}
-
-.social-btn {
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  padding: 0.6rem;
-  transition: transform 0.3s ease, background-color 0.3s ease;
-}
-
-.social-btn:hover {
-  transform: scale(1.1);
-}
-
-.social-btn svg {
-  width: 28px;
-  height: 28px;
-  fill: currentColor;
-  transition: fill 0.4s ease, transform 0.3s ease;
-}
-
-.login-terms {
-  font-size: 0.75rem;
-  text-align: center;
-  margin-top: 1.5rem;
-  color: var(--text-secondary);
-  transition: color 0.3s ease;
-}
-
-.login-terms a {
-  color: var(--primary-color);
-  text-decoration: underline;
-  transition: color 0.3s ease;
-}
-
-.login-terms a:hover {
-  color: var(--primary-color-hover);
-}
-
-.login-socials {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-}
-
-.login-social {
-  border: none;
-  background: transparent; /* убираем фон */
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  padding: 0.6rem;
-  transition: transform 0.3s ease, color 0.3s ease;
-}
-
-.login-social:hover {
-  transform: scale(1.1);
-}
-
-/* Цвет иконок по умолчанию */
-.login-social svg {
-  width: 28px;
-  height: 28px;
-  fill: var(--social-icon-color);
-  transition: fill 0.3s ease;
-}
-
-/* Можно при желании добавить hover для иконок */
-.login-social:hover svg {
-  fill: var(--primary-color);
-}
-
-/* Блок регистрации */
-.login-register {
-  margin-top: 1rem;
-  text-align: center;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  transition: color 0.3s ease;
-}
-
-.login-register a {
-  color: var(--primary-color);
-  font-weight: 500;
-  text-decoration: underline;
-  transition: color 0.3s ease;
-}
-
-.login-register a:hover {
-  color: var(--primary-color-hover);
-}
-
-/* Floating Label */
-.floating-label {
-  position: relative;
-}
-
-.floating-label label {
-  position: absolute;
-  top: 50%;
-  left: 1rem;
-  transform: translateY(-50%);
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  pointer-events: none;
-  transition: all 0.2s ease;
-}
-
-/* Когда поле в фокусе или есть текст → label поднимается */
-.floating-label input:focus + label,
-.floating-label input:not(:placeholder-shown) + label {
-  top: -0.5rem; /* поднимаем выше */
-  transform: scale(0.85);
-  background: var(--card-background); /* подложка под текст */
-  padding: 0 0.25rem;
-  left: 0.75rem;
-  color: var(--primary-color);
-}
-
-/* Добавляем в Login.css */
-
-.discord-oauth-btn {
-  width: 100%;
-  padding: 12px 16px;
-  background: #5865F2;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  transition: all 0.3s ease;
-  margin-bottom: 20px;
-}
-
-.discord-oauth-btn:hover:not(:disabled) {
-  background: #4752c4;
-  transform: translateY(-1px);
-}
-
-.discord-oauth-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.loading-spinner-small {
-  width: 20px;
-  height: 20px;
-  border: 2px solid transparent;
-  border-top: 2px solid currentColor;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-.global-error {
-  background: #fee;
-  border: 1px solid #fcc;
-  color: #c33;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-[data-theme="dark"] .floating-label input:focus + label,
-.floating-label input:not(:placeholder-shown) + label {
-  top: 0;
-  transform: translateY(-50%) scale(0.85);
-  background: #000000; /* подложка, чтобы текст не сливался с бордером */
-  padding: 0 0.25rem;
-  left: 0.75rem;
-  color: var(--primary-color);
-}
-
-
-/* Темная тема */
-[data-theme="dark"] .login-wrapper {
-  background: linear-gradient(to bottom, #000000);
-}
-
-[data-theme="dark"] .login-btn {
-  background-color: #e0e3ff;
-  color: #000000;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-[data-theme="dark"] .login-btn:hover {
-  background-color: #5865f2;
-  color: #e0e3ff;
-}
-
-
-[data-theme="dark"] .login-register {
-  color: var(--text-secondary);
-}
-
-[data-theme="dark"] .login-register a {
-  color: var(--primary-color);
-}
-
-[data-theme="dark"] .login-register a:hover {
-  color: var(--primary-color-hover);
-}
-
-[data-theme="dark"] .login-social svg {
-  fill: #e0e3ff; /* белые иконки */
-}
-
-[data-theme="dark"] .login-social svg:hover {
-  fill: #5865f2; /* белые иконки */
-}
-
-[data-theme="dark"] .password-toggle-btn {
-  outline: none;
-  border: none;
-}
-
-[data-theme="dark"] .login-terms {
-  color: var(--text-secondary);
-}
-
-[data-theme="dark"] .login-terms a {
-  color: var(--primary-color);
-}
-
-[data-theme="dark"] .login-terms a:hover {
-  color: var(--primary-color-hover);
-}
-
-[data-theme="dark"] .login-card {
-  background-color: #000000;
-}
-
-[data-theme="dark"] .theme-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--mp-bg-secondary);
-  border: none;
-  padding: 6px;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #e0e3ff;
-  transition: background 0.2s, color 0.2s;
-}
-
-[data-theme="dark"] .theme-toggle:hover {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--mp-bg-secondary);
-  border: none;
-  padding: 6px;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #5865f2;
-  transition: background 0.2s, color 0.2s;
-}
-
-[data-theme="dark"] .login-header h1,
-[data-theme="dark"] .login-input-group label,
-[data-theme="dark"] .login-header p,
-[data-theme="dark"] .login-divider {
-  color: var(--text-color);
-}
-
-[data-theme="dark"] .login-input-group input {
-  background-color: #000000;
-  color: var(--text-color);
-  border-color: var(--border-color);
+  border-bottom: 1px solid rgb(229 231 235);
 }
 
 [data-theme="dark"] .login-divider::before,
 [data-theme="dark"] .login-divider::after {
-  background-color: var(--border-color);
+  border-bottom-color: rgb(75 85 99);
 }
 
-/* Светлая тема (на случай, если нужны точные overrides) */
-[data-theme="light"] .login-wrapper {
-  background: linear-gradient(to bottom, #e0e3ff);
+.login-divider span {
+  padding: 0 1rem;
 }
 
-[data-theme="light"] .login-register {
-  color: var(--text-secondary);
-}
-
-[data-theme="light"] .login-register a {
-  color: var(--primary-color);
-}
-
-[data-theme="light"] .login-social svg {
-  fill: #5865f2; /* белые иконки */
-}
-
-[data-theme="light"] .login-social svg:hover {
-  fill: #000000; /* белые иконки */
-}
-
-[data-theme="light"] .login-btn {
-  background-color: #5865f2;
-  color: #e0e3ff;
-  transition: background-color 0.5s ease, color 0.5s ease, transform 0.1s ease;
-}
-
-[data-theme="light"] .login-btn:hover {
-  background-color: #5865f2;
-  color: #000000;
-}
-
-
-[data-theme="light"] .theme-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--mp-bg-secondary);
-  border: none;
-  padding: 6px;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #1f2937;
-  transition: background 0.2s, color 0.2s;
-}
-
-[data-theme="light"] .theme-toggle:hover {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--mp-bg-secondary);
-  border: none;
-  padding: 6px;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #5865f2;
-  transition: background 0.2s, color 0.2s;
-}
-
-[data-theme="light"] .login-register a:hover {
-  color: var(--primary-color-hover);
+.login-terms {
+  text-align: center;
+  font-size: 0.75rem;
+  margin-top: 1rem;
 }
 
 [data-theme="light"] .login-terms {
-  color: var(--text-secondary);
+  color: rgb(107 114 128);
 }
 
-[data-theme="light"] .login-terms a {
-  color: var(--primary-color);
+[data-theme="dark"] .login-terms {
+  color: rgb(156 163 175);
 }
 
-[data-theme="light"] .password-toggle-btn {
-  outline: none;
-  border: none;
+/* ----------------------------- Error Styles ----------------------------- */
+.global-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
 }
 
-[data-theme="light"] .login-terms a:hover {
-  color: var(--primary-color-hover);
+[data-theme="light"] .global-error {
+  color: #dc2626;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
 }
 
-[data-theme="light"] .login-card {
-  background-color: #e0e3ff;
+[data-theme="dark"] .global-error {
+  color: #fca5a5;
+  background-color: #7f1d1d;
+  border: 1px solid #ef4444;
 }
 
-[data-theme="light"] .login-header h1,
-[data-theme="light"] .login-input-group label,
-[data-theme="light"] .login-header p,
-[data-theme="light"] .login-divider {
-  color: var(--text-color);
+.form-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.25;
 }
 
-[data-theme="light"] .login-input-group input {
-  background-color: #e0e3ff;
-  color: var(--text-color);
-  border-color: #b0b0b0;
+[data-theme="light"] .form-error {
+  color: #dc2626;
 }
 
-[data-theme="light"] .login-divider::before,
-[data-theme="light"] .login-divider::after {
-  background-color: rgb(190, 190, 190);
+[data-theme="dark"] .form-error {
+  color: #ff6b6b;
 }
 
-/* Адаптивность */
-@media (max-width: 480px) {
-  .login-card {
-    padding: 1.5rem;
-    margin: 1rem;
+.error-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+[data-theme="dark"] .input-error {
+  border-color: #ff0000 !important;
+  background-color: rgb(55 65 81) !important;
+}
+
+[data-theme="light"] .input-error {
+  border-color: #ff0000 !important;
+  background-color: rgb(243 244 246) !important;
+}
+
+/* ----------------------------- Loading Spinner ----------------------------- */
+.loading-spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
   }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* ----------------------------- Responsive ----------------------------- */
+@media (max-width: 768px) {
+  .login-wrapper {
+    padding: 2rem 1rem;
+  }
+
+  .login-card {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-wrapper {
+    padding: 1rem;
+  }
+
+  .login-title {
+    font-size: 1.5rem;
+  }
+}
+
+[data-theme="dark"] .login-header-top {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 2rem;
+  align-items: center;
+  text-align: center;
+}
+
+[data-theme="light"] .login-header-top {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 2rem;
+  align-items: center;
+  text-align: center;
+}
+
+[data-theme="dark"] .theme-toggle {
+  background-color: rgb(0, 0, 0) !important;
+  color: #8f8f8f;
+  border: 1px solid transparent;
+  border-color: #d6d6d6;
+  align-items: flex-start;
+  display: flex;
+}
+
+[data-theme="light"] .theme-toggle {
+  background-color: rgb(243 244 246) !important;
+  color: #8f8f8f;
+  border: 1px solid transparent;
+  border-color: #d6d6d6;
+  align-items: flex-start;
+  display: flex;
 }

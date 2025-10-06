@@ -43,7 +43,9 @@ export default function DashboardOverview() {
         setIsRefreshing(false);
     };
 
-    const getLogTypeClass = (type) => {
+    type LogType = 'error' | 'warn' | 'info';
+
+    const getLogTypeClass = (type: LogType) => {
         switch (type) {
             case 'error': return styles.error;
             case 'warn': return styles.warn;
@@ -59,7 +61,7 @@ export default function DashboardOverview() {
                 <div className={styles.header}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                         <h1>Overview</h1>
-                        <button 
+                        <button
                             onClick={handleRefresh}
                             disabled={isRefreshing}
                             style={{
@@ -198,7 +200,7 @@ export default function DashboardOverview() {
                     {logs.length > 0 ? (
                         <ul className={styles.logsList}>
                             {logs.map((log, i) => (
-                                <li key={i} className={`${styles.logItem} ${getLogTypeClass(log.type)}`}>
+                                <li key={i} className={`${styles.logItem} ${getLogTypeClass(log.type as LogType)}`}>
                                     <span className={styles.time}>{log.time}</span> — {log.message} by {log.user}
                                 </li>
                             ))}
@@ -217,9 +219,9 @@ export default function DashboardOverview() {
                 {/* Дополнительная информация */}
                 <div className={styles.section}>
                     <h2>Quick Actions</h2>
-                    <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                         gap: '1rem',
                         marginTop: '1rem'
                     }}>

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import "./CSS/Toast.css";
+import styles from "./Toast.module.scss";
 
 interface ToastProps {
     message: string;
@@ -15,7 +15,7 @@ export const Toast = ({ message, type, onClose, duration = 3000 }: ToastProps) =
     }, [onClose, duration]);
 
     return (
-        <div className={`toast toast-${type}`}>
+        <div className={`${styles.toast} ${type === "success" ? styles.toastSuccess : styles.toastError}`}>
             <span>{message}</span>
             <button onClick={onClose}>×</button>
         </div>

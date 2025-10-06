@@ -1,13 +1,13 @@
 import React from "react";
-import { CommandParam } from "../pages/CommandsPage";
-import "../components/CSS/CommandParamsSelect.css";
-import GlassSelect from "./GlassSelect";
+import { CommandParam } from "../pages/CommandsPage.js";
+import GlassSelect from "./GlassSelect.js";
 import { FiTrash2 } from "react-icons/fi";
+import styles from "../styles/components/CommandParams.module.scss";
 
 type Props = {
     params: CommandParam[];
     onChange: (params: CommandParam[]) => void;
-    onSelectOpenChange?: (open: boolean) => void; // ✅ новый проп
+    onSelectOpenChange?: (open: boolean) => void;
 };
 
 export default function CommandParams({ params, onChange, onSelectOpenChange }: Props) {
@@ -27,22 +27,24 @@ export default function CommandParams({ params, onChange, onSelectOpenChange }: 
     }
 
     return (
-        <div>
-            <h3>Command Parameters</h3>
+        <div className={styles.wrapper}>
+            <h3 className={styles.title}>Command Parameters</h3>
             {params.map((p) => (
-                <div key={p.id} className="param-item">
+                <div key={p.id} className={styles.paramItem}>
                     <input
+                        className={styles.input}
                         placeholder="Name"
                         value={p.name}
                         onChange={(e) => updateParam(p.id, "name", e.target.value)}
                     />
                     <input
+                        className={styles.input}
                         placeholder="Description"
                         value={p.description}
                         onChange={(e) => updateParam(p.id, "description", e.target.value)}
                     />
 
-                    <div className="command-param-select-wrapper">
+                    <div className={styles.selectWrapper}>
                         <GlassSelect
                             value={p.type}
                             onChange={(val) => updateParam(p.id, "type", val)}
@@ -54,12 +56,12 @@ export default function CommandParams({ params, onChange, onSelectOpenChange }: 
                                 { value: "channel", label: "Channel" },
                                 { value: "role", label: "Role" }
                             ]}
-                            onOpenChange={onSelectOpenChange} // ✅ проброс
+                            onOpenChange={onSelectOpenChange}
                         />
                     </div>
 
                     <button
-                        className="param-delete-btn"
+                        className={styles.deleteBtn}
                         onClick={() => removeParam(p.id)}
                         title="Delete parameter"
                     >
@@ -67,7 +69,7 @@ export default function CommandParams({ params, onChange, onSelectOpenChange }: 
                     </button>
                 </div>
             ))}
-            <button onClick={addParam} className="param-add-btn">
+            <button onClick={addParam} className={styles.addBtn}>
                 Add parameter
             </button>
         </div>

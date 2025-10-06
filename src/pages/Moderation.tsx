@@ -15,15 +15,87 @@ import {
 } from 'lucide-react';
 import styles from "../module_pages/Moderation.module.scss";
 
+interface Ban {
+  id: number;
+  user: string;
+  reason: string;
+  date: string;
+  duration: string;
+  moderator: string;
+}
+
+interface Kick {
+  id: number;
+  user: string;
+  reason: string;
+  date: string;
+  moderator: string;
+}
+
+interface Warning {
+  id: number;
+  user: string;
+  reason: string;
+  date: string;
+  moderator: string;
+}
+
+interface ModerationStore {
+  bans: Ban[];
+  kicks: Kick[];
+  warnings: Warning[];
+  isLoading: boolean;
+  fetchModerationData: () => Promise<void>;
+}
+
+
 export default function Moderation() {
-  const { bans, kicks, warnings, isLoading, fetchModerationData } = useServerStore()
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const store = useServerStore() as unknown as {
+  bans: string[];
+  kicks: string[];
+  warnings: string[];
+  isLoading: boolean;
+  fetchModerationData: () => Promise<void>;
+};
+
+// Если нужно работать с типизированными объектами, мапим:
+const bans: Ban[] = store.bans.map((b, i) => ({
+  id: i + 1,
+  user: b,           // здесь пока только строка, можно заменить на реальные поля
+  reason: 'Unknown',
+  date: new Date().toISOString().split('T')[0],
+  duration: 'Unknown',
+  moderator: 'Unknown',
+}));
+
+const kicks: Kick[] = store.kicks.map((k, i) => ({
+  id: i + 1,
+  user: k,
+  reason: 'Unknown',
+  date: new Date().toISOString().split('T')[0],
+  moderator: 'Unknown',
+}));
+
+const warnings: Warning[] = store.warnings.map((w, i) => ({
+  id: i + 1,
+  user: w,
+  reason: 'Unknown',
+  date: new Date().toISOString().split('T')[0],
+  moderator: 'Unknown',
+}));
+
+const isLoading = store.isLoading;
+const fetchModerationData = store.fetchModerationData;
+
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+
 
   useEffect(() => {
     fetchModerationData().then(() => {
       setLastUpdated(new Date());
     });
-  }, [fetchModerationData])
+  }, [fetchModerationData]);
 
   const handleRefresh = async () => {
     await fetchModerationData();
@@ -31,20 +103,21 @@ export default function Moderation() {
   };
 
   // Mock data for demonstration (заменится реальными данными из store)
-  const mockBans = [
+  const mockBans: Ban[] = [
     { id: 1, user: 'User#1234', reason: 'Spamming', date: '2024-01-15', duration: '30 days', moderator: 'Admin#0001' },
     { id: 2, user: 'User#5678', reason: 'Harassment', date: '2024-01-14', duration: 'Permanent', moderator: 'Mod#0002' },
   ];
 
-  const mockKicks = [
+  const mockKicks: Kick[] = [
     { id: 1, user: 'User#9012', reason: 'Inappropriate name', date: '2024-01-15', moderator: 'Admin#0001' },
     { id: 2, user: 'User#3456', reason: 'Channel disruption', date: '2024-01-13', moderator: 'Mod#0003' },
   ];
 
-  const mockWarnings = [
+  const mockWarnings: Warning[] = [
     { id: 1, user: 'User#7890', reason: 'Minor spam', date: '2024-01-15', moderator: 'Mod#0002' },
     { id: 2, user: 'User#2345', reason: 'Language violation', date: '2024-01-12', moderator: 'Admin#0001' },
   ];
+
 
   const displayBans = bans.length > 0 ? bans : mockBans;
   const displayKicks = kicks.length > 0 ? kicks : mockKicks;
@@ -195,7 +268,7 @@ export default function Moderation() {
                       <td>{ban.date}</td>
                       <td>
                         <span className={`${styles.statusBadge} ${ban.duration === 'Permanent' ? styles.permanent :
-                            ban.duration.includes('days') ? styles.active : styles.expired
+                          ban.duration.includes('days') ? styles.active : styles.expired
                           }`}>
                           {ban.duration}
                         </span>

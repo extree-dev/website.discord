@@ -1,6 +1,6 @@
 import React from "react";
-import "../components/CSS/CommandAccess.css";
-import { FiTrash2, FiPlus } from "react-icons/fi";
+import styles from "./CommandAccess.module.scss";
+import { FiTrash2 } from "react-icons/fi";
 
 type Props = {
     access: string[];
@@ -18,21 +18,25 @@ export default function CommandAccess({ access, onChange, className = "" }: Prop
     }
 
     return (
-        <div className={`command-access ${className}`}>
-            <h3>Command Access</h3>
-            {access.length === 0 && <p>Access is open to everyone</p>}
-            <div className="command-access-list">
+        <div className={`${styles.container} ${className}`}>
+            <h3 className={styles.header}>Command Access</h3>
+            {access.length === 0 && <p className={styles.emptyMessage}>Access is open to everyone</p>}
+            <div className={styles.list}>
                 {access.map((a) => (
-                    <div className="command-access-item" key={a}>
-                        <span>{a}</span>
-                        <button onClick={() => removeAccess(a)} title="Remove access">
+                    <div className={styles.item} key={a}>
+                        <span className={styles.idText}>{a}</span>
+                        <button 
+                            className={styles.removeButton} 
+                            onClick={() => removeAccess(a)} 
+                            title="Remove access"
+                        >
                             <FiTrash2 size={18} />
                         </button>
                     </div>
                 ))}
             </div>
 
-            <button className="command-access-add-btn" onClick={addAccess}>
+            <button className={styles.addButton} onClick={addAccess}>
                 Add Access
             </button>
         </div>

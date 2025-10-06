@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import './CSS/AnimateButton.css';
+import styles from './AnimateButton.module.scss';
 
 const CompactAnimatedButton = () => {
   const buttonRef = useRef<HTMLDivElement>(null);
@@ -8,7 +8,7 @@ const CompactAnimatedButton = () => {
     if (!buttonRef.current) return;
 
     const button = buttonRef.current;
-    const images = button.querySelectorAll('.btn-img');
+    const images = button.querySelectorAll(`.${styles.image}`);
 
     const handleMouseEnter = () => {
       images.forEach((img, index) => {
@@ -52,20 +52,36 @@ const CompactAnimatedButton = () => {
   return (
     <div 
       ref={buttonRef} 
-      className="compact-button"
+      className={styles.button}
     >
-      <div className="btn-title">
-        <span>P</span>
-        <span>l</span>
-        <span>a</span>
-        <span>y</span>
+      <div className={styles.title}>
+        <span className={styles.letter}>P</span>
+        <span className={styles.letter}>l</span>
+        <span className={styles.letter}>a</span>
+        <span className={styles.letter}>y</span>
       </div>
       
-      <div className="button-hover-bg">
-        <img src="https://uploads-ssl.webflow.com/62648ebcbe072375efb3062a/6264ae54c0c11b39d0df5eab_2.png" className="btn-img" alt="" />
-        <img src="https://uploads-ssl.webflow.com/62648ebcbe072375efb3062a/6264ae54b1845a854a04b412_4.png" className="btn-img" alt="" />
-        <img src="https://uploads-ssl.webflow.com/62648ebcbe072375efb3062a/6264ae542fe04912b9102c18_1.png" className="btn-img" alt="" />
-        <img src="https://uploads-ssl.webflow.com/62648ebcbe072375efb3062a/6264ae548d38bc533959d56c_3.png" className="btn-img" alt="" />
+      <div className={styles.hoverBg}>
+        <img 
+          src="https://uploads-ssl.webflow.com/62648ebcbe072375efb3062a/6264ae54c0c11b39d0df5eab_2.png" 
+          className={`${styles.image} ${styles.topLeft}`} 
+          alt="" 
+        />
+        <img 
+          src="https://uploads-ssl.webflow.com/62648ebcbe072375efb3062a/6264ae54b1845a854a04b412_4.png" 
+          className={`${styles.image} ${styles.topRight}`} 
+          alt="" 
+        />
+        <img 
+          src="https://uploads-ssl.webflow.com/62648ebcbe072375efb3062a/6264ae542fe04912b9102c18_1.png" 
+          className={`${styles.image} ${styles.bottomLeft}`} 
+          alt="" 
+        />
+        <img 
+          src="https://uploads-ssl.webflow.com/62648ebcbe072375efb3062a/6264ae548d38bc533959d56c_3.png" 
+          className={`${styles.image} ${styles.bottomRight}`} 
+          alt="" 
+        />
       </div>
     </div>
   );

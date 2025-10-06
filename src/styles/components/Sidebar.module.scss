@@ -1,0 +1,171 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  background: #1e1e2f;
+  color: #fff;
+  width: 220px;
+  transition: width 0.2s ease;
+  position: relative;
+}
+
+.open {
+  width: 220px;
+}
+
+.collapsed {
+  width: 60px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+}
+
+.brandMeta {
+  display: flex;
+  flex-direction: column;
+}
+
+.brandTitle {
+  font-weight: 700;
+}
+
+.brandSubtitle {
+  font-size: 0.85rem;
+  color: #ccc;
+}
+
+.collapseBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1rem;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  text-align: left;
+  font-size: 0.9rem;
+  color: #fff;
+  transition: background 0.2s ease;
+}
+
+.navItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.active {
+  background: rgba(88, 101, 242, 0.2);
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.icon {
+  margin-right: 0.75rem;
+  display: flex;
+  align-items: center;
+}
+
+.label {
+  flex: 1;
+}
+
+.badge {
+  background: #5865f2;
+  border-radius: 12px;
+  padding: 0 6px;
+  font-size: 0.75rem;
+}
+
+.divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 1rem 0;
+}
+
+.footer {
+  margin-top: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.avatar {
+  border-radius: 50%;
+  margin-right: 0.75rem;
+}
+
+.profileMeta {
+  display: flex;
+  flex-direction: column;
+}
+
+.profileName {
+  font-weight: 600;
+}
+
+.profileSub {
+  font-size: 0.8rem;
+  color: #ccc;
+}
+
+.logout {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.tooltip {
+  position: absolute;
+  left: 70px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0.25rem 0.5rem;
+  background: #222;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.collapseBtn svg {
+  display: block;
+  fill: #fff;
+}
+
+.navItem .badge {
+  margin-left: auto;
+}

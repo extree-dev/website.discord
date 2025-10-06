@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { FiCheck } from "react-icons/fi";
+import styles from "./GlassSelect.module.scss";
 
 type Option = { value: string; label: string };
 
@@ -11,32 +12,36 @@ interface GlassSelectProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-export default function GlassSelect({ value, onChange, options, onOpenChange }: GlassSelectProps) {
+export default function GlassSelect({
+  value,
+  onChange,
+  options,
+  onOpenChange,
+}: GlassSelectProps) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
 
   const triggerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const selectedLabel = options.find(o => o.value === value)?.label || "Select...";
+  const selectedLabel = options.find((o) => o.value === value)?.label || "Select...";
 
-  // Уведомляем родителя об открытии/закрытии через useEffect
   useEffect(() => {
     onOpenChange?.(open);
   }, [open, onOpenChange]);
 
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setOpen(prev => !prev);
+    setOpen((prev) => !prev);
   };
 
   useEffect(() => {
-    function onDocDown(e: MouseEvent) {
+    const onDocDown = (e: MouseEvent) => {
       const t = e.target as Node;
       if (triggerRef.current?.contains(t)) return;
       if (listRef.current?.contains(t)) return;
       if (open) setOpen(false);
-    }
+    };
     document.addEventListener("mousedown", onDocDown);
     return () => document.removeEventListener("mousedown", onDocDown);
   }, [open]);
@@ -68,41 +73,34 @@ export default function GlassSelect({ value, onChange, options, onOpenChange }: 
     const overflowBottom = listRect.bottom > window.innerHeight - 8;
     if (overflowBottom) {
       const newTop = coords.top - listRect.height - 20;
-      setCoords(c => (c ? { ...c, top: newTop } : c));
+      setCoords((c) => (c ? { ...c, top: newTop } : c));
     }
   }, [open, coords]);
 
   const list = (
     <ul
       ref={listRef}
-      className="glass-options"
+      className={styles.options}
       role="listbox"
       style={{
-        position: "absolute",
         top: coords?.top ?? -9999,
         left: coords?.left ?? -9999,
         width: coords?.width ?? "auto",
-        zIndex: 100000,
-        pointerEvents: "auto",
-        maxHeight: "250px",       // ← ограничиваем высоту
-        overflowY: "auto",        // ← вертикальный скролл
-        boxShadow: "0 4px 12px rgba(0,0,0,0.15)", // для красоты
-        borderRadius: "8px",
       }}
-      onClick={e => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
     >
-      {options.map(opt => (
+      {options.map((opt) => (
         <li
           key={opt.value}
-          className={opt.value === value ? "active" : ""}
+          className={`${styles.option} ${opt.value === value ? styles.active : ""}`}
           onClick={(e) => {
             e.stopPropagation();
             onChange(opt.value);
-            setOpen(false); // уведомление родителя произойдет через useEffect
+            setOpen(false);
           }}
         >
           {opt.label}
-          {opt.value === value && <FiCheck size={16} className="opt-check" />}
+          {opt.value === value && <FiCheck size={16} className={styles.checkIcon} />}
         </li>
       ))}
     </ul>
@@ -110,10 +108,10 @@ export default function GlassSelect({ value, onChange, options, onOpenChange }: 
 
   return (
     <>
-      <div className={`glass-dropdown ${open ? "open" : ""}`}>
-        <div className="glass-selected" ref={triggerRef} onClick={toggle}>
-          <span className="glass-selected__text">{selectedLabel}</span>
-          <span className="arrow" />
+      <div className={`${styles.dropdown} ${open ? styles.open : ""}`}>
+        <div className={styles.selected} ref={triggerRef} onClick={toggle}>
+          <span className={styles.selectedText}>{selectedLabel}</span>
+          <span className={styles.arrow} />
         </div>
       </div>
       {open && coords && ReactDOM.createPortal(list, document.body)}

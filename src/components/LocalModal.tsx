@@ -1,9 +1,8 @@
-// LocalModal.tsx
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/Button.js";
 import { FaDiscord } from "react-icons/fa";
-import "./CSS/LocalModal.css"; // Подключаем CSS
+import styles from "./LocalModal.module.scss";
 
 interface LockModalProps {
   message: string;
@@ -42,23 +41,23 @@ export const LockModal: React.FC<LockModalProps> = ({ message, onClose }) => {
   return (
     <AnimatePresence>
       <motion.div
-        className="lockmodal-overlay"
+        className={styles.overlay}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
         <motion.div
-          className="lockmodal-container"
+          className={styles.container}
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.8, opacity: 0 }}
         >
-          <FaDiscord size={96} className="lockmodal-image" />
-          <h2 className="lockmodal-title">{message}</h2>
-          <p className="lockmodal-text">Try again</p>
-          <div className="lockmodal-timer">{minutes}:{seconds}</div>
+          <FaDiscord size={96} className={styles.image} />
+          <h2 className={styles.title}>{message}</h2>
+          <p className={styles.text}>Try again</p>
+          <div className={styles.timer}>{minutes}:{seconds}</div>
           <Button
-            className="lockmodal-button"
+            className={styles.button}
             onClick={() => {
               setIsVisible(false);
               onClose?.();

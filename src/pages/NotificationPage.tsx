@@ -1,19 +1,26 @@
 import React, { useState } from "react";
 import Sidebars from "@/components/Saidbar.js";
 import LanguageSelect from "@/components/LanguageSelect.js";
-import { 
-  Mail, 
-  MessageCircle, 
-  Bell, 
-  Volume2, 
-  Smartphone, 
-  History, 
-  Send,
-  CheckCircle,
-  XCircle,
-  Clock
+import {
+    Mail,
+    MessageCircle,
+    Bell,
+    Volume2,
+    Smartphone,
+    History,
+    Send,
+    CheckCircle,
+    XCircle,
+    Clock
 } from 'lucide-react';
 import styles from "../module_pages/NotificationPage.module.scss";
+
+type Props = {
+    options: string[];
+    defaultValue?: string;
+    onChange: (value: string) => void;
+    className?: string; // ← добавлено
+};
 
 const NotificationPage: React.FC = () => {
     const [emailEnabled, setEmailEnabled] = useState(false);
@@ -31,13 +38,22 @@ const NotificationPage: React.FC = () => {
         alert('Test notification sent! Check your configured channels.');
     };
 
-    const notificationHistory = [
-        { id: 1, message: "Server rebooted at 10:32 AM", time: "2 hours ago", type: "system" },
-        { id: 2, message: "New message in Discord channel #general", time: "5 hours ago", type: "discord" },
-        { id: 3, message: "Email report sent successfully", time: "1 day ago", type: "email" }
-    ];
+    const notificationHistory: NotificationItem[] = [
+    { id: 1, message: "Server rebooted at 10:32 AM", time: "2 hours ago", type: "system" },
+    { id: 2, message: "New message in Discord channel #general", time: "5 hours ago", type: "discord" },
+    { id: 3, message: "Email report sent successfully", time: "1 day ago", type: "email" }
+];
 
-    const getStatusIcon = (type) => {
+    type NotificationType = 'system' | 'discord' | 'email' | 'other';
+
+    interface NotificationItem {
+    id: number;
+    message: string;
+    time: string;
+    type: NotificationType;
+}
+
+    const getStatusIcon = (type: NotificationType) => {
         switch (type) {
             case 'system': return <CheckCircle size={14} />;
             case 'discord': return <MessageCircle size={14} />;
@@ -73,7 +89,7 @@ const NotificationPage: React.FC = () => {
                                 Receive reports and system notifications via email.
                             </p>
                             <div className={styles.actions}>
-                                <button 
+                                <button
                                     className={`${styles.toggleButton} ${emailEnabled ? styles.active : styles.inactive}`}
                                     onClick={() => setEmailEnabled(!emailEnabled)}
                                 >
@@ -103,7 +119,7 @@ const NotificationPage: React.FC = () => {
                                 Link a channel for logs and system messages.
                             </p>
                             <div className={styles.actions}>
-                                <button 
+                                <button
                                     className={`${styles.toggleButton} ${discordConnected ? styles.active : styles.inactive}`}
                                     onClick={() => setDiscordConnected(!discordConnected)}
                                 >
@@ -132,8 +148,8 @@ const NotificationPage: React.FC = () => {
                             />
                             <div className={styles.infoBlock}>
                                 <div className={styles.infoBlock__content}>
-                                    <strong>Instant:</strong> Receive notifications immediately<br/>
-                                    <strong>Daily:</strong> Daily digest at 9:00 AM<br/>
+                                    <strong>Instant:</strong> Receive notifications immediately<br />
+                                    <strong>Daily:</strong> Daily digest at 9:00 AM<br />
                                     <strong>Weekly:</strong> Weekly report on Monday
                                 </div>
                             </div>
@@ -149,7 +165,7 @@ const NotificationPage: React.FC = () => {
                                 Play a sound when a new notification arrives.
                             </p>
                             <div className={styles.actions}>
-                                <button 
+                                <button
                                     className={`${styles.toggleButton} ${soundEnabled ? styles.active : styles.inactive}`}
                                     onClick={() => setSoundEnabled(!soundEnabled)}
                                 >
@@ -171,7 +187,7 @@ const NotificationPage: React.FC = () => {
                                 Receive notifications directly in your browser or OS.
                             </p>
                             <div className={styles.actions}>
-                                <button 
+                                <button
                                     className={`${styles.toggleButton} ${pushEnabled ? styles.active : styles.inactive}`}
                                     onClick={() => setPushEnabled(!pushEnabled)}
                                 >
@@ -217,7 +233,7 @@ const NotificationPage: React.FC = () => {
                                 Send a test notification to verify your settings.
                             </p>
                             <div className={styles.actions}>
-                                <button 
+                                <button
                                     className={`${styles.saveButton} ${isTesting ? styles.testing : ''}`}
                                     onClick={handleTestNotification}
                                     disabled={isTesting}

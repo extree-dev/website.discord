@@ -1,0 +1,123 @@
+.button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  min-width: 120px;
+  min-height: 48px;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  // Compact variation
+  &.compact {
+    padding: 10px 20px;
+    min-width: 100px;
+    
+    .title {
+      font-size: 14px;
+    }
+  }
+}
+
+.title {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  gap: 2px;
+  font-family: 'Arial', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  
+  .letter {
+    display: inline-block;
+    transition: transform 0.3s ease;
+  }
+  
+  .button:hover & .letter {
+    &:nth-child(odd) { transform: translateY(-2px); }
+    &:nth-child(even) { transform: translateY(2px); }
+  }
+}
+
+.hoverBg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.image {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  opacity: 0;
+  pointer-events: none;
+  
+  // Initial positions
+  &.topLeft {
+    top: -20px;
+    left: -20px;
+  }
+  
+  &.topRight {
+    top: -20px;
+    right: -20px;
+  }
+  
+  &.bottomLeft {
+    bottom: -20px;
+    left: -20px;
+  }
+  
+  &.bottomRight {
+    bottom: -20px;
+    right: -20px;
+  }
+}
+
+// Responsive
+.mobile {
+  .button {
+    padding: 10px 20px;
+    min-width: 100px;
+  }
+  
+  .title {
+    font-size: 14px;
+  }
+  
+  .image {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+.smallMobile {
+  .button {
+    padding: 8px 16px;
+    min-width: 90px;
+  }
+  
+  .title {
+    font-size: 13px;
+  }
+}

@@ -19,7 +19,7 @@ export function OAuthSuccess() {
         // Сохраняем токен в localStorage
         localStorage.setItem('auth_token', token);
         localStorage.setItem('user_id', userId);
-        
+
         // Сохраняем метод авторизации для аналитики
         if (method) {
           localStorage.setItem('auth_method', method);
@@ -36,7 +36,7 @@ export function OAuthSuccess() {
             userId,
             method
           }, window.location.origin);
-          
+
           // Запускаем таймер для автоматического закрытия
           const timer = setInterval(() => {
             setCountdown((prev) => {
@@ -67,14 +67,22 @@ export function OAuthSuccess() {
     }
   }, [searchParams, navigate]);
 
-  const getAuthMethodName = (method) => {
-    const methods = {
-      'discord': 'Discord',
-      'google': 'Google',
-      'github': 'GitHub',
-      'microsoft': 'Microsoft'
+  const getAuthMethodName = (method: string | null): string => {
+    const methods: Record<'discord' | 'google' | 'github' | 'microsoft', string> = {
+      discord: 'Discord',
+      google: 'Google',
+      github: 'GitHub',
+      microsoft: 'Microsoft'
     };
-    return methods[method] || method || 'Unknown';
+
+    if (!method) return 'Unknown';
+
+    // Приводим к ключу Record или возвращаем сам метод, если не найден
+    if (method in methods) {
+      return methods[method as keyof typeof methods];
+    }
+
+    return method;
   };
 
   if (status === 'error') {
@@ -84,10 +92,10 @@ export function OAuthSuccess() {
           <Shield className={styles.icon} />
           <h1 className={styles.title}>Authorization Error</h1>
           <p className={styles.message}>
-            Something went wrong during the authorization process. 
+            Something went wrong during the authorization process.
             Please try again or contact support if the problem persists.
           </p>
-          <button 
+          <button
             onClick={() => navigate('/login')}
             className={styles.retryButton}
           >
@@ -102,15 +110,15 @@ export function OAuthSuccess() {
     <div className={styles.container}>
       <div className={styles.content}>
         <CheckCircle className={styles.icon} />
-        
+
         <div className={styles.successBadge}>
           <Shield size={16} />
           Authorization Successful
         </div>
-        
+
         <h1 className={styles.title}>Welcome Aboard!</h1>
         <p className={styles.message}>
-          {window.opener 
+          {window.opener
             ? `This window will close automatically in ${countdown} seconds...`
             : 'You will be redirected to the dashboard shortly...'
           }
@@ -164,12 +172,12 @@ export function OAuthSuccess() {
         <div style={{ marginTop: '1.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
           <p>
             If nothing happens,{' '}
-            <button 
+            <button
               onClick={() => window.opener ? window.close() : navigate('/')}
-              style={{ 
-                background: 'none', 
-                border: 'none', 
-                color: 'var(--accent-color)', 
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--accent-color)',
                 textDecoration: 'underline',
                 cursor: 'pointer'
               }}

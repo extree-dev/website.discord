@@ -1,10 +1,10 @@
 // CompleteProfile.tsx
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { MdVerified, MdWarning, MdKey, MdVisibility, MdVisibilityOff } from 'react-icons/md';
+import { MdVerified, MdWarning, MdKey, MdVisibility, MdVisibilityOff } from "react-icons/md";
 import ThemeToggle from "./ThemeToggle/ThemeToggle.js";
 import CountrySelect from "./CountrySelect.js";
-import "./CSS/CompleteProfile.css";
+import styles from "../styles/components/CompleteProfile.module.scss";
 
 interface ProfileData {
     firstName: string;
@@ -403,30 +403,36 @@ export const CompleteProfile: React.FC = () => {
         }
     };
 
-    if (!userInfo) return (
-        <div className="loading-container">
-            <div className="loading-spinner"></div>
-        </div>
-    );
+    if (!userInfo)
+        return (
+            <div className={styles.loadingContainer}>
+                <div className={styles.loadingSpinner}></div>
+            </div>
+        );
 
     return (
-        <div className="complete-profile-wrapper">
-            <div className={`complete-profile-background ${isCountryListOpen ? 'blur-background' : ''}`}></div>
-            <div className="complete-profile-container">
-                <div className="complete-profile-card">
-                    <div className="login-header-top"><ThemeToggle /></div>
-                    <div className="complete-profile-header">
-                        <h2 className="complete-profile-title">Complete Your Profile</h2>
+        <div className={styles.wrapper}>
+            <div
+                className={`${styles.background} ${isCountryListOpen ? styles.blurBackground : ""
+                    }`}
+            ></div>
 
-                        {/* Аватар пользователя */}
-                        <div className="user-avatar-container">
+            <div className={styles.container}>
+                <div className={styles.card}>
+                    <div className={styles.headerTop}>
+                        <ThemeToggle />
+                    </div>
+
+                    <div className={styles.header}>
+                        <h2 className={styles.title}>Complete Your Profile</h2>
+
+                        <div className={styles.avatarContainer}>
                             {userInfo.avatar ? (
                                 <img
                                     src={userInfo.avatar}
                                     alt={`${userInfo.name}'s avatar`}
-                                    className="user-avatar"
+                                    className={styles.avatar}
                                     onError={(e) => {
-                                        console.log('Avatar failed to load, using default');
                                         e.currentTarget.src = getDefaultAvatar(userInfo.name);
                                     }}
                                 />
@@ -434,86 +440,95 @@ export const CompleteProfile: React.FC = () => {
                                 <img
                                     src={getDefaultAvatar(userInfo.name)}
                                     alt={`${userInfo.name}'s avatar`}
-                                    className="user-avatar"
+                                    className={styles.avatar}
                                 />
                             )}
                         </div>
 
-                        <p className="complete-profile-subtitle">
-                            Welcome, {userInfo.name}! Please provide some additional information to continue.
+                        <p className={styles.subtitle}>
+                            Welcome, {userInfo.name}! Please provide some additional
+                            information to continue.
                         </p>
                     </div>
 
-                    <form className="complete-profile-form" onSubmit={handleSubmit}>
-                        <div className="form-group">
-                            <label htmlFor="secretCode" className="form-label">
-                                <MdKey className="inline-icon" />
+                    <form className={styles.form} onSubmit={handleSubmit}>
+                        <div className={styles.formGroup}>
+                            <label htmlFor="secretCode" className={styles.formLabel}>
+                                <MdKey className={styles.inlineIcon} />
                                 Secret Registration Code *
                             </label>
                             <input
                                 id="secretCode"
                                 type="text"
                                 value={profileData.secretCode}
-                                onChange={e => handleInputChange('secretCode', e.target.value.toUpperCase())}
-                                className={`form-input ${codeValidation?.isValid ? 'input-valid' :
-                                    codeValidation && !codeValidation.isValid ? 'input-error' : ''
-                                    } ${errors.secretCode ? 'input-error' : ''}`}
+                                onChange={(e) =>
+                                    handleInputChange("secretCode", e.target.value.toUpperCase())
+                                }
+                                className={`${styles.formInput} 
+                  ${codeValidation?.isValid ? styles.inputValid : ""} 
+                  ${codeValidation && !codeValidation.isValid
+                                        ? styles.inputError
+                                        : ""
+                                    } 
+                  ${errors.secretCode ? styles.inputError : ""}`}
                                 placeholder="Enter code provided by administrator"
                                 disabled={isLoading || isCountryListOpen}
                             />
 
-                            {/* Индикатор загрузки валидации */}
                             {isValidatingCode && (
-                                <div className="validation-loading">
-                                    <div className="loading-spinner-small"></div>
+                                <div className={styles.validationLoading}>
+                                    <div className={styles.loadingSpinnerSmall}></div>
                                     Validating code...
                                 </div>
                             )}
 
-                            {/* Сообщение о валидном коде */}
                             {codeValidation?.isValid && !isValidatingCode && (
-                                <div className="code-validation validation-valid">
-                                    <MdVerified className="validation-icon" />
+                                <div
+                                    className={`${styles.codeValidation} ${styles.validationValid}`}
+                                >
+                                    <MdVerified className={styles.validationIcon} />
                                     {codeValidation.message}
                                 </div>
                             )}
 
-                            {/* Сообщение о невалидном коде */}
                             {codeValidation && !codeValidation.isValid && !isValidatingCode && (
-                                <div className="code-validation validation-invalid">
-                                    <MdWarning className="validation-icon" />
+                                <div
+                                    className={`${styles.codeValidation} ${styles.validationInvalid}`}
+                                >
+                                    <MdWarning className={styles.validationIcon} />
                                     {codeValidation.message}
                                 </div>
                             )}
 
-                            {/* Общие ошибки формы */}
                             {errors.secretCode && !isValidatingCode && (
-                                <p className="form-error">
-                                    <MdWarning className="error-icon" />
+                                <p className={styles.formError}>
+                                    <MdWarning className={styles.errorIcon} />
                                     {errors.secretCode}
                                 </p>
                             )}
                         </div>
 
-                        {/* Поля для пароля */}
-                        <div className="form-grid-2col">
-                            <div className="form-group">
-                                <label htmlFor="password" className="form-label">
+                        <div className={styles.formGrid2col}>
+                            <div className={styles.formGroup}>
+                                <label htmlFor="password" className={styles.formLabel}>
                                     Password *
                                 </label>
-                                <div className="password-input-container">
+                                <div className={styles.passwordInputContainer}>
                                     <input
                                         id="password"
                                         type={showPassword ? "text" : "password"}
                                         value={profileData.password}
-                                        onChange={e => handleInputChange('password', e.target.value)}
-                                        className={`form-input password-input ${errors.password ? 'input-error' : ''}`}
+                                        onChange={(e) =>
+                                            handleInputChange("password", e.target.value)
+                                        }
+                                        className={`${styles.formInput} ${errors.password ? styles.inputError : ""
+                                            }`}
                                         placeholder="Create a strong password"
                                         disabled={isLoading || isCountryListOpen}
                                     />
                                     <button
                                         type="button"
-                                        className="password-toggle"
+                                        className={styles.passwordToggle}
                                         onClick={() => setShowPassword(!showPassword)}
                                         disabled={isLoading || isCountryListOpen}
                                     >
@@ -521,17 +536,20 @@ export const CompleteProfile: React.FC = () => {
                                     </button>
                                 </div>
 
-                                {profileData.password.length > 0 && ( // ← измените password на profileData.password
-                                    <div className="password-strength-indicator">
-                                        <div className="password-strength-text">
-                                            Strength: <span style={{ color: getPasswordStrengthColor() }}>{getPasswordStrengthLabel()}</span>
+                                {profileData.password.length > 0 && (
+                                    <div className={styles.passwordStrengthIndicator}>
+                                        <div className={styles.passwordStrengthText}>
+                                            Strength:{" "}
+                                            <span style={{ color: getPasswordStrengthColor() }}>
+                                                {getPasswordStrengthLabel()}
+                                            </span>
                                         </div>
-                                        <div className="password-strength-bar">
+                                        <div className={styles.passwordStrengthBar}>
                                             <div
-                                                className="password-strength-progress"
+                                                className={styles.passwordStrengthProgress}
                                                 style={{
                                                     width: `${(passwordStrength / 4) * 100}%`,
-                                                    backgroundColor: getPasswordStrengthColor()
+                                                    backgroundColor: getPasswordStrengthColor(),
                                                 }}
                                             ></div>
                                         </div>
@@ -539,142 +557,191 @@ export const CompleteProfile: React.FC = () => {
                                 )}
 
                                 {errors.password && (
-                                    <p className="form-error">
-                                        <MdWarning className="error-icon" />
+                                    <p className={styles.formError}>
+                                        <MdWarning className={styles.errorIcon} />
                                         {errors.password}
                                     </p>
                                 )}
-                                <div className="password-hints">
+
+                                <div className={styles.passwordHints}>
                                     <small>• At least 12 characters</small>
                                     <small>• Uppercase & lowercase letters</small>
                                     <small>• Numbers & special characters</small>
                                 </div>
                             </div>
 
-                            <div className="form-group">
-                                <label htmlFor="confirmPassword" className="form-label">
+                            <div className={styles.formGroup}>
+                                <label htmlFor="confirmPassword" className={styles.formLabel}>
                                     Confirm Password *
                                 </label>
-
-                                <div className="password-input-container">
+                                <div className={styles.passwordInputContainer}>
                                     <input
                                         id="confirmPassword"
                                         type={showConfirmPassword ? "text" : "password"}
                                         value={profileData.confirmPassword}
-                                        onChange={e => handleInputChange('confirmPassword', e.target.value)}
-                                        className={`form-input password-input ${errors.confirmPassword ? 'input-error' : ''}`} // ← добавил password-input
+                                        onChange={(e) =>
+                                            handleInputChange("confirmPassword", e.target.value)
+                                        }
+                                        className={`${styles.formInput} ${errors.confirmPassword ? styles.inputError : ""
+                                            }`}
                                         placeholder="Repeat password"
                                         disabled={isLoading || isCountryListOpen}
                                     />
                                     <button
                                         type="button"
-                                        className="password-toggle"
-                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        className={styles.passwordToggle}
+                                        onClick={() =>
+                                            setShowConfirmPassword(!showConfirmPassword)
+                                        }
                                         disabled={isLoading || isCountryListOpen}
                                     >
-                                        {showConfirmPassword ? <MdVisibilityOff /> : <MdVisibility />}
+                                        {showConfirmPassword ? (
+                                            <MdVisibilityOff />
+                                        ) : (
+                                            <MdVisibility />
+                                        )}
                                     </button>
                                 </div>
                                 {errors.confirmPassword && (
-                                    <p className="form-error">
-                                        <MdWarning className="error-icon" />
+                                    <p className={styles.formError}>
+                                        <MdWarning className={styles.errorIcon} />
                                         {errors.confirmPassword}
                                     </p>
                                 )}
                             </div>
                         </div>
 
-                        <div className="form-grid-2col">
-                            <div className="form-group">
-                                <label htmlFor="firstName" className="form-label">First Name *</label>
+                        <div className={styles.formGrid2col}>
+                            <div className={styles.formGroup}>
+                                <label htmlFor="firstName" className={styles.formLabel}>
+                                    First Name *
+                                </label>
                                 <input
                                     id="firstName"
                                     type="text"
                                     value={profileData.firstName}
-                                    onChange={e => handleInputChange('firstName', e.target.value)}
-                                    className="form-input"
+                                    onChange={(e) =>
+                                        handleInputChange("firstName", e.target.value)
+                                    }
+                                    className={styles.formInput}
                                     placeholder="John"
                                     disabled
                                 />
-                                {errors.firstName && <p className="form-error">{errors.firstName}</p>}
+                                {errors.firstName && (
+                                    <p className={styles.formError}>{errors.firstName}</p>
+                                )}
                             </div>
-                            <div className="form-group">
-                                <label htmlFor="discordId" className="form-label">Discord ID</label>
+                            <div className={styles.formGroup}>
+                                <label htmlFor="discordId" className={styles.formLabel}>
+                                    Discord ID
+                                </label>
                                 <input
                                     id="discordId"
                                     type="text"
-                                    value={userInfo.discordId || ''}
-                                    className="form-input form-input-disabled"
+                                    value={userInfo.discordId || ""}
+                                    className={`${styles.formInput} ${styles.formInputDisabled}`}
                                     placeholder="Discord ID"
                                     disabled
                                 />
                             </div>
                         </div>
 
-                        <div className="form-group">
-                            <label htmlFor="email" className="form-label">Email (from Discord)</label>
+                        <div className={styles.formGroup}>
+                            <label htmlFor="email" className={styles.formLabel}>
+                                Email (from Discord)
+                            </label>
                             <input
                                 id="email"
                                 type="email"
                                 value={userInfo.email}
                                 disabled
-                                className={`form-input form-input-disabled ${getEmailStatusClass(userInfo.emailVerified)}`}
+                                className={`${styles.formInput} ${styles.formInputDisabled} ${getEmailStatusClass(
+                                    userInfo.emailVerified
+                                )}`}
                             />
-                            <div className={`email-status ${getEmailStatusClass(userInfo.emailVerified)}`}>
+                            <div
+                                className={`${styles.emailStatus} ${getEmailStatusClass(
+                                    userInfo.emailVerified
+                                )}`}
+                            >
                                 {getEmailStatusText(userInfo.emailVerified)}
                             </div>
                         </div>
 
-                        <div className="form-grid-2col">
-                            <div className="form-group">
-                                <label htmlFor="discordCreated" className="form-label">Discord Member Since</label>
+                        <div className={styles.formGrid2col}>
+                            <div className={styles.formGroup}>
+                                <label htmlFor="discordCreated" className={styles.formLabel}>
+                                    Discord Member Since
+                                </label>
                                 <input
                                     id="discordCreated"
                                     type="text"
                                     value={formatDiscordDate(userInfo.discordCreatedAt)}
-                                    className="form-input form-input-disabled"
+                                    className={`${styles.formInput} ${styles.formInputDisabled}`}
                                     disabled
                                 />
                             </div>
-                            <div className="form-group">
-                                <label htmlFor="discordRole" className="form-label">Discord Role</label>
+                            <div className={styles.formGroup}>
+                                <label htmlFor="discordRole" className={styles.formLabel}>
+                                    Discord Role
+                                </label>
                                 <input
                                     id="discordRole"
                                     type="text"
-                                    value={userInfo.highestRole || '@everyone'}
-                                    className="form-input form-input-disabled"
+                                    value={userInfo.highestRole || "@everyone"}
+                                    className={`${styles.formInput} ${styles.formInputDisabled}`}
                                     style={{
-                                        backgroundColor: userInfo.roleHexColor || '#99AAB5',
-                                        color: userInfo.roleHexColor ? getContrastColor(userInfo.roleHexColor) : '#FFFFFF',
-                                        borderColor: userInfo.roleHexColor || '#99AAB5',
-                                        fontWeight: '600',
-                                        textShadow: '0 1px 1px rgba(0, 0, 0, 0.2)'
+                                        backgroundColor: userInfo.roleHexColor || "#99AAB5",
+                                        color: userInfo.roleHexColor
+                                            ? getContrastColor(userInfo.roleHexColor)
+                                            : "#FFFFFF",
+                                        borderColor: userInfo.roleHexColor || "#99AAB5",
+                                        fontWeight: "600",
+                                        textShadow: "0 1px 1px rgba(0, 0, 0, 0.2)",
                                     }}
                                     disabled
                                 />
                             </div>
                         </div>
-                        <div className="checkbox-group">
+
+                        <div className={styles.checkboxGroup}>
                             <input
                                 id="agreeTerms"
                                 type="checkbox"
                                 checked={profileData.agreeTerms}
-                                onChange={e => handleInputChange('agreeTerms', e.target.checked)}
-                                className="checkbox-input"
+                                onChange={(e) =>
+                                    handleInputChange("agreeTerms", e.target.checked)
+                                }
+                                className={styles.checkboxInput}
                                 disabled={isCountryListOpen}
                             />
-                            <label htmlFor="agreeTerms" className="checkbox-label">
-                                I agree to the <a href="/terms" className="link-primary">Terms of Service</a> and <a href="/privacy" className="link-primary">Privacy Policy</a> *
+                            <label htmlFor="agreeTerms" className={styles.checkboxLabel}>
+                                I agree to the{" "}
+                                <a href="/terms" className={styles.linkPrimary}>
+                                    Terms of Service
+                                </a>{" "}
+                                and{" "}
+                                <a href="/privacy" className={styles.linkPrimary}>
+                                    Privacy Policy
+                                </a>{" "}
+                                *
                             </label>
                         </div>
-                        {errors.agreeTerms && <p className="form-error">{errors.agreeTerms}</p>}
+
+                        {errors.agreeTerms && (
+                            <p className={styles.formError}>{errors.agreeTerms}</p>
+                        )}
 
                         <button
                             type="submit"
-                            disabled={isLoading || isCountryListOpen || !profileData.agreeTerms}
-                            className="submit-button"
+                            disabled={
+                                isLoading || isCountryListOpen || !profileData.agreeTerms
+                            }
+                            className={styles.submitButton}
                         >
-                            {isLoading ? "Completing Registrathion..." : "Completing Registrathion"}
+                            {isLoading
+                                ? "Completing Registration..."
+                                : "Complete Registration"}
                         </button>
                     </form>
                 </div>

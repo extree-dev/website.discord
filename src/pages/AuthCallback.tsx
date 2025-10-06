@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/stores/auth';
+import { useAuth } from '@/stores/auth.js';
 
 const AuthCallback = () => {
   const { login } = useAuth();

@@ -9,28 +9,11 @@ import {
     LogOut,
     Server,
     Bell,
-    Circle,
     LayoutDashboard,
     Key,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle/ThemeToggle.js";
-import "../components/CSS/saidbar.css";
-
-/**
- * Sidebar.tsx
- *
- * Minimalist, strict and accessible sidebar for moderator dashboard.
- * - Collapsible (persists state)
- * - Keyboard navigation (ArrowUp/ArrowDown, Home/End, Enter)
- * - Clear active item handling
- * - Compact mode shows only icons with tooltips
- *
- * Notes:
- * - This file intentionally verbose (comments + structure) to be
- *   easy to adapt to your project.
- */
-
-/* ---------- Types ---------- */
+import styles from "./Sidebar.module.scss";
 
 export type SidebarId =
     | "dashboard"
@@ -46,13 +29,11 @@ export type SidebarId =
 type MenuItem = {
     id: SidebarId;
     title: string;
-    sr?: string; // screen-reader override text
+    sr?: string;
     icon: React.ReactNode;
     badge?: string | number;
     disabled?: boolean;
 };
-
-/* ---------- Props ---------- */
 
 interface SidebarProps {
     initialCollapsed?: boolean;
@@ -61,13 +42,10 @@ interface SidebarProps {
     className?: string;
 }
 
-/* ---------- Constants ---------- */
-
 const STORAGE_KEY = "modpanel_sidebar_collapsed_v1";
 
-/* Default menu — can be replaced by props or context in your app */
 const DEFAULT_MENU: MenuItem[] = [
-    { id: "dashboard", title: "Dashboard", icon: <LayoutDashboard size={18} /> }, // ← добавили
+    { id: "dashboard", title: "Dashboard", icon: <LayoutDashboard size={18} /> },
     { id: "overview", title: "Overview", icon: <Home size={18} /> },
     { id: "users", title: "Users", icon: <Users size={18} />, badge: "12" },
     { id: "channels", title: "Channels", icon: <MessageCircle size={18} /> },
@@ -78,24 +56,18 @@ const DEFAULT_MENU: MenuItem[] = [
     { id: "secret-codes", title: "Secret Codes", icon: <Key size={18} /> },
 ];
 
-
-/* ---------- Component ---------- */
-
-const Sidebars: React.FC<SidebarProps> = ({
+const Sidebar: React.FC<SidebarProps> = ({
     initialCollapsed,
     onNavigate,
     active: externalActive,
     className,
 }) => {
-
     const navigate = useNavigate();
-    // controlled active (if external provided) or internal
     const [active, setActive] = useState<SidebarId>(() => externalActive ?? "overview");
     useEffect(() => {
         if (externalActive) setActive(externalActive);
     }, [externalActive]);
 
-    // collapsed state — persisted
     const [collapsed, setCollapsed] = useState<boolean>(() => {
         const saved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
         if (saved !== null) return saved === "1";
@@ -106,55 +78,33 @@ const Sidebars: React.FC<SidebarProps> = ({
     useEffect(() => {
         try {
             localStorage.setItem(STORAGE_KEY, collapsed ? "1" : "0");
-        } catch {
-            // ignore
-        }
+        } catch { }
     }, [collapsed]);
 
-    // menu items
     const menu = useMemo<MenuItem[]>(() => DEFAULT_MENU, []);
-
-    // focus management for keyboard navigation
     const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
     const containerRef = useRef<HTMLDivElement | null>(null);
 
-    // on navigate (internal + callback)
     function navigateTo(id: SidebarId) {
-        if (externalActive === undefined) {
-            setActive(id);
-        }
+        if (externalActive === undefined) setActive(id);
         onNavigate?.(id);
 
-        if (id === "dashboard") {
-            window.location.href = "http://localhost:5173/dashboard/";
-        } else if (id === "settings") {
-            navigate("/dashboard/settings");
-        } else if (id === "notification") {
-            navigate("/dashboard/notification");
-        } else if (id === "secret-codes") {
-            navigate("/dashboard/secret-codes");
-        } else {
-            navigate(`/dashboard/${id}`);
-        }
+        if (id === "dashboard") window.location.href = "http://localhost:5173/dashboard/";
+        else navigate(`/dashboard/${id}`);
     }
 
-    // keyboard handling
     useEffect(() => {
         function onKey(e: KeyboardEvent) {
-            // when focus inside sidebar, we will handle arrow navigation
             const el = document.activeElement;
-            if (!containerRef.current) return;
-            if (!containerRef.current.contains(el)) return;
+            if (!containerRef.current?.contains(el)) return;
 
             const idx = itemRefs.current.findIndex((r) => r === el);
             if (e.key === "ArrowDown") {
                 e.preventDefault();
-                const next = Math.min(itemRefs.current.length - 1, Math.max(0, idx + 1));
-                itemRefs.current[next]?.focus();
+                itemRefs.current[Math.min(itemRefs.current.length - 1, idx + 1)]?.focus();
             } else if (e.key === "ArrowUp") {
                 e.preventDefault();
-                const prev = Math.max(0, idx - 1);
-                itemRefs.current[prev]?.focus();
+                itemRefs.current[Math.max(0, idx - 1)]?.focus();
             } else if (e.key === "Home") {
                 e.preventDefault();
                 itemRefs.current[0]?.focus();
@@ -162,46 +112,37 @@ const Sidebars: React.FC<SidebarProps> = ({
                 e.preventDefault();
                 itemRefs.current[itemRefs.current.length - 1]?.focus();
             } else if (e.key === "Enter" || e.key === " ") {
-                // activate
                 if (idx >= 0) {
                     e.preventDefault();
-                    const id = menu[idx].id;
-                    navigateTo(id);
+                    navigateTo(menu[idx].id);
                 }
             }
         }
-
         document.addEventListener("keydown", onKey);
         return () => document.removeEventListener("keydown", onKey);
-    }, [menu, onNavigate, externalActive]);
+    }, [menu]);
 
-    // tooltip visibility control when collapsed
     const [hoverTip, setHoverTip] = useState<string | null>(null);
 
     return (
         <div
             ref={containerRef}
-            className={[
-                "mp-sidebar",
-                collapsed ? "mp-sidebar--collapsed" : "mp-sidebar--open",
-                className || "",
-            ].join(" ")}
+            className={`${styles.sidebar} ${collapsed ? styles.collapsed : styles.open} ${className || ""}`}
             aria-label="Primary"
         >
-            {/* Top: Brand */}
-            <div className="mp-sidebar__top">
-                <div className="mp-brand" title="Moderator Panel">
+            <div className={styles.top}>
+                <div className={styles.brand} title="Moderator Panel">
                     {!collapsed && (
-                        <div className="mp-brand__meta">
-                            <div className="mp-brand__title">Sentinel Dashboard</div>
-                            <div className="mp-brand__subtitle">Moderator</div>
+                        <div className={styles.brandMeta}>
+                            <div className={styles.brandTitle}>Sentinel Dashboard</div>
+                            <div className={styles.brandSubtitle}>Moderator</div>
                         </div>
                     )}
                 </div>
 
                 <button
-                    className="mp-collapse-btn"
-                    onClick={() => setCollapsed((c) => !c)}
+                    className={styles.collapseBtn}
+                    onClick={() => setCollapsed(c => !c)}
                     aria-pressed={collapsed}
                     aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                     title={collapsed ? "Expand" : "Collapse"}
@@ -210,21 +151,14 @@ const Sidebars: React.FC<SidebarProps> = ({
                 </button>
             </div>
 
-            {/* Navigation list */}
-            <nav className="mp-nav" role="navigation" aria-label="Main navigation">
+            <nav className={styles.nav} role="navigation" aria-label="Main navigation">
                 {menu.map((m, idx) => {
                     const isActive = active === m.id;
                     return (
                         <button
                             key={m.id}
-                            ref={(r) => {
-                                itemRefs.current[idx] = r;
-                            }}
-                            className={[
-                                "mp-nav__item",
-                                isActive ? "mp-nav__item--active" : "",
-                                m.disabled ? "mp-nav__item--disabled" : "",
-                            ].join(" ")}
+                            ref={r => void (itemRefs.current[idx] = r)}
+                            className={`${styles.navItem} ${isActive ? styles.active : ""} ${m.disabled ? styles.disabled : ""}`}
                             onClick={() => !m.disabled && navigateTo(m.id)}
                             onMouseEnter={() => setHoverTip(m.title)}
                             onMouseLeave={() => setHoverTip(null)}
@@ -232,30 +166,19 @@ const Sidebars: React.FC<SidebarProps> = ({
                             aria-disabled={m.disabled ? true : undefined}
                             title={collapsed ? m.title : undefined}
                         >
-                            <span className="mp-nav__icon" aria-hidden>
-                                {m.icon}
-                            </span>
-
-                            {!collapsed && <span className="mp-nav__label">{m.title}</span>}
-
-                            {m.badge !== undefined && (
-                                <span className="mp-nav__badge" aria-hidden>
-                                    {m.badge}
-                                </span>
-                            )}
+                            <span className={styles.icon}>{m.icon}</span>
+                            {!collapsed && <span className={styles.label}>{m.title}</span>}
+                            {m.badge !== undefined && <span className={styles.badge}>{m.badge}</span>}
                         </button>
                     );
                 })}
             </nav>
 
-            {/* Divider */}
-            <div className="mp-divider" role="separator" />
+            <div className={styles.divider} role="separator" />
 
-
-            {/* Footer: profile & logout */}
-            <div className="mp-sidebar__foot">
+            <div className={styles.footer}>
                 <div
-                    className="mp-profile"
+                    className={styles.profile}
                     tabIndex={0}
                     onMouseEnter={() => setHoverTip("Moderator")}
                     onMouseLeave={() => setHoverTip(null)}
@@ -264,52 +187,38 @@ const Sidebars: React.FC<SidebarProps> = ({
                     <img
                         src="https://i.pravatar.cc/40?img=12"
                         alt="Moderator avatar"
-                        className="mp-profile__avatar"
+                        className={styles.avatar}
                         width={36}
                         height={36}
                     />
                     {!collapsed && (
-                        <div className="mp-profile__meta">
-                            <div className="mp-profile__name">Moderator</div>
-                            <div className="mp-profile__sub">myserver#1234</div>
+                        <div className={styles.profileMeta}>
+                            <div className={styles.profileName}>Moderator</div>
+                            <div className={styles.profileSub}>myserver#1234</div>
                         </div>
                     )}
                 </div>
 
                 <button
-                    className="mp-logout"
-                    onClick={() => {
-                        // default behavior: for now we simply log out to console.
-                        // In your app, replace with real logout handler.
-                        // eslint-disable-next-line no-console
-                        console.log("logout clicked");
-                        // you might call onNavigate?.("logout") or similar
-                    }}
+                    className={styles.logout}
+                    onClick={() => console.log("logout clicked")}
                     onMouseEnter={() => setHoverTip("Logout")}
                     onMouseLeave={() => setHoverTip(null)}
                     title={collapsed ? "Logout" : undefined}
                 >
                     <LogOut size={16} />
-                    {!collapsed && <span className="mp-logout__label">Logout</span>}
+                    {!collapsed && <span className={styles.logoutLabel}>Logout</span>}
                 </button>
             </div>
 
-            {/* Floating tooltip when collapsed */}
-            {collapsed && hoverTip && (
-                <div className="mp-tooltip" role="status" aria-live="polite">
-                    {hoverTip}
-                </div>
-            )}
+            {collapsed && hoverTip && <div className={styles.tooltip}>{hoverTip}</div>}
         </div>
     );
 };
 
-export default Sidebars;
-
-/* ---------- Small icon helper (inline) ---------- */
+export default Sidebar;
 
 function ChevronIcon({ collapsed }: { collapsed: boolean }) {
-    // simple chevron that rotates based on collapsed state
     return (
         <svg
             width="14"

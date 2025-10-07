@@ -20,6 +20,8 @@ import NotificationPage from "./pages/NotificationPage.js";
 // Новые страницы
 import { Login } from "@/pages/Login.js";
 import { Register } from "@/pages/Register.js";
+import { ForgotPassword } from "@/pages/ForgotPassword.js";
+import { Support } from "@/pages/Support.js";
 import { LockModal } from "@/components/LocalModal.js";
 import Terms from "@/pages/Terms.js";
 import Privacy from "@/pages/Privacy.js";
@@ -55,25 +57,27 @@ function App() {
                   }
                 />
                 <Route path="/register" element={<Register />} />
-
+                <Route path="/forgot-password" element={<ForgotPassword />} /> {/* Добавляем роут */}
+                <Route path="/support" element={<Support />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
+                <Route path="/moderation" element={<Moderation />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/dashboard/settings" element={<SettingsPage />} />
+                <Route path="/dashboard/bot" element={<BotDashboard />} />
+                <Route path="/dashboard/commands" element={<CommandsPage />} />
+                <Route path="/dashboard/overview" element={<DashboardOverview />} />
+                <Route path="/dashboard/notification" element={<NotificationPage />} />
+                <Route path="/dashboard/secret-codes" element={<SecretCodesPage />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/oauth/success" element={<OAuthSuccess />} />
+                <Route path="/complete-profile" element={<CompleteProfile />} />
+                <Route path="/admin/logs" element={<AdminLogs />} />
+                <Route path="/complete-profile" element={<CompleteProfile />} />
                 {/* Страницы с Layout */}
                 <Route element={<Layout />}>
                   <Route path="/" element={<Home />} />
-                  <Route path="/auth/callback" element={<AuthCallback />} />
-                  <Route path="/moderation" element={<Moderation />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/dashboard/settings" element={<SettingsPage />} />
-                  <Route path="/dashboard/bot" element={<BotDashboard />} />
-                  <Route path="/dashboard/commands" element={<CommandsPage />} />
-                  <Route path="/dashboard/overview" element={<DashboardOverview />} />
-                  <Route path="/dashboard/notification" element={<NotificationPage />} />
-                  <Route path="/dashboard/secret-codes" element={<SecretCodesPage />} />
-                  <Route path="/terms" element={<Terms />} />
-                  <Route path="/privacy" element={<Privacy />} />
-                  <Route path="/oauth/success" element={<OAuthSuccess />} />
-                  <Route path="/complete-profile" element={<CompleteProfile />} />
-                  <Route path="/admin/logs" element={<AdminLogs />} />
-                  <Route path="/complete-profile" element={<CompleteProfile />} />
+
                 </Route>
               </Routes>
             </div>
@@ -82,6 +86,7 @@ function App() {
             {lockUntil && (
               <LockModal
                 message={lockMessage}
+                lockUntil={lockUntil}
                 onClose={() => setLockUntil(null)}
               />
             )}

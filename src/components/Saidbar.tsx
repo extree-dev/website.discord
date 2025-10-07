@@ -13,7 +13,7 @@ import {
     Key,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle/ThemeToggle.js";
-import styles from "./Sidebar.module.scss";
+import styles from "../styles/components/Sidebar.module.scss";
 
 export type SidebarId =
     | "dashboard"

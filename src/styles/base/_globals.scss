@@ -3,7 +3,7 @@
 @use '../abstracts/themes' as *;
 
 // Import all base styles
-@import 'reset';
+@use 'reset';
 
 // Глобальные стили для body
 body {
@@ -48,7 +48,7 @@ button {
   transition: border-color 0.25s, background-color 0.3s ease;
   
   &:hover {
-    background-color: var(--button-hover);
+    background-color: transparent;
   }
   
   &:focus,

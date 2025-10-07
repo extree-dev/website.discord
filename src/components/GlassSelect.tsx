@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { FiCheck } from "react-icons/fi";
-import styles from "./GlassSelect.module.scss";
+import styles from "../styles/components/GlassSelect.module.scss";
 
 type Option = { value: string; label: string };
 

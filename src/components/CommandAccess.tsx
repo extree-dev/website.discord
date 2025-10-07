@@ -1,5 +1,5 @@
 import React from "react";
-import styles from "./CommandAccess.module.scss";
+import styles from "../styles/components/CommandAccess.module.scss";
 import { FiTrash2 } from "react-icons/fi";
 
 type Props = {

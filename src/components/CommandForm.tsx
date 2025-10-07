@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { DiscordCommand } from "../pages/CommandsPage.js";
 import CommandParams from "./CommandParams.js";
 import CommandAccess from "./CommandAccess.js";
-import '../components/CSS/CommandForm.css';
 
 type Props = {
   command: DiscordCommand | null;

@@ -1,4 +1,4 @@
-// Login.tsx - ОБНОВЛЕННЫЙ КОМПОНЕНТ В СТИЛЕ COMPLETEPROFILE
+// Login.tsx - ОБНОВЛЕННЫЙ С БЛОКИРОВКОЙ ПРИ ЛОКЕ
 
 import { useState, useEffect } from "react";
 import { FaDiscord } from "react-icons/fa";
@@ -25,11 +25,28 @@ export const Login: React.FC<LoginProps> = ({
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ identifier?: string; password?: string }>({});
+  const [formError, setFormError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isDiscordLoading, setIsDiscordLoading] = useState(false);
   const [oauthError, setOauthError] = useState("");
 
   const navigate = useNavigate();
+
+  // Проверяем заблокирована ли форма
+  const isLocked = lockUntil !== null && lockUntil > Date.now();
+
+  useEffect(() => {
+    if (!lockUntil) return;
+
+    const interval = setInterval(() => {
+      if (Date.now() >= lockUntil) {
+        setLockUntil(null);
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [lockUntil, setLockUntil]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -40,11 +57,9 @@ export const Login: React.FC<LoginProps> = ({
       if (event.data.type === 'OAUTH_SUCCESS') {
         const { token, userId, method, requiresCompletion } = event.data;
 
-        // Сохраняем токен
         localStorage.setItem('authToken', token);
         localStorage.setItem('userId', userId);
 
-        // Перенаправляем в зависимости от необходимости завершения профиля
         if (requiresCompletion) {
           navigate('/complete-profile');
         } else {
@@ -60,13 +75,31 @@ export const Login: React.FC<LoginProps> = ({
     return () => window.removeEventListener('message', handleMessage);
   }, [navigate]);
 
-  // Обработчик Discord OAuth
+  const handleIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isLocked) return; // Блокируем ввод при локе
+    setIdentifier(e.target.value);
+    if (errors.identifier || formError) {
+      setErrors(prev => ({ ...prev, identifier: undefined }));
+      setFormError("");
+    }
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isLocked) return; // Блокируем ввод при локе
+    setPassword(e.target.value);
+    if (errors.password || formError) {
+      setErrors(prev => ({ ...prev, password: undefined }));
+      setFormError("");
+    }
+  };
+
   const handleDiscordLogin = async () => {
+    if (isLocked) return; // Блокируем OAuth при локе
+
     setIsDiscordLoading(true);
     setOauthError("");
 
     try {
-      // Получаем URL для аутентификации Discord
       const response = await fetch("http://localhost:4000/api/oauth/discord");
       const data = await response.json();
 
@@ -74,7 +107,6 @@ export const Login: React.FC<LoginProps> = ({
         throw new Error(data.error || "Failed to initiate Discord login");
       }
 
-      // ЗАМЕНЯЕМ window.open на window.location.href для редиректа в ЭТОЙ ЖЕ ВКЛАДКЕ
       window.location.href = data.authUrl;
 
     } catch (error) {
@@ -85,18 +117,25 @@ export const Login: React.FC<LoginProps> = ({
     }
   };
 
-  // Обычный логин
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLocked) return; // Блокируем отправку формы при локе
+
     setErrors({});
+    setFormError("");
     setOauthError("");
 
+    const newErrors: { identifier?: string; password?: string } = {};
+
     if (!identifier.trim()) {
-      setErrors({ identifier: "Enter your email or login" });
-      return;
+      newErrors.identifier = "Enter your email or login";
     }
     if (!password.trim()) {
-      setErrors({ password: "Enter the password" });
+      newErrors.password = "Enter the password";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
@@ -113,25 +152,31 @@ export const Login: React.FC<LoginProps> = ({
 
       if (!res.ok) {
         if (data.error.includes("locked") || data.error.includes("temporarily")) {
-          const lockTime = 30 * 60 * 1000;
+          const lockTime = 2 * 60 * 1000;
           setLockUntil(Date.now() + lockTime);
-          setLockMessage("Protection system activated. Please try again in 30 minutes.");
+          setLockMessage("Protection system activated. Please try again in 2 minutes.");
         } else {
-          setErrors({
-            identifier: "Invalid email/nickname or password",
-            password: "Invalid email/nickname or password"
-          });
+          let errorMessage = "Invalid email/nickname or password";
+
+          if (data.errorType === 'identifier_not_found') {
+            errorMessage = "Invalid email or username";
+          } else if (data.errorType === 'invalid_password') {
+            errorMessage = "Invalid password";
+          } else if (data.error) {
+            errorMessage = data.error;
+          }
+
+          setFormError(errorMessage);
         }
         return;
       }
 
-      // Сохраняем токен и переходим на dashboard
       localStorage.setItem('authToken', data.session.token);
       navigate("/dashboard");
 
     } catch (err) {
       console.error("Login error:", err);
-      setErrors({ identifier: "Network error. Please try again." });
+      setFormError("Network error. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -149,6 +194,13 @@ export const Login: React.FC<LoginProps> = ({
             <p className={styles.subtitle}>Log in to continue</p>
           </div>
 
+          {formError && (
+            <div className={styles.globalError}>
+              <MdWarning className={styles.errorIcon} />
+              {formError}
+            </div>
+          )}
+
           {oauthError && (
             <div className={styles.globalError}>
               <MdWarning className={styles.errorIcon} />
@@ -158,17 +210,14 @@ export const Login: React.FC<LoginProps> = ({
 
           <form onSubmit={handleSubmit} className={styles.form} noValidate>
             <div className={styles.formGroup}>
-              <label htmlFor="identifier" className={styles.formLabel}>
-                Email or Login
-              </label>
               <input
                 id="identifier"
                 type="text"
                 value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                className={`${styles.formInput} ${errors.identifier ? styles.inputError : ''}`}
+                onChange={handleIdentifierChange}
+                className={`${styles.formInput} ${errors.identifier ? styles.inputError : ''} ${isLocked ? styles.inputDisabled : ''}`}
                 placeholder="Enter your email or username"
-                disabled={isLoading || isDiscordLoading}
+                disabled={isLoading || isDiscordLoading || isLocked} // Добавляем isLocked
               />
               {errors.identifier && (
                 <p className={styles.formError}>
@@ -179,24 +228,21 @@ export const Login: React.FC<LoginProps> = ({
             </div>
 
             <div className={styles.formGroup}>
-              <label htmlFor="password" className={styles.formLabel}>
-                Password
-              </label>
               <div className={styles.passwordInputContainer}>
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={`${styles.formInput} ${styles.passwordInput} ${errors.password ? styles.inputError : ''}`}
+                  onChange={handlePasswordChange}
+                  className={`${styles.formInput} ${styles.passwordInput} ${errors.password ? styles.inputError : ''} ${isLocked ? styles.inputDisabled : ''}`}
                   placeholder="Enter your password"
-                  disabled={isLoading || isDiscordLoading}
+                  disabled={isLoading || isDiscordLoading || isLocked} // Добавляем isLocked
                 />
                 <button
                   type="button"
                   className={styles.passwordToggle}
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={isLoading || isDiscordLoading}
+                  onClick={() => !isLocked && setShowPassword(!showPassword)} // Блокируем переключение
+                  disabled={isLoading || isDiscordLoading || isLocked} // Добавляем isLocked
                 >
                   {showPassword ? <MdVisibilityOff /> : <MdVisibility />}
                 </button>
@@ -208,44 +254,50 @@ export const Login: React.FC<LoginProps> = ({
                 </p>
               )}
 
-              {/* Forgot Password Link */}
               <div className={styles.forgotPassword}>
-                <a href="/forgot-password">Forgot password?</a>
+                <a href="/forgot-password" className={isLocked ? styles.linkDisabled : ''}>
+                  Forgot password?
+                </a>
               </div>
             </div>
 
             <button
               type="submit"
-              className={styles.submitButton}
-              disabled={isLoading || isDiscordLoading}
+              className={`${styles.submitButton} ${isLocked ? styles.buttonDisabled : ''}`}
+              disabled={isLoading || isDiscordLoading || isLocked} // Добавляем isLocked
             >
               {isLoading ? (
                 <>
                   <div className={styles.loadingSpinnerSmall}></div>
                   Loading...
                 </>
+              ) : isLocked ? (
+                "Account Locked"
               ) : (
                 "Log in"
               )}
             </button>
 
             <p className={styles.loginRegister}>
-              Don't have an account? <a href="/register" className={styles.linkPrimary}>Create an account</a>
+              Don't have an account? <a href="/register" className={isLocked ? styles.linkDisabled : styles.linkPrimary}>
+                Create an account
+              </a>
             </p>
 
             <div className={styles.loginDivider}>
               <span>Or continue with</span>
             </div>
 
-            {/* Discord OAuth кнопка */}
             <button
               type="button"
               onClick={handleDiscordLogin}
-              className={styles.discordOauthBtn}
-              disabled={isLoading || isDiscordLoading}
+              className={`${styles.discordOauthBtn} ${isLocked ? styles.buttonDisabled : ''}`}
+              disabled={isLoading || isDiscordLoading || isLocked} // Добавляем isLocked
             >
               {isDiscordLoading ? (
                 <div className={styles.loadingSpinnerSmall}></div>
+              ) : isLocked ? (
+                "Account Locked"
               ) : (
                 <>
                   <FaDiscord className={styles.discordIcon} />
@@ -254,7 +306,6 @@ export const Login: React.FC<LoginProps> = ({
               )}
             </button>
 
-            {/* Security Note */}
             <div className={styles.securityNote}>
               <div className={styles.securityNote__title}>
                 <MdLock size={14} style={{ marginRight: '0.5rem' }} />
@@ -268,7 +319,8 @@ export const Login: React.FC<LoginProps> = ({
 
             <p className={styles.loginTerms}>
               &copy; {new Date().getFullYear()} Sentinel LLC. By logging in, you agree to our{" "}
-              <a href="/terms" className={styles.linkPrimary}>Terms</a> and <a href="/privacy" className={styles.linkPrimary}>Privacy Policy</a>.
+              <a href="/terms" className={isLocked ? styles.linkDisabled : styles.linkPrimary}>Terms</a> and{" "}
+              <a href="/privacy" className={isLocked ? styles.linkDisabled : styles.linkPrimary}>Privacy Policy</a>.
             </p>
           </form>
         </div>
@@ -277,6 +329,7 @@ export const Login: React.FC<LoginProps> = ({
       {lockUntil && (
         <LockModal
           message={lockMessage}
+          lockUntil={lockUntil} // Добавляем пропс
           onClose={() => setLockUntil(null)}
         />
       )}

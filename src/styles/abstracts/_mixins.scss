@@ -1,20 +1,21 @@
 @use 'variables' as *;
+@use 'sass:map';
 
 // Media queries
 @mixin mobile {
-  @media (max-width: map-get($breakpoints, mobile)) {
+  @media (max-width: map.get($breakpoints, mobile)) {
     @content;
   }
 }
 
 @mixin tablet {
-  @media (max-width: map-get($breakpoints, tablet)) {
+  @media (max-width: map.get($breakpoints, tablet)) {
     @content;
   }
 }
 
 @mixin desktop {
-  @media (min-width: map-get($breakpoints, desktop)) {
+  @media (min-width: map.get($breakpoints, desktop)) {
     @content;
   }
 }
@@ -42,7 +43,7 @@
 
 // Buttons
 @mixin button-base {
-  border-radius: map-get($border-radius, md);
+  border-radius: map.get($border-radius, md);
   border: 1px solid transparent;
   padding: 0.6em 1.2em;
   font-size: 1em;
@@ -59,5 +60,44 @@
   
   &:hover {
     background-color: var(--button-hover);
+  }
+}
+
+$breakpoints: (
+  mobile-sm: 360px,
+  mobile: 768px,
+  tablet: 1024px,
+  desktop: 1440px,
+  hd: 1920px
+);
+
+// Миксины для медиа-запросов
+@mixin mobile-sm {
+  @media (max-width: map.get($breakpoints, mobile-sm)) {
+    @content;
+  }
+}
+
+@mixin mobile {
+  @media (max-width: map.get($breakpoints, mobile)) {
+    @content;
+  }
+}
+
+@mixin tablet {
+  @media (max-width: map.get($breakpoints, tablet)) {
+    @content;
+  }
+}
+
+@mixin desktop {
+  @media (min-width: map.get($breakpoints, desktop)) {
+    @content;
+  }
+}
+
+@mixin hd {
+  @media (min-width: map.get($breakpoints, hd)) {
+    @content;
   }
 }

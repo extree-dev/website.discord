@@ -1,68 +1,459 @@
 @use '../../styles/abstracts/mixins' as *;
-@use '../../styles/abstracts/animations' as *;
 
 .toggle {
-  background: none;
-  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   cursor: pointer;
-  padding: 10px;
-  border-radius: 50%;
-  transition: all 0.3s ease;
+  padding: 0;
+  border-radius: 20px;
+  transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
   @include flex-center;
   position: relative;
-  overflow: visible;
-  z-index: 1000;
-  width: 42px;
-  height: 42px;
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 2px solid var(--border-color);
+  width: 80px;
+  height: 40px;
+  overflow: hidden;
 
-  &:hover:not(.animating) {
-    transform: scale(1.1);
-    background-color: var(--accent-color);
-    color: white;
+  // Стеклянный эффект
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.2) 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0.05) 100%);
+    border-radius: 20px;
+    pointer-events: none;
   }
 
-  &.animating {
-    transform: scale(0.95);
+  // Внешняя тень
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1),
+  inset 0 1px 0 rgba(255, 255, 255, 0.2),
+  inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+
+    .thumb {
+      transform: scale(1.05);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .thumb:active{
+      opacity: 0.6;
+      animation: glow 2s ease-in-out infinite;
+    }
+
+  }
+
+  &:active {
+    transform: translateY(0);
+    animation: none;
   }
 }
 
-.wave {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 9999;
-  transform: translate(-50%, -50%);
+.thumb {
+  position: absolute;
+  left: 4px;
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+  @include flex-center;
 
-  &.toLight {
-    background: white;
-  }
+  // Стеклянный эффект на thumb
+  box-shadow:
+    0 4px 20px rgba(102, 126, 234, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
 
-  &.toDark {
-    background: #242424;
-  }
-
-  &.expanding {
-    animation: waveExpand 0.8s ease-out forwards;
+  // Свечение
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 18px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+    filter: blur(8px);
+    pointer-events: none;
   }
 }
 
+// Иконки с стеклянными фонами
 .icon {
-  transition: transform 0.3s ease;
-  position: relative;
-  z-index: 1001;
+  position: absolute;
+  transition: all 0.4s ease;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  pointer-events: none;
 
-  .toggle:hover:not(.animating) & {
-    transform: rotate(15deg);
+  &.sun {
+    left: 6px;
+    color: rgba(255, 255, 255, 0.9);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    
+    // Стеклянный серый фон для солнца в светлой теме
+    :global([data-theme="light"]) & {
+      background: rgba(120, 120, 120, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    // В темной теме - прозрачный
+    :global([data-theme="dark"]) & {
+      background: transparent;
+      border: 1px solid transparent;
+    }
   }
 
-  .toggle.animating & {
-    animation: iconPulse 0.6s ease-in-out;
+  &.moon {
+    right: 6px;
+    color: rgba(255, 255, 255, 0.9);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    
+    // Стеклянный белый фон для луны в темной теме
+    :global([data-theme="dark"]) & {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    // В светлой теме - прозрачный
+    :global([data-theme="light"]) & {
+      background: transparent;
+      border: 1px solid transparent;
+    }
   }
+}
+
+// Анимации для иконок на thumb
+.thumbIcon {
+  color: white;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  transition: all 0.4s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+// Темная тема
+:global([data-theme="dark"]) {
+  .toggle {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  .thumb {
+    left: calc(100% - 32px - 4.5px); // Правильный расчет: width + left padding
+
+    box-shadow:
+      0 4px 20px rgba(245, 87, 108, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  .icon.sun {
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .icon.moon {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+// Светлая тема
+:global([data-theme="light"]) {
+  .toggle {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .thumb {
+    left: 4px;
+  }
+
+  .icon.sun {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .icon.moon {
+    color: rgba(37, 37, 37, 0.6);
+  }
+}
+
+// Анимации
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+@keyframes glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+// === ИСПРАВЛЕННАЯ АДАПТИВНОСТЬ ===
+
+// Большие телевизоры и мониторы (1440px+)
+@include desktop {
+  .toggle {
+    width: 90px;
+    height: 45px;
+    border-radius: 22px;
+
+    &::before {
+      border-radius: 22px;
+    }
+  }
+
+  .thumb {
+    width: 37px;
+    height: 37px;
+    border-radius: 18.5px;
+    left: 4px;
+
+    &::after {
+      border-radius: 20px;
+    }
+  }
+
+  .icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 16px;
+
+    &.sun {
+      left: 7px;
+    }
+
+    &.moon {
+      right: 7px;
+    }
+  }
+
+  :global([data-theme="dark"]) {
+    .thumb {
+      left: calc(100% - 37px - 4px);
+    }
+  }
+}
+
+// Планшеты (768px - 1023px)
+@include tablet {
+  .toggle {
+    width: 70px;
+    height: 35px;
+    border-radius: 17.5px;
+
+    &::before {
+      border-radius: 17.5px;
+    }
+  }
+
+  .thumb {
+    width: 27px;
+    height: 27px;
+    border-radius: 13.5px;
+    left: 4px;
+
+    &::after {
+      border-radius: 15px;
+    }
+  }
+
+  .icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 12px;
+
+    &.sun {
+      left: 6px;
+    }
+
+    &.moon {
+      right: 6px;
+    }
+  }
+
+  :global([data-theme="dark"]) {
+    .thumb {
+      left: calc(100% - 27px - 5px);
+    }
+  }
+}
+
+// Телефоны (320px - 767px)
+@include mobile {
+  .toggle {
+    width: 60px;
+    height: 30px;
+    border-radius: 15px;
+
+    &::before {
+      border-radius: 15px;
+    }
+
+    backdrop-filter: blur(10px) saturate(160%);
+
+    &:hover {
+      transform: none;
+      .thumb{
+        animation: none;
+      }
+    }
+  }
+
+  .thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 11px;
+    left: 4px;
+
+    &::after {
+      border-radius: 13px;
+      filter: blur(4px);
+    }
+  }
+
+  .icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    backdrop-filter: blur(8px);
+
+    &.sun {
+      left: 5px;
+    }
+
+    &.moon {
+      right: 5px;
+    }
+  }
+
+  :global([data-theme="dark"]) {
+    .thumb {
+      left: calc(100% - 22px - 4px);
+    }
+  }
+}
+
+// Очень маленькие телефоны (меньше 360px)
+@include mobile-sm {
+  .toggle {
+    width: 55px;
+    height: 28px;
+    border-radius: 14px;
+
+    &::before {
+      border-radius: 14px;
+    }
+  }
+
+  .thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    left: 4px;
+
+    &::after {
+      border-radius: 12px;
+    }
+  }
+
+  .icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 9px;
+
+    &.sun {
+      left: 4px;
+    }
+
+    &.moon {
+      right: 4px;
+    }
+  }
+
+  :global([data-theme="dark"]) {
+    .thumb {
+      left: calc(100% - 20px - 3px);
+    }
+  }
+}
+
+// Очень большие экраны (4K и телевизоры)
+@media (min-width: 2000px) {
+  .toggle {
+    width: 100px;
+    height: 50px;
+    border-radius: 25px;
+
+    &::before {
+      border-radius: 25px;
+    }
+  }
+
+  .thumb {
+    width: 42px;
+    height: 42px;
+    border-radius: 21px;
+    left: 4px;
+
+    &::after {
+      border-radius: 23px;
+    }
+  }
+
+  .icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 18px;
+
+    &.sun {
+      left: 8px;
+    }
+
+    &.moon {
+      right: 8px;
+    }
+  }
+
+  :global([data-theme="dark"]) {
+    .thumb {
+      left: calc(100% - 42px - 4px);
+    }
+  }
+}
+
+// Плавные переходы для всей темы
+.themeTransition :global(*) {
+  transition:
+    background-color 0.6s ease,
+    color 0.6s ease,
+    border-color 0.6s ease,
+    box-shadow 0.6s ease !important;
 }

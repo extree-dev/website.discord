@@ -1,63 +1,176 @@
+// LocalModal.module.scss - с блюром фона
+
+// Блюр для body когда модалка открыта
+.bodyBlur {
+  overflow: hidden; // предотвращаем скролл
+
+  &::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.1);
+
+    z-index: 9999;
+    pointer-events: none;
+  }
+}
+
+[data-theme="dark"] {
+  .bodyBlur::before {
+    background: rgba(0, 0, 0, 0.3);
+  }
+}
+
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
   display: flex;
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(8px);
   justify-content: center;
   align-items: center;
-  z-index: 99999;
+  z-index: 10000;
+  padding: 1rem;
 }
 
-.container {
-  background: rgba(32, 34, 37, 0.95);
-  backdrop-filter: blur(12px);
-  border-radius: 1rem;
-  padding: 2rem 2.5rem;
-  text-align: center;
+.modal {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 5rem;
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 10001;
+}
+
+// Остальные стили остаются такими же...
+.header {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  max-width: 400px;
-  width: 90%;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  justify-content: center;
 }
 
-.image {
+.icon {
+  width: 24px;
+  height: 24px;
   color: #5865f2;
-  margin-bottom: 1rem;
 }
 
 .title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #fff;
-  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
 }
 
-.text {
-  color: rgba(255, 255, 255, 0.7);
-  margin-bottom: 1rem;
+.message {
+  color: #6b7280;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+  text-align: center;
 }
 
 .timer {
-  font-size: 1.2rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.time {
+  font-size: 2rem;
   font-weight: 600;
+  color: #111827;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  margin-bottom: 0.25rem;
+}
+
+.timerLabel {
+  font-size: 0.875rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.progress {
+  width: 100%;
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 2px;
   margin-bottom: 1.5rem;
-  color: #ff6b6b;
+  overflow: hidden;
+}
+
+.progressBar {
+  height: 100%;
+  background: #5865f2;
+  border-radius: 2px;
+  transition: width 1s linear;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
 }
 
 .button {
-  background: rgba(88, 101, 242, 0.25);
-  border: 1px solid rgba(88, 101, 242, 0.4);
-  border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
-  color: #fff;
-  font-weight: 600;
+  background: #5865f2;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.75rem 2rem;
+  font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.25s ease, transform 0.15s ease;
+  transition: background-color 0.2s;
 
   &:hover {
-    background: rgba(88, 101, 242, 0.4);
-    transform: translateY(-1px);
+    background: #4752c4;
+  }
+}
+
+[data-theme="dark"] {
+  .modal {
+    background: var(--bg-primary);
+  }
+
+  .title {
+    color: #f9fafb;
+  }
+
+  .message {
+    color: #d1d5db;
+  }
+
+  .time {
+    color: #f9fafb;
+  }
+
+  .timerLabel {
+    color: #9ca3af;
+  }
+
+  .progress {
+    background: #374151;
+  }
+
+  .button {
+    background: #5865f2;
+
+    &:hover {
+      background: #4752c4;
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .modal {
+    padding: 1.5rem;
+    margin: 1rem;
   }
 }

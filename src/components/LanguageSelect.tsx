@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { LuCheck } from "react-icons/lu";
-import styles from "./LanguageSelect.module.scss";
+import styles from "../styles/components/LanguageSelect.module.scss";
 
 type Props = {
     options: string[];

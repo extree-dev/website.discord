@@ -1,3 +1,5 @@
+@use 'sass:map';
+
 // Theme variables
 $themes: (
   light: (
@@ -34,19 +36,19 @@ $themes: (
 
 // Theme mixin
 @mixin theme($property, $key, $theme: light) {
-  $theme-map: map-get($themes, $theme);
-  #{$property}: map-get($theme-map, $key);
+  $theme-map: map.get($themes, $theme);
+  #{$property}: map.get($theme-map, $key);
 }
 
 // Generate CSS variables
 :root {
-  @each $key, $value in map-get($themes, light) {
+  @each $key, $value in map.get($themes, light) {
     --#{$key}: #{$value};
   }
 }
 
 [data-theme="dark"] {
-  @each $key, $value in map-get($themes, dark) {
+  @each $key, $value in map.get($themes, dark) {
     --#{$key}: #{$value};
   }
 }

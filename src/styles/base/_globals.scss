@@ -128,27 +128,6 @@ li {
   margin-bottom: 0.5em;
 }
 
-// Формы
-input, textarea, select {
-  font-family: inherit;
-  font-size: inherit;
-  color: var(--text-primary);
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 0.5em 0.75em;
-  transition: border-color 0.3s ease;
-  
-  &:focus {
-    outline: none;
-    border-color: var(--accent-color);
-  }
-  
-  &::placeholder {
-    color: var(--text-secondary);
-  }
-}
-
 // Утилитарные классы
 .sr-only {
   position: absolute;

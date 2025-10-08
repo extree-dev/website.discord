@@ -63,6 +63,17 @@
   }
 }
 
+@mixin button-danger {
+  @include button-base;
+  background-color: #ef4444;
+  color: white;
+
+  &:hover {
+    background-color: #f87171;
+  }
+}
+
+
 $breakpoints: (
   mobile-sm: 360px,
   mobile: 768px,

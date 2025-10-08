@@ -37,6 +37,7 @@ import { OAuthSuccess } from "@/pages/OAuthSuccess.js";
 import { CompleteProfile } from "@/components/CompleteProfile.js";
 import AdminLogs from "@/pages/AdminLogs.js";
 import SecretCodesPage from "@/pages/SecretCodesPage.js";
+import Profile from "@/pages/Profile.js";
 
 // Стили
 import styles from './App.module.scss';
@@ -83,6 +84,7 @@ function App() {
                 <Route path="/oauth/success" element={<OAuthSuccess />} />
                 <Route path="/complete-profile" element={<CompleteProfile />} />
                 <Route path="/admin/logs" element={<AdminLogs />} />
+                <Route path="/dashboard/profile" element={ <Profile /> } />
 
                 {/* Страницы с Layout */}
                 <Route element={<Layout />}>

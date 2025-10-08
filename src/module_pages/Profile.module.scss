@@ -1,0 +1,1008 @@
+@use '../styles/abstracts/mixins' as *;
+
+.layout {
+    display: flex;
+    min-height: 100vh;
+    background:
+        radial-gradient(ellipse at top right, rgba(120, 119, 198, 0.15), transparent 50%),
+        radial-gradient(ellipse at bottom left, rgba(255, 119, 198, 0.1), transparent 50%),
+        linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+}
+
+.main {
+    flex: 1;
+    padding: 3rem 4rem;
+    margin-left: 280px;
+    position: relative;
+
+    @include tablet {
+        margin-left: 0;
+        padding: 2rem;
+    }
+
+    @include mobile {
+        padding: 1.5rem 1rem;
+    }
+}
+
+// Header
+.header {
+    margin-bottom: 4rem;
+
+    &__title {
+        font-size: 3.5rem;
+        font-weight: 900;
+        background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-color) 50%, #8b5cf6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 0 0 1rem 0;
+        letter-spacing: -0.02em;
+    }
+
+    &__subtitle {
+        font-size: 1.375rem;
+        color: var(--text-secondary);
+        margin: 0;
+        font-weight: 400;
+        opacity: 0.8;
+    }
+}
+
+// Main Profile Container
+.profileContainer {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 3rem;
+    max-width: 1400px;
+    margin: 0 auto;
+
+    @include tablet {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+}
+
+
+// Sidebar Profile Card
+.profileSidebar {
+    background: linear-gradient(165deg, var(--modal-bg) 0%, rgba(255, 255, 255, 0.08) 100%);
+    backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 28px;
+    padding: 2.5rem;
+    height: fit-content;
+    position: sticky;
+    top: 2rem;
+    box-shadow:
+        0 25px 50px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.avatarSection {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.avatarContainer {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    margin: 0 auto 1.5rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 4px;
+
+    .avatar {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid var(--modal-bg);
+    }
+
+    .statusIndicator {
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 3px solid var(--modal-bg);
+
+        &.online {
+            background: #10b981;
+        }
+
+        &.idle {
+            background: #f59e0b;
+        }
+
+        &.dnd {
+            background: #ef4444;
+        }
+
+        &.offline {
+            background: #6b7280;
+        }
+    }
+
+    .avatarUpload {
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--accent-color);
+        color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 6px 16px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        opacity: 0;
+        transition: all 0.3s ease;
+
+        &:hover {
+            background: var(--button-hover);
+            transform: translateX(-50%) translateY(-2px);
+        }
+    }
+
+    &:hover .avatarUpload {
+        opacity: 1;
+    }
+}
+
+.userInfo {
+    text-align: center;
+
+    .displayName {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .email {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        margin: 0 0 1.5rem 0;
+        opacity: 0.8;
+    }
+
+    .roleBadge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1.25rem;
+        margin-top: 0.5rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: white;
+
+        &::before {
+            content: '';
+        }
+    }
+}
+
+
+.quickStats {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+
+    .stat {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+
+        &:not(:last-child) {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .value {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+    }
+}
+
+// Main Content Area
+.profileContent {
+    position: relative; // 🔥 ВАЖНО!
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+}
+
+// Settings Sections
+.settingsSection {
+    position: relative; // 🔥 ВАЖНО!
+    background: linear-gradient(145deg, var(--modal-bg) 0%, rgba(255, 255, 255, 0.06) 100%);
+    backdrop-filter: blur(30px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 2.5rem;
+    box-shadow:
+        0 20px 40px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+    &:first-of-type {
+        z-index: 10;
+    }
+
+    &:last-of-type {
+        z-index: 1;
+        margin-top: -2rem; // Немного поднимаем чтобы создать наслоение
+    }
+}
+
+// Form Grid
+.formGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    padding-top: 2rem;
+}
+
+.formField {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    label {
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        &::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--accent-color);
+            border-radius: 50%;
+        }
+    }
+
+    .inputField {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1.5px solid rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        padding: 1.2rem 1.25rem 1rem 1rem;
+        color: var(--text-primary);
+        font-size: 1rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        backdrop-filter: blur(10px);
+        font-family: inherit;
+
+        &::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.6;
+        }
+
+        &:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow:
+                0 0 0 4px rgba(139, 92, 246, 0.15),
+                0 8px 25px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        &:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.07);
+            transform: translateY(-1px);
+        }
+    }
+
+    .displayNameInput {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.03) 100%);
+        border: 1.5px solid rgba(120, 119, 198, 0.3);
+
+        &:focus {
+            border-color: rgba(120, 119, 198, 0.6);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.05) 100%);
+            box-shadow:
+                0 0 0 4px rgba(120, 119, 198, 0.2),
+                0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+    }
+
+    .emailInput {
+
+        &:focus {
+            box-shadow:
+                0 0 0 4px rgba(120, 119, 198, 0.2),
+                0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+    }
+
+    &:nth-child(1) .inputField {
+        animation: slideInUp 0.4s ease 0.1s both;
+    }
+
+    &:nth-child(2) .inputField {
+        animation: slideInUp 0.4s ease 0.2s both;
+    }
+
+    // Premium Select Container - FIXED
+    .selectContainer {
+        position: relative;
+
+        .selectTrigger {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            padding: 1rem 3rem 1rem 1.25rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            backdrop-filter: blur(10px);
+
+            .statusIndicator {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                flex-shrink: 0;
+
+                &.online {
+                    background: #10b981;
+                    box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+                }
+
+                &.idle {
+                    background: #f59e0b;
+                    box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+                }
+
+                &.dnd {
+                    background: #ef4444;
+                    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+                }
+
+                &.offline {
+                    background: #6b7280;
+                    box-shadow: 0 0 10px rgba(107, 114, 128, 0.5);
+                }
+            }
+
+            .selectedText {
+                flex: 1;
+                font-weight: 500;
+            }
+
+            .chevron {
+                transition: transform 0.3s ease;
+                color: #9CA3AF;
+
+                &.open {
+                    transform: rotate(180deg);
+                }
+            }
+
+            &:hover {
+                border-color: rgba(255, 255, 255, 0.2);
+                background: rgba(255, 255, 255, 0.08);
+                transform: translateY(-1px);
+            }
+
+            &.active {
+                border-color: var(--accent-color);
+                background: rgba(255, 255, 255, 0.1);
+                box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
+            }
+        }
+
+        // Dropdown Menu - FIXED Z-INDEX
+        .dropdownMenu {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background: var(--modal-bg);
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+            border-radius: 14px;
+            padding: 0.5rem;
+            backdrop-filter: blur(130px) saturate(180%);
+            box-shadow:
+                0 20px 40px rgba(0, 0, 0, 0.25),
+                0 0 0 1px rgba(255, 255, 255, 0.05);
+            z-index: 10050 !important; // 🔥 УВЕЛИЧИЛ Z-INDEX
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+
+            &.open {
+                // Гарантируем, что меню будет поверх следующей секции
+                position: absolute;
+                top: calc(100% + 8px);
+                left: 0;
+                right: 0;
+                background: var(--bg-primary);
+                border: 1.5px solid rgba(255, 255, 255, 0.15);
+                border-radius: 14px;
+                padding: 0.5rem;
+                box-shadow:
+                    0 25px 50px rgba(0, 0, 0, 0.3),
+                    0 0 0 1px rgba(255, 255, 255, 0.1);
+                opacity: 1;
+                visibility: visible;
+                transform: translateY(0);
+            }
+
+            .dropdownItem {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                padding: 1rem 1.25rem;
+                border-radius: 10px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                color: var(--text-primary);
+
+                .statusIndicator {
+                    width: 10px;
+                    height: 10px;
+                    border-radius: 50%;
+                    flex-shrink: 0;
+
+                    &.online {
+                        background: #10b981;
+                    }
+
+                    &.idle {
+                        background: #f59e0b;
+                    }
+
+                    &.dnd {
+                        background: #ef4444;
+                    }
+
+                    &.offline {
+                        background: #6b7280;
+                    }
+                }
+
+                .itemText {
+                    flex: 1;
+                    font-weight: 500;
+                }
+
+                .checkIcon {
+                    opacity: 0;
+                    color: var(--accent-color);
+                    transition: opacity 0.2s ease;
+                }
+
+                &:hover {
+                    background: rgba(255, 255, 255, 0.08);
+                    transform: translateX(4px);
+                }
+
+                &.selected {
+                    background: rgba(139, 92, 246, 0.1);
+
+                    .checkIcon {
+                        opacity: 1;
+                    }
+                }
+
+                &:not(:last-child) {
+                    margin-bottom: 2px;
+                }
+            }
+        }
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes inputGlow {
+    0% {
+        box-shadow:
+            0 0 0 4px rgba(139, 92, 246, 0.15),
+            0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    50% {
+        box-shadow:
+            0 0 0 6px rgba(139, 92, 246, 0.2),
+            0 12px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    100% {
+        box-shadow:
+            0 0 0 4px rgba(139, 92, 246, 0.15),
+            0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+}
+
+input:focus:not(:focus-visible) {
+    animation: inputGlow 0.6s ease;
+}
+
+.formField.native {
+    .selectWrapper {
+        position: relative;
+
+        &::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: 1.25rem;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239CA3AF'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: center;
+            pointer-events: none;
+            transition: transform 0.3s ease;
+        }
+
+        &:focus-within::after {
+            transform: translateY(-50%) rotate(180deg);
+        }
+    }
+
+    select {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1.5px solid rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        padding: 1rem 3rem 1rem 1.25rem;
+        color: var(--text-primary);
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        appearance: none;
+        cursor: pointer;
+        width: 100%;
+        backdrop-filter: blur(10px);
+
+        option {
+            background: var(--modal-bg);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+        }
+
+        &:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
+        }
+
+        &:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.07);
+        }
+    }
+}
+
+$statusOptions: (
+    online: (#10b981, 'Online'),
+    idle: (#f59e0b, 'Idle'),
+    dnd: (#ef4444, 'Do Not Disturb'),
+    offline: (#6b7280, 'Offline')
+);
+
+// Generate status classes
+@each $status, $data in $statusOptions {
+    $color: nth($data, 1);
+    $label: nth($data, 2);
+
+    .status-#{$status} {
+        background: $color;
+
+        &::before {
+            content: $label;
+        }
+    }
+}
+
+// Social Connections
+.connectionsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.connectionCard {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1.5px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+
+    &:hover {
+        transform: translateY(-4px);
+        border-color: rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.06);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+    }
+
+    &.connected {
+        border-color: #10b981;
+        background: rgba(16, 185, 129, 0.05);
+    }
+
+    .platformIcon {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+    }
+
+    .platformName {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .status {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin: 0;
+    }
+
+    .connectBtn {
+        width: 100%;
+        margin-top: 1rem;
+        padding: 0.75rem;
+        background: var(--accent-color);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+
+        &:hover {
+            background: var(--button-hover);
+            transform: translateY(-1px);
+        }
+    }
+}
+
+// Notifications
+.notificationsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.notificationToggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1.5px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+
+    &:hover {
+        border-color: rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    .label {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+
+        .icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: rgba(139, 92, 246, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-color);
+            font-size: 1.25rem;
+        }
+
+        .text {
+            .title {
+                font-weight: 600;
+                color: var(--text-primary);
+                margin: 0 0 0.25rem 0;
+            }
+
+            .desc {
+                font-size: 0.85rem;
+                color: var(--text-secondary);
+                margin: 0;
+            }
+        }
+    }
+
+    .toggle {
+        position: relative;
+        width: 52px;
+        height: 28px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        transition: all 0.3s ease;
+
+        &::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        &.active {
+            background: var(--accent-color);
+
+            &::after {
+                left: 26px;
+            }
+        }
+    }
+}
+
+// Danger Zone
+.dangerZone {
+    background: linear-gradient(145deg, rgba(239, 68, 68, 0.05) 0%, rgba(239, 68, 68, 0.02) 100%);
+    border: 1.5px solid rgba(239, 68, 68, 0.2);
+
+    .sectionHeader .icon {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+}
+
+.dangerActions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+
+    .dangerBtn {
+        padding: 1rem 2rem;
+        border: 1.5px solid rgba(239, 68, 68, 0.3);
+        border-radius: 14px;
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+
+        &:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.5);
+            transform: translateY(-2px);
+        }
+
+        &.delete {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            border: none;
+
+            &:hover {
+                background: linear-gradient(135deg, #dc2626, #b91c1c);
+                box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+            }
+        }
+    }
+}
+
+// Save Actions
+.saveActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+
+    .saveBtn {
+        padding: 1.25rem 3rem;
+        background: linear-gradient(135deg, var(--accent-color), #8b5cf6);
+        color: white;
+        border: none;
+        border-radius: 18px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
+
+        &:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(139, 92, 246, 0.4);
+        }
+
+        &:active {
+            transform: translateY(-1px);
+        }
+    }
+}
+
+// Utility Classes
+.message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 50vh;
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+}
+
+.hidden {
+    display: none;
+}
+
+.verifiedBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+}
+
+// Responsive
+@include tablet {
+    .profileContainer {
+        grid-template-columns: 1fr;
+    }
+
+    .profileSidebar {
+        position: static;
+    }
+
+    .formGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .connectionsGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .formField {
+        .selectContainer {
+            .selectTrigger {
+                padding: 0.875rem 2.5rem 0.875rem 1rem;
+                font-size: 16px;
+            }
+
+            .dropdownMenu {
+                position: fixed;
+                top: auto;
+                bottom: 0;
+                left: 1rem;
+                right: 1rem;
+                border-radius: 20px 20px 0 0;
+                transform: translateY(100%);
+
+                &.open {
+                    transform: translateY(0);
+                }
+            }
+
+            input {
+                padding: 0.875rem 1rem;
+                font-size: 16px; // Предотвращает zoom на iOS
+                border-radius: 12px;
+            }
+        }
+
+    }
+}
+
+@include mobile {
+    .header {
+        margin-bottom: 2.5rem;
+
+        &__title {
+            font-size: 2.5rem;
+        }
+
+        &__subtitle {
+            font-size: 1.125rem;
+        }
+
+        input {
+            padding: 0.75rem 0.875rem;
+            font-size: 16px;
+            border-radius: 10px;
+
+            &:focus {
+                transform: translateY(-1px);
+                box-shadow:
+                    0 0 0 3px rgba(139, 92, 246, 0.15),
+                    0 6px 20px rgba(0, 0, 0, 0.15);
+            }
+        }
+    }
+
+    .settingsSection {
+        padding: 2rem 1.5rem;
+    }
+
+    .connectionsGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .saveActions {
+        flex-direction: column;
+
+        .saveBtn {
+            width: 100%;
+            text-align: center;
+        }
+    }
+
+    .dangerActions {
+        flex-direction: column;
+
+        .dangerBtn {
+            width: 100%;
+            text-align: center;
+        }
+    }
+
+    .formField {
+        gap: 0.5rem;
+
+        .selectContainer {
+            .selectTrigger {
+                padding: 0.75rem 2.25rem 0.75rem 0.875rem;
+                border-radius: 12px;
+                font-size: 0.9rem;
+            }
+
+            .dropdownMenu {
+                left: 0.5rem;
+                right: 0.5rem;
+
+                .dropdownItem {
+                    padding: 0.875rem 1rem;
+                }
+            }
+        }
+    }
+}

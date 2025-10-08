@@ -1,0 +1,139 @@
+.card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 12px;
+    padding: 8px 12px;
+    transition: background 0.2s ease;
+    justify-content: center;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.07);
+    }
+}
+
+.avatarSection {
+    position: relative;
+    width: 40px;
+    height: 40px;
+}
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.status {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid #2b2d31;
+
+    &.online {
+        background-color: #43b581;
+    }
+
+    &.idle {
+        background-color: #faa61a;
+    }
+
+    &.dnd {
+        background-color: #f04747;
+    }
+
+    &.offline {
+        background-color: #747f8d;
+    }
+}
+
+.info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    font-size: 10px;
+}
+
+.nameRow {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.discordTag {
+    font-size: 12px;
+    color: #aaa;
+    margin-left: 3px;
+}
+
+.roleRow {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+}
+
+.roleIcon {
+    opacity: 0.8;
+}
+
+.role {
+    font-weight: 500;
+}
+
+.createdRow {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #999;
+}
+
+.calendarIcon {
+    opacity: 0.7;
+}
+
+.statusRow {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    color: #ccc;
+    margin-top: 2px;
+    margin-bottom: 3px;
+
+    .statusText {
+        font-weight: 500;
+        letter-spacing: 0.2px;
+    }
+}
+
+.statusDot {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid #2b2d31;
+
+    &.online {
+        background-color: #43b581;
+    }
+
+    &.idle {
+        background-color: #faa61a;
+    }
+
+    &.dnd {
+        background-color: #f04747;
+    }
+
+    &.offline {
+        background-color: #747f8d;
+    }
+}

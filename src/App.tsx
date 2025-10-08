@@ -5,6 +5,14 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./stores/auth.js";
 import { ThemeProvider } from "./stores/theme.js";
 
+// Hooks
+import { useDiscordAuth } from "./hooks/useDiscordAuth.js";
+
+export const DiscordAuthHandler: React.FC = () => {
+  useDiscordAuth(); // теперь useLocation() безопасно
+  return null; // ничего не рендерим
+};
+
 // Layout и страницы
 import { Layout } from "./components/Layout/Layout.js";
 import Dashboard from "@/pages/Dashboard.js";
@@ -37,11 +45,13 @@ function App() {
   const [lockUntil, setLockUntil] = useState<number | null>(null);
   const [lockMessage, setLockMessage] = useState<string>("");
 
+
   return (
     <div className={styles.app}>
       <AuthProvider>
         <ThemeProvider>
           <BrowserRouter>
+            <DiscordAuthHandler />
             <div className={styles.mainContent}>
               <Routes>
                 {/* Страницы без Layout */}
@@ -57,7 +67,7 @@ function App() {
                   }
                 />
                 <Route path="/register" element={<Register />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} /> {/* Добавляем роут */}
+                <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/support" element={<Support />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="/moderation" element={<Moderation />} />
@@ -73,11 +83,10 @@ function App() {
                 <Route path="/oauth/success" element={<OAuthSuccess />} />
                 <Route path="/complete-profile" element={<CompleteProfile />} />
                 <Route path="/admin/logs" element={<AdminLogs />} />
-                <Route path="/complete-profile" element={<CompleteProfile />} />
+
                 {/* Страницы с Layout */}
                 <Route element={<Layout />}>
                   <Route path="/" element={<Home />} />
-
                 </Route>
               </Routes>
             </div>

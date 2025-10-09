@@ -720,6 +720,65 @@
 
 }
 
+.rolesLoading {
+  color: #faa61a;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+.loadingRoles {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: #888;
+  text-align: center;
+  
+  .loadingSpinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #5865f2;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 8px;
+  }
+}
+
+.roleBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  margin-top: 8px;
+  max-width: fit-content;
+  
+  svg {
+    flex-shrink: 0;
+  }
+  
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.loadingDot {
+  color: #faa61a;
+  margin-left: 4px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 @keyframes tooltipFade {
   from {
     opacity: 0;

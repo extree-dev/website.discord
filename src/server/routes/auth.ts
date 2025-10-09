@@ -1150,7 +1150,16 @@ router.get("/oauth/discord/callback", async (req, res) => {
       role: txResult.highestRole,
       roleColor: txResult.roleColor,
       roleHexColor: txResult.roleHexColor,
-      allRoles: txResult.allRoles
+      allRoles: txResult.allRoles,
+      avatar: txResult.avatar
+    });
+
+    console.log('🎫 Generated JWT token with roles:', {
+      userId: txResult.id,
+      role: txResult.highestRole,
+      allRoles: txResult.allRoles,
+      roleColor: txResult.roleColor,
+      avatar: txResult.avatar
     });
 
     // 7) Редирект с JWT токеном
@@ -1320,6 +1329,84 @@ router.post("/oauth/discord/disconnect", async (req, res) => {
     res.status(500).json({ error: "Disconnect failed" });
   }
 });
+
+// ==================== ПОЛУЧЕНИЕ РОЛЕЙ СЕРВЕРА ДЛЯ ПРАВ ДОСТУПА ====================
+
+router.get("/server/roles", async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+
+  if (!token) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  try {
+    const decoded = verifyToken(token);
+
+    // Получаем пользователя чтобы проверить его Discord ID
+    const user = await prisma.user.findFirst({
+      where: { id: decoded.userId },
+      select: { discordId: true }
+    });
+
+    if (!user || !user.discordId) {
+      return res.status(403).json({ error: "User not connected to Discord" });
+    }
+
+    // Получаем роли сервера через Discord API
+    const serverRoles = await fetchServerRolesWithPermissions();
+
+    res.json({
+      success: true,
+      roles: serverRoles,
+      serverId: process.env.DISCORD_GUILD_ID
+    });
+
+  } catch (error) {
+    console.error('Server roles fetch error:', error);
+    res.status(500).json({ error: "Failed to fetch server roles" });
+  }
+});
+
+// Функция для получения ролей сервера с Discord API
+async function fetchServerRolesWithPermissions(): Promise<any[]> {
+  try {
+    const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+    const GUILD_ID = process.env.DISCORD_GUILD_ID;
+
+    if (!BOT_TOKEN || !GUILD_ID) {
+      throw new Error('Bot token or guild ID not configured');
+    }
+
+    const response = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/roles`, {
+      headers: {
+        'Authorization': `Bot ${BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Discord API error: ${response.status}`);
+    }
+
+    const roles = await response.json();
+
+    // Фильтруем и сортируем роли
+    return roles
+      .filter((role: any) => !role.managed && role.name !== '@everyone')
+      .sort((a: any, b: any) => b.position - a.position)
+      .map((role: any) => ({
+        id: role.id,
+        name: role.name,
+        color: role.color,
+        position: role.position,
+        permissions: role.permissions
+      }));
+
+  } catch (error) {
+    console.error('Failed to fetch server roles from Discord:', error);
+    throw error;
+  }
+}
 
 // ==================== ЛОГАУТ ====================
 

@@ -1,33 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-    Home,
-    Users,
-    MessageCircle,
-    Zap,
-    Settings,
-    LogOut,
-    Server,
-    Bell,
-    LayoutDashboard,
-    Key,
+    Home, Users, MessageCircle, Zap, Settings, LogOut, Bell,
+    LayoutDashboard, Search, Sparkles, Shield, Bot, Code,
+    BarChart3, FileText, HelpCircle, Mail, User, AlertTriangle,
+    Crown, ShieldCheck, Star,
     ChevronLeft,
-    ChevronRight,
-    Search,
-    Sparkles,
-    Shield,
-    Bot,
-    Code,
-    BarChart3,
-    FileText,
-    HelpCircle,
-    Mail,
-    User,
-    AlertTriangle
+    ChevronRight
 } from "lucide-react";
 import styles from "../styles/components/Sidebar.module.scss";
 import DiscordProfileCard from "./DiscordProfileCard.js";
-import { verifyToken } from "@/utils/jwt.js";
+import { getUserFromToken, type UserFromToken } from "@/utils/jwtClient.js";
+import {
+    hasRoleAccess,
+    ROLE_IDS,
+    ROLE_MAPPING,
+    convertRoleIdsToNames,
+} from "@/utils/discordRoles.js";
 
 export type SidebarId =
     | "dashboard"
@@ -54,7 +43,8 @@ interface MenuItem {
     category?: string;
     isNew?: boolean;
     isPro?: boolean;
-    requiredRole?: string[];
+    requiredRoles?: string[];
+    description?: string;
 }
 
 interface User {
@@ -75,6 +65,13 @@ interface User {
     discordConnected: boolean;
 }
 
+// Расширяем тип UserFromToken чтобы включить недостающие поля
+interface ExtendedUserFromToken extends UserFromToken {
+    discordId?: string;
+    avatar?: string;
+    discordCreatedAt?: string;
+}
+
 interface SidebarProps {
     initialCollapsed?: boolean;
     onNavigate?: (id: SidebarId) => void;
@@ -87,27 +84,41 @@ interface SidebarProps {
 
 const STORAGE_KEY = "sentinel_sidebar_state_v2";
 
-// Modern menu structure with role-based access
+// Modern menu structure with Discord role-based access
 const MENU_STRUCTURE: MenuItem[] = [
-    // Core - доступно всем
-    { id: "dashboard", title: "Dashboard", icon: <LayoutDashboard size={20} />, category: "core" },
-    { id: "overview", title: "Overview", icon: <Home size={20} />, category: "core" },
+    // Core - доступно всем авторизованным пользователям
+    {
+        id: "dashboard",
+        title: "Dashboard",
+        icon: <LayoutDashboard size={20} />,
+        category: "core",
+        description: "Главная панель управления"
+    },
+    {
+        id: "overview",
+        title: "Overview",
+        icon: <Home size={20} />,
+        category: "core",
+        description: "Обзор сервера"
+    },
 
-    // Management - требуется роль модератора или выше
+    // Management - требуется определенные роли Discord
     {
         id: "users",
         title: "User Management",
         icon: <Users size={20} />,
         badge: "12",
         category: "management",
-        requiredRole: ["Moderator", "Admin", "Owner"]
+        requiredRoles: [ROLE_IDS.MODERATOR, ROLE_IDS.SENIOR_MODERATOR, ROLE_IDS.CHIEF_ADMIN, ROLE_IDS.BOT_DEVELOPER],
+        description: "Управление пользователями"
     },
     {
         id: "channels",
         title: "Channels",
         icon: <MessageCircle size={20} />,
         category: "management",
-        requiredRole: ["Moderator", "Admin", "Owner"]
+        requiredRoles: [ROLE_IDS.MODERATOR, ROLE_IDS.SENIOR_MODERATOR, ROLE_IDS.CHIEF_ADMIN, ROLE_IDS.BOT_DEVELOPER],
+        description: "Управление каналами"
     },
     {
         id: "commands",
@@ -115,40 +126,45 @@ const MENU_STRUCTURE: MenuItem[] = [
         icon: <Zap size={20} />,
         isNew: true,
         category: "management",
-        requiredRole: ["Moderator", "Admin", "Owner"]
+        requiredRoles: [ROLE_IDS.SENIOR_MODERATOR, ROLE_IDS.CHIEF_ADMIN, ROLE_IDS.BOT_DEVELOPER],
+        description: "Управление командами бота"
     },
 
-    // Bot - требуется роль администратора или выше
+    // Bot - требуется высшие роли администратора
     {
         id: "bot",
         title: "Bot Settings",
         icon: <Bot size={20} />,
         category: "bot",
-        requiredRole: ["Admin", "Owner"]
+        requiredRoles: [ROLE_IDS.CHIEF_ADMIN, ROLE_IDS.BOT_DEVELOPER],
+        description: "Настройки бота"
     },
     {
         id: "secret-codes",
         title: "Secret Codes",
         icon: <Code size={20} />,
         category: "bot",
-        requiredRole: ["Admin", "Owner"]
+        requiredRoles: [ROLE_IDS.CHIEF_ADMIN, ROLE_IDS.BOT_DEVELOPER],
+        description: "Секретные коды и функции"
     },
 
-    // Analytics - PRO функция
+    // Analytics - требуется доступ к аналитике
     {
         id: "analytics",
         title: "Analytics",
         icon: <BarChart3 size={20} />,
         category: "analytics",
         isPro: true,
-        requiredRole: ["Moderator", "Admin", "Owner"]
+        requiredRoles: [ROLE_IDS.SENIOR_MODERATOR, ROLE_IDS.CHIEF_ADMIN, ROLE_IDS.BOT_DEVELOPER],
+        description: "Аналитика сервера"
     },
     {
         id: "reports",
         title: "Reports",
         icon: <FileText size={20} />,
         category: "analytics",
-        requiredRole: ["Moderator", "Admin", "Owner"]
+        requiredRoles: [ROLE_IDS.MODERATOR, ROLE_IDS.SENIOR_MODERATOR, ROLE_IDS.CHIEF_ADMIN, ROLE_IDS.BOT_DEVELOPER],
+        description: "Отчеты и статистика"
     },
 
     // System - доступно всем авторизованным пользователям
@@ -157,10 +173,23 @@ const MENU_STRUCTURE: MenuItem[] = [
         title: "Notifications",
         icon: <Bell size={20} />,
         badge: "3",
-        category: "system"
+        category: "system",
+        description: "Уведомления системы"
     },
-    { id: "settings", title: "Settings", icon: <Settings size={20} />, category: "system" },
-    { id: "support", title: "Support", icon: <HelpCircle size={20} />, category: "system" },
+    {
+        id: "settings",
+        title: "Settings",
+        icon: <Settings size={20} />,
+        category: "system",
+        description: "Настройки профиля"
+    },
+    {
+        id: "support",
+        title: "Support",
+        icon: <HelpCircle size={20} />,
+        category: "system",
+        description: "Поддержка и помощь"
+    },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -180,140 +209,103 @@ const Sidebar: React.FC<SidebarProps> = ({
     const [hoverTip, setHoverTip] = useState<{ text: string; position: number } | null>(null);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
     const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
+    const [jwtUser, setJwtUser] = useState<ExtendedUserFromToken | null>(null);
+    const [loadingUser, setLoadingUser] = useState<boolean>(true);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
     const logoutTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const [discordUser, setDiscordUser] = useState<User | null>(null);
-    const [loadingDiscord, setLoadingDiscord] = useState(true);
 
-    const handleFooterClick = () => {
-        navigate("/dashboard/profile");
-        onNavigate?.("profile"); // если нужна синхронизация активного элемента
-    };
-
+    // Получаем пользователя из JWT токена
     useEffect(() => {
-        const fetchDiscordData = async () => {
-            const userDataStr = localStorage.getItem('user_data');
-            const userId = userDataStr ? JSON.parse(userDataStr).id : null;
-            const token = authToken || localStorage.getItem('auth_token');
+        const token = authToken || localStorage.getItem('auth_token');
 
-            if (!userId || !token) {
-                setLoadingDiscord(false);
-                return;
-            }
-
+        if (token) {
             try {
-                const res = await fetch(`http://localhost:4000/api/users/${userId}/basic`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-
-                if (!res.ok) {
-                    console.warn("Failed to fetch Discord user info");
-                    setLoadingDiscord(false);
-                    return;
-                }
-
-                const data = await res.json();
-
-                setDiscordUser({
-                    id: data.id,
-                    name: data.name,
-                    email: data.email,
-                    nickname: data.nickname,
-                    discordId: data.discordId,
-                    emailVerified: data.emailVerified,
-                    avatar: data.avatar || "https://cdn.discordapp.com/embed/avatars/0.png",
-                    highestRole: data.highestRole || "@everyone",
-                    roleColor: data.roleColor || 0,
-                    roleHexColor: data.roleHexColor || "#99AAB5",
-                    allRoles: data.allRoles || ["@everyone"],
-                    profileUrl: `/dashboard/profile`,
-                    status: "online",
-                    discordConnected: !!data.discordId,
-                    discordCreatedAt: data.discordCreatedAt
-                });
-            } catch (err) {
-                console.error("Error fetching Discord user:", err);
-            } finally {
-                setLoadingDiscord(false);
+                const userFromToken = getUserFromToken(token) as ExtendedUserFromToken;
+                setJwtUser(userFromToken);
+            } catch (error) {
+                console.error('❌ Error parsing user from token:', error);
+                setJwtUser(null);
             }
-        };
-
-        fetchDiscordData();
+        } else {
+            console.log('No token found');
+        }
+        setLoadingUser(false);
     }, [authToken]);
 
-    // Initialize from localStorage
-    useEffect(() => {
-        try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                const state = JSON.parse(saved);
-                setCollapsed(state.collapsed ?? initialCollapsed);
-            }
-        } catch (error) {
-            console.warn("Failed to read sidebar state:", error);
+    // Приоритет: user из пропсов -> user из JWT -> null
+    const currentUser = useMemo(() => {
+        if (user) {
+            return user;
         }
-    }, [initialCollapsed]);
+        if (jwtUser) {
 
-    // Save state to localStorage
-    useEffect(() => {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                collapsed,
-                timestamp: Date.now()
-            }));
-        } catch (error) {
-            console.warn("Failed to save sidebar state:", error);
+            return {
+                id: jwtUser.id,
+                name: jwtUser.name,
+                email: jwtUser.email,
+                nickname: jwtUser.name,
+                discordId: jwtUser.discordId || null,
+                emailVerified: true,
+                avatar: jwtUser.avatar || "https://cdn.discordapp.com/embed/avatars/0.png",
+                highestRole: jwtUser.highestRole,
+                roleColor: jwtUser.roleColor,
+                roleHexColor: jwtUser.roleHexColor,
+                allRoles: jwtUser.allRoles || ['@everyone'],
+                profileUrl: "/dashboard/profile",
+                status: "online" as const,
+                discordConnected: !!jwtUser.discordId,
+                discordCreatedAt: jwtUser.discordCreatedAt // Добавляем это поле
+            };
         }
-    }, [collapsed]);
 
-    // Sync active item with route
-    useEffect(() => {
-        const currentPath = location.pathname.split('/').pop();
-        if (currentPath && MENU_STRUCTURE.some(item => item.id === currentPath)) {
-            setActive(currentPath as SidebarId);
-        }
-    }, [location]);
+        return null;
+    }, [user, jwtUser]);
 
-    // Cleanup timeout on unmount
-    useEffect(() => {
-        return () => {
-            if (logoutTimeoutRef.current) {
-                clearTimeout(logoutTimeoutRef.current);
-            }
-        };
-    }, []);
-
-    // Check if user has required role for menu item
+    // Улучшенная проверка прав доступа
     const hasRequiredRole = useCallback((requiredRoles?: string[]): boolean => {
+        // Если роли не требуются - доступ открыт
         if (!requiredRoles || requiredRoles.length === 0) return true;
-        if (!user) return false;
 
-        return requiredRoles.some(role =>
-            user.allRoles.includes(role) ||
-            user.highestRole === role
-        );
-    }, [user]);
+        // Если пользователь не загружен или нет ролей - доступ закрыт
+        if (!currentUser || !currentUser.allRoles || currentUser.allRoles.length === 0) {
+            
+            return false;
+        }
+
+        // Используем упрощенную логику проверки прав
+        const hasAccess = hasRoleAccess(currentUser.allRoles, requiredRoles);
+
+        return hasAccess;
+    }, [currentUser]);
 
     // Filter menu items based on search and user roles
     const filteredMenu = useMemo(() => {
         let filtered = MENU_STRUCTURE;
 
         // Apply role-based filtering
-        filtered = filtered.filter(item => hasRequiredRole(item.requiredRole));
+        filtered = filtered.filter(item => {
+            const hasAccess = hasRequiredRole(item.requiredRoles);
+            return hasAccess;
+        });
 
         // Apply search filtering
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
             filtered = filtered.filter(item =>
                 item.title.toLowerCase().includes(query) ||
-                item.category?.toLowerCase().includes(query)
+                item.category?.toLowerCase().includes(query) ||
+                item.description?.toLowerCase().includes(query)
             );
         }
 
         return filtered;
     }, [searchQuery, hasRequiredRole]);
+
+    // Debug эффект
+    useEffect(() => {
+    }, [currentUser, loadingUser, authToken, filteredMenu]);
 
     // Group menu items by category
     const groupedMenu = useMemo(() => {
@@ -345,21 +337,44 @@ const Sidebar: React.FC<SidebarProps> = ({
         }
     }, [externalActive, onNavigate, navigate]);
 
-    // Navigate to user profile
-    const navigateToProfile = useCallback(() => {
-        if (user) {
-            navigate(user.profileUrl);
-            onNavigate?.("profile");
+    // Get role badge color
+    const getRoleBadgeColor = useCallback(() => {
+        if (!currentUser) return '#99AAB5';
+        return currentUser.roleHexColor;
+    }, [currentUser]);
+
+    // Render role icon based on highest role
+    const renderRoleIcon = useCallback(() => {
+        if (!currentUser) return <User size={14} />;
+
+        const highestRole = currentUser.highestRole;
+        switch (highestRole) {
+            case "Bot Developer":
+                return <Code size={14} />;
+            case "Chief Administrator":
+                return <Crown size={14} />;
+            case "Senior Moderator":
+                return <ShieldCheck size={14} />;
+            case "Moderator":
+                return <Star size={14} />;
+            default:
+                return <User size={14} />;
         }
-    }, [user, navigate, onNavigate]);
+    }, [currentUser]);
+
+    const handleMouseEnter = useCallback((text: string, position: number) => {
+        setHoverTip({ text, position });
+    }, []);
+
+    const handleMouseLeave = useCallback(() => {
+        setHoverTip(null);
+    }, []);
 
     // Enhanced logout handler with API integration
     const handleLogout = useCallback(async () => {
         if (!showLogoutConfirm) {
-            // First click - show confirmation
             setShowLogoutConfirm(true);
 
-            // Auto hide confirmation after 3 seconds
             logoutTimeoutRef.current = setTimeout(() => {
                 setShowLogoutConfirm(false);
             }, 3000);
@@ -367,7 +382,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             return;
         }
 
-        // Second click - perform logout
         setIsLoggingOut(true);
         setShowLogoutConfirm(false);
 
@@ -376,16 +390,13 @@ const Sidebar: React.FC<SidebarProps> = ({
         }
 
         try {
-            // Call the custom logout handler if provided
             if (onLogout) {
                 await onLogout();
             } else {
-                // Default logout behavior with API call
                 await performLogout();
             }
         } catch (error) {
             console.error('Logout failed:', error);
-            // Fallback to client-side logout
             performClientSideLogout();
         } finally {
             setIsLoggingOut(false);
@@ -415,23 +426,17 @@ const Sidebar: React.FC<SidebarProps> = ({
             }
         }
 
-        // Always perform client-side cleanup
         performClientSideLogout();
     };
 
     // Client-side logout cleanup
     const performClientSideLogout = () => {
-        // Clear all auth-related storage
         localStorage.removeItem('auth_token');
         localStorage.removeItem('session_token');
         localStorage.removeItem('user_data');
         sessionStorage.removeItem('auth_token');
-
-        // Clear sidebar state
         localStorage.removeItem(STORAGE_KEY);
-
-        // Redirect to login page
-        window.location.href = '/auth/login';
+        window.location.href = '/login';
     };
 
     // Cancel logout confirmation
@@ -441,71 +446,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             clearTimeout(logoutTimeoutRef.current);
         }
     }, []);
-
-    // Keyboard navigation
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (!containerRef.current?.contains(document.activeElement)) return;
-
-            const currentIndex = itemRefs.current.findIndex(ref => ref === document.activeElement);
-
-            switch (e.key) {
-                case "ArrowDown":
-                    e.preventDefault();
-                    const nextIndex = Math.min(itemRefs.current.length - 1, currentIndex + 1);
-                    itemRefs.current[nextIndex]?.focus();
-                    break;
-
-                case "ArrowUp":
-                    e.preventDefault();
-                    const prevIndex = Math.max(0, currentIndex - 1);
-                    itemRefs.current[prevIndex]?.focus();
-                    break;
-
-                case "Home":
-                    e.preventDefault();
-                    itemRefs.current[0]?.focus();
-                    break;
-
-                case "End":
-                    e.preventDefault();
-                    itemRefs.current[itemRefs.current.length - 1]?.focus();
-                    break;
-
-                case "Escape":
-                    if (searchQuery) {
-                        e.preventDefault();
-                        setSearchQuery("");
-                    }
-                    if (showLogoutConfirm) {
-                        e.preventDefault();
-                        cancelLogout();
-                    }
-                    break;
-            }
-        };
-
-        document.addEventListener("keydown", handleKeyDown);
-        return () => document.removeEventListener("keydown", handleKeyDown);
-    }, [searchQuery, showLogoutConfirm, cancelLogout]);
-
-    const toggleCollapse = useCallback(() => {
-        setCollapsed(prev => !prev);
-    }, []);
-
-    const handleMouseEnter = useCallback((text: string, position: number) => {
-        setHoverTip({ text, position });
-    }, []);
-
-    const handleMouseLeave = useCallback(() => {
-        setHoverTip(null);
-    }, []);
-
-    // Get role badge color
-    const getRoleBadgeColor = useCallback(() => {
-        if (!user) return '#99AAB5';
-        return user.roleHexColor || '#99AAB5';
-    }, [user]);
 
     // Render category section
     const renderCategory = useCallback((category: string, items: MenuItem[]) => {
@@ -527,7 +467,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 {items.map((item, index) => {
                     const isActive = active === item.id;
                     const globalIndex = MENU_STRUCTURE.findIndex(m => m.id === item.id);
-                    const hasAccess = hasRequiredRole(item.requiredRole);
+                    const hasAccess = hasRequiredRole(item.requiredRoles);
 
                     return (
                         <button
@@ -539,12 +479,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                             onClick={() => hasAccess && !item.disabled && navigateTo(item.id, item)}
                             onMouseEnter={(e) => {
                                 const rect = e.currentTarget.getBoundingClientRect();
-                                handleMouseEnter(item.title, rect.top);
+                                const description = item.description || item.title;
+                                handleMouseEnter(description, rect.top);
                             }}
                             onMouseLeave={handleMouseLeave}
                             aria-current={isActive ? "page" : undefined}
                             aria-disabled={!hasAccess || item.disabled || undefined}
-                            title={collapsed ? item.title : !hasAccess ? "Insufficient permissions" : item.title}
+                            title={collapsed ? (item.description || item.title) : !hasAccess ? "Insufficient permissions" : (item.description || item.title)}
                             disabled={!hasAccess || item.disabled}
                         >
                             <span className={styles.icon}>
@@ -560,6 +501,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                                 <span className={styles.content}>
                                     <span className={styles.label}>
                                         {item.title}
+                                        {loadingUser && item.requiredRoles && (
+                                            <span className={styles.loadingDot}>...</span>
+                                        )}
                                     </span>
 
                                     <span className={styles.meta}>
@@ -587,7 +531,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 })}
             </div>
         );
-    }, [active, collapsed, navigateTo, handleMouseEnter, handleMouseLeave, hasRequiredRole]);
+    }, [active, collapsed, navigateTo, handleMouseEnter, handleMouseLeave, hasRequiredRole, loadingUser]);
 
     // Default user data for fallback
     const defaultUser: User = {
@@ -607,7 +551,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         discordConnected: false
     };
 
-    const currentUser: User = discordUser || user || defaultUser;
+    const displayUser = currentUser || defaultUser;
 
     return (
         <>
@@ -615,7 +559,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             {!collapsed && (
                 <div
                     className={styles.overlay}
-                    onClick={toggleCollapse}
+                    onClick={() => setCollapsed(true)}
                     aria-hidden="true"
                 />
             )}
@@ -632,14 +576,29 @@ const Sidebar: React.FC<SidebarProps> = ({
                             <div className={styles.logo}>
                                 <Shield size={24} />
                                 <span className={styles.logoText}>Sentinel</span>
+                                {loadingUser && (
+                                    <span className={styles.rolesLoading} title="Loading user...">
+                                        ...
+                                    </span>
+                                )}
                             </div>
-                            <div className={styles.brandSubtitle}>Moderation Platform</div>
+                            <div className={styles.brandSubtitle}>Discord Moderation Platform</div>
+                            {currentUser && currentUser.highestRole !== '@everyone' && !collapsed && (
+                                <div
+                                    className={styles.roleBadge}
+                                    style={{ backgroundColor: getRoleBadgeColor() }}
+                                    title={`Your role: ${currentUser.highestRole}`}
+                                >
+                                    {renderRoleIcon()}
+                                    <span>{currentUser.highestRole}</span>
+                                </div>
+                            )}
                         </div>
                     )}
 
                     <button
                         className={styles.collapseBtn}
-                        onClick={toggleCollapse}
+                        onClick={() => setCollapsed(prev => !prev)}
                         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                         title={collapsed ? "Expand" : "Collapse"}
                     >
@@ -672,32 +631,51 @@ const Sidebar: React.FC<SidebarProps> = ({
 
                 {/* Navigation */}
                 <nav className={styles.nav} aria-label="Main menu">
-                    {Object.entries(groupedMenu).map(([category, items]) =>
-                        renderCategory(category, items)
-                    )}
-
-                    {filteredMenu.length === 0 && (
-                        <div className={styles.noResults}>
-                            {searchQuery ? `No results found for "${searchQuery}"` : "No accessible menu items"}
+                    {loadingUser ? (
+                        <div className={styles.loadingRoles}>
+                            <div className={styles.loadingSpinner}></div>
+                            Loading user data...
                         </div>
+                    ) : (
+                        <>
+                            {Object.entries(groupedMenu).map(([category, items]) =>
+                                renderCategory(category, items)
+                            )}
+
+                            {filteredMenu.length === 0 && (
+                                <div className={styles.noResults}>
+                                    {searchQuery ? `No results found for "${searchQuery}"` : "No accessible menu items"}
+                                </div>
+                            )}
+                        </>
                     )}
                 </nav>
 
                 {/* Footer */}
-                <footer className={styles.footer} style={{ cursor: "pointer" }}>
-                    {currentUser.discordConnected && (
-                        <div onClick={() => navigate("/dashboard/profile")}>
-                            <DiscordProfileCard
-                                nickname={currentUser.nickname}
-                                discordId={currentUser.discordId || "0000"}
-                                avatar={currentUser.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"}
-                                highestRole={currentUser.highestRole}
-                                roleHexColor={currentUser.roleHexColor}
-                                createdAt={currentUser.discordCreatedAt}
-                                status={currentUser.status}
-                            />
-                        </div>
-                    )}
+                <footer className={styles.footer}>
+                    {/* Profile card - теперь всегда кликабельный и ведет на профиль */}
+                    <div
+                        onClick={() => navigateTo("profile", {
+                            id: "profile",
+                            title: "My Profile",
+                            icon: <User size={20} />,
+                            category: "system",
+                            description: "Мой профиль и настройки",
+                            path: "/dashboard/profile"
+                        })}
+                        style={{ cursor: "pointer", marginBottom: "10px" }}
+                        title="Click to view profile"
+                    >
+                        <DiscordProfileCard
+                            nickname={displayUser.nickname}
+                            discordId={displayUser.discordId || "0000"}
+                            avatar={displayUser.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"}
+                            highestRole={displayUser.highestRole}
+                            roleHexColor={getRoleBadgeColor()}
+                            createdAt={displayUser.discordCreatedAt} // Теперь это поле существует
+                            status={displayUser.status}
+                        />
+                    </div>
 
                     <div className={styles.footerActions}>
                         <button
@@ -705,12 +683,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                             aria-label="Get support"
                             title="Support"
                             onClick={(e) => {
-                                e.stopPropagation(); // предотвращаем срабатывание handleFooterClick
+                                e.stopPropagation();
                                 navigateTo("support", {
                                     id: "support",
                                     title: "Support",
                                     icon: <HelpCircle size={20} />,
-                                    category: "system"
+                                    category: "system",
+                                    description: "Поддержка и помощь"
                                 });
                             }}
                         >
@@ -721,7 +700,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                             <button
                                 className={`${styles.logoutBtn} ${showLogoutConfirm ? styles.confirm : ""} ${isLoggingOut ? styles.loading : ""}`}
                                 onClick={(e) => {
-                                    e.stopPropagation(); // предотвращаем переход при клике
+                                    e.stopPropagation();
                                     handleLogout();
                                 }}
                                 disabled={isLoggingOut}
@@ -758,6 +737,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         </div>
                     </div>
                 </footer>
+
                 {/* Enhanced Tooltip */}
                 {collapsed && hoverTip && (
                     <div

@@ -14,6 +14,7 @@ export interface JWTPayload {
     allRoles?: string[];
     roleColor?: number;
     roleHexColor?: string;
+    avatar?: string | null;
 }
 
 export function generateToken(payload: JWTPayload): string {

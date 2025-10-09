@@ -203,7 +203,6 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
     const navigate = useNavigate();
     const location = useLocation();
-    const [active, setActive] = useState<SidebarId>(externalActive ?? "overview");
     const [collapsed, setCollapsed] = useState<boolean>(initialCollapsed);
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [hoverTip, setHoverTip] = useState<{ text: string; position: number } | null>(null);
@@ -211,6 +210,40 @@ const Sidebar: React.FC<SidebarProps> = ({
     const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
     const [jwtUser, setJwtUser] = useState<ExtendedUserFromToken | null>(null);
     const [loadingUser, setLoadingUser] = useState<boolean>(true);
+
+    const getActiveIdFromPath = useCallback((): SidebarId => {
+        const path = location.pathname;
+
+        // Извлекаем последнюю часть пути
+        const pathSegments = path.split('/').filter(segment => segment);
+
+        // Если путь заканчивается на /dashboard, то это dashboard
+        if (pathSegments.length === 1 && pathSegments[0] === 'dashboard') {
+            return 'dashboard';
+        }
+
+        const currentSection = pathSegments[pathSegments.length - 1] as SidebarId;
+
+        // Проверяем, существует ли такой ID в нашем меню
+        const isValidId = MENU_STRUCTURE.some(item => item.id === currentSection);
+
+        const activeId = isValidId ? currentSection : 'overview';
+
+        return activeId;
+    }, [location.pathname]);
+
+    const [active, setActive] = useState<SidebarId>(() => {
+        // Если передан externalActive, используем его, иначе определяем из URL
+        return externalActive ?? getActiveIdFromPath();
+    });
+
+    // Эффект для обновления активного состояния при изменении URL
+    useEffect(() => {
+        if (externalActive === undefined) {
+            const newActive = getActiveIdFromPath();
+            setActive(newActive);
+        }
+    }, [location.pathname, externalActive, getActiveIdFromPath]);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -270,7 +303,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         // Если пользователь не загружен или нет ролей - доступ закрыт
         if (!currentUser || !currentUser.allRoles || currentUser.allRoles.length === 0) {
-            
+
             return false;
         }
 
@@ -333,7 +366,9 @@ const Sidebar: React.FC<SidebarProps> = ({
         if (item.path) {
             window.location.href = item.path;
         } else {
-            navigate(`/dashboard/${id}`);
+            // Исправляем логику навигации чтобы избежать дублирования
+            const targetPath = id === 'dashboard' ? '/dashboard' : `/dashboard/${id}`;
+            navigate(targetPath);
         }
     }, [externalActive, onNavigate, navigate]);
 

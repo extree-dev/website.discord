@@ -8,22 +8,58 @@ import {
     FiServer,
     FiAlertTriangle,
     FiWifi,
-    FiRefreshCw
+    FiRefreshCw,
+    FiCpu,
+    FiDatabase,
+    FiShield,
+    FiMessageSquare,
+    FiBarChart2,
+    FiGlobe,
+    FiDownload,
+    FiUpload,
+    FiHeart
 } from "react-icons/fi";
+import {
+    Users,
+    Eye,
+    Command,
+    Shield,
+    AlertTriangle,
+    TrendingUp,
+    MessageCircle,
+    Clock,
+    CheckCircle,
+    XCircle,
+    Search,
+    Filter,
+    Download,
+    MoreHorizontal,
+    Bell,
+    Calendar,
+    Server,
+    Network,
+    Cpu,
+    Database,
+    BarChart3,
+    Globe,
+    Heart
+} from "lucide-react";
 import styles from "../module_pages/DashboardOverview.module.scss";
 
 export default function DashboardOverview() {
     const [guilds, setGuilds] = useState([
-        { id: "123456789", name: "Main Server", members: 1542, enabled: true },
-        { id: "987654321", name: "Test Server", members: 243, enabled: false },
-        { id: "543216789", name: "Gaming Hub", members: 3124, enabled: true }
+        { id: "123456789", name: "Main Server", members: 1542, enabled: true, icon: "🏠" },
+        { id: "987654321", name: "Test Server", members: 243, enabled: false, icon: "🧪" },
+        { id: "543216789", name: "Gaming Hub", members: 3124, enabled: true, icon: "🎮" },
+        { id: "789123456", name: "Community", members: 876, enabled: true, icon: "👥" }
     ]);
 
     const [logs] = useState([
+        { time: "2m ago", type: "success", message: "Bot started successfully", user: "System" },
         { time: "5m ago", type: "error", message: "/ban failed — Missing Permissions", user: "@Admin" },
         { time: "12m ago", type: "warn", message: "Rate limit warning — /ping", user: "@Moderator" },
-        { time: "1h ago", type: "error", message: "/kick failed — API Timeout", user: "@ModJane" },
-        { time: "2h ago", type: "info", message: "Bot started successfully", user: "System" }
+        { time: "1h ago", type: "success", message: "Auto-moderation rule triggered", user: "System" },
+        { time: "2h ago", type: "info", message: "Scheduled backup completed", user: "System" }
     ]);
 
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -38,201 +74,314 @@ export default function DashboardOverview() {
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
-        // Имитация обновления данных
         await new Promise(resolve => setTimeout(resolve, 1000));
         setIsRefreshing(false);
     };
 
-    type LogType = 'error' | 'warn' | 'info';
+    type LogType = 'error' | 'warn' | 'info' | 'success';
 
     const getLogTypeClass = (type: LogType) => {
         switch (type) {
             case 'error': return styles.error;
             case 'warn': return styles.warn;
             case 'info': return styles.info;
+            case 'success': return styles.success;
             default: return '';
         }
+    };
+
+    const getLogIcon = (type: LogType) => {
+        switch (type) {
+            case 'error': return <XCircle size={16} />;
+            case 'warn': return <AlertTriangle size={16} />;
+            case 'info': return <MessageCircle size={16} />;
+            case 'success': return <CheckCircle size={16} />;
+            default: return <MessageCircle size={16} />;
+        }
+    };
+
+    // Performance metrics
+    const performanceData = {
+        cpu: 24,
+        memory: 68,
+        network: 45,
+        storage: 82
     };
 
     return (
         <div className={styles.layout}>
             <Sidebars />
             <div className={`${styles.overviewPage} ${isRefreshing ? styles.updating : ''}`}>
-                <div className={styles.header}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                        <h1>Overview</h1>
-                        <button
-                            onClick={handleRefresh}
-                            disabled={isRefreshing}
-                            style={{
-                                background: 'var(--bg-secondary)',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '6px',
-                                padding: '0.5rem',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                color: 'var(--text-primary)'
-                            }}
-                        >
-                            <FiRefreshCw size={16} className={isRefreshing ? styles.loading : ''} />
-                            Refresh
-                        </button>
-                    </div>
-                    <span className={styles.subtitle}>
-                        Monitor your bot's performance and usage statistics
-                    </span>
-                </div>
 
-                {/* Основная статистика */}
-                <div className={styles.grid}>
-                    <div className={styles.card}>
-                        <FiTrendingUp className={styles.cardIcon} />
-                        <h2>Active Servers</h2>
-                        <p>245</p>
-                    </div>
-                    <div className={styles.card}>
-                        <FiUsers className={styles.cardIcon} />
-                        <h2>Users Reached</h2>
-                        <p>18,320</p>
-                    </div>
-                    <div className={styles.card}>
-                        <FiActivity className={styles.cardIcon} />
-                        <h2>Commands Run</h2>
-                        <p>92,440</p>
-                    </div>
-                    <div className={styles.card}>
-                        <FiClock className={styles.cardIcon} />
-                        <h2>Uptime</h2>
-                        <p>99.98%</p>
-                    </div>
-                </div>
-
-                {/* Статус бота и версии */}
-                <div className={styles.statusContainer}>
-                    <div className={`${styles.section} ${styles.botStatus}`}>
-                        <h2><FiWifi /> Bot Status</h2>
-                        <div className={styles.statusContainer}>
-                            <div className={styles.statusColumn}>
-                                <p>Status</p>
-                                <span>
-                                    <span className={`${styles.statusDot} ${styles.online}`}></span> Online
-                                </span>
-                            </div>
-                            <div className={styles.statusColumn}>
-                                <p>Ping</p>
-                                <span className={styles.statusValue}>42 ms</span>
-                            </div>
-                            <div className={styles.statusColumn}>
-                                <p>Last heartbeat</p>
-                                <span className={styles.statusValue}>2m ago</span>
-                            </div>
+                {/* Header */}
+                <header className={styles.header}>
+                    <div className={styles.headerContent}>
+                        <div className={styles.headerText}>
+                            <h1>System Overview</h1>
+                            <span className={styles.subtitle}>
+                                Real-time monitoring and performance analytics
+                            </span>
                         </div>
-                    </div>
-
-                    <div className={`${styles.section} ${styles.versionInfo}`}>
-                        <h2><FiServer /> Version & Uptime</h2>
-                        <div className={styles.statusContainer}>
-                            <div className={styles.statusColumn}>
-                                <p>Bot Version</p>
-                                <span className={styles.statusValue}>
-                                    v2.3.1 <small>(commit a1b2c3d)</small>
-                                </span>
-                            </div>
-                            <div className={styles.statusColumn}>
-                                <p>Server Uptime</p>
-                                <span className={styles.statusValue}>12 days 4 hours</span>
-                            </div>
-                            <div className={styles.statusColumn}>
-                                <p>Last Deploy</p>
-                                <span className={styles.statusValue}>2025-08-10 14:32</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Подключённые гильдии */}
-                <div className={styles.section}>
-                    <h2>Connected Guilds</h2>
-                    {guilds.length > 0 ? (
-                        <table className={styles.guildsTable}>
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>ID</th>
-                                    <th>Members</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {guilds.map(g => (
-                                    <tr key={g.id}>
-                                        <td>{g.name}</td>
-                                        <td className={styles.textMuted}>{g.id}</td>
-                                        <td>{g.members.toLocaleString()}</td>
-                                        <td>
-                                            <button
-                                                className={`${styles.guildToggle} ${g.enabled ? styles.on : styles.off}`}
-                                                onClick={() => toggleGuildStatus(g.id)}
-                                            >
-                                                {g.enabled ? "Enabled" : "Disabled"}
-                                            </button>
-                                        </td>
-                                    </tr>
+                        <div className={styles.headerActions}>
+                            <div className={styles.timeFilters}>
+                                {['24h', '7d', '30d'].map((range) => (
+                                    <button key={range} className={styles.timeFilter}>
+                                        {range}
+                                    </button>
                                 ))}
-                            </tbody>
-                        </table>
-                    ) : (
-                        <div className={styles.emptyState}>
-                            <FiServer className={styles.emptyStateIcon} />
-                            <div className={styles.emptyStateTitle}>No Guilds Connected</div>
-                            <div className={styles.emptyStateDescription}>
-                                Connect your first Discord server to get started.
+                            </div>
+                            <button
+                                onClick={handleRefresh}
+                                disabled={isRefreshing}
+                                className={styles.refreshBtn}
+                            >
+                                <FiRefreshCw size={16} className={isRefreshing ? styles.loading : ''} />
+                                Refresh
+                            </button>
+                        </div>
+                    </div>
+                </header>
+
+                {/* Key Metrics Grid */}
+                <section className={styles.metricsGrid}>
+                    <div className={styles.metricCard}>
+                        <div className={styles.metricHeader}>
+                            <div className={styles.metricIcon}>
+                                <Globe size={24} />
+                            </div>
+                            <TrendingUp size={16} className={styles.trendingUp} />
+                        </div>
+                        <h3 className={styles.metricValue}>245</h3>
+                        <p className={styles.metricLabel}>Active Servers</p>
+                        <div className={styles.metricChange}>
+                            <span className={styles.changePositive}>+12</span>
+                            <span className={styles.changeText}>this week</span>
+                        </div>
+                    </div>
+
+                    <div className={styles.metricCard}>
+                        <div className={styles.metricHeader}>
+                            <div className={styles.metricIcon}>
+                                <Users size={24} />
+                            </div>
+                            <TrendingUp size={16} className={styles.trendingUp} />
+                        </div>
+                        <h3 className={styles.metricValue}>18.3K</h3>
+                        <p className={styles.metricLabel}>Users Reached</p>
+                        <div className={styles.metricChange}>
+                            <span className={styles.changePositive}>+2.1%</span>
+                            <span className={styles.changeText}>today</span>
+                        </div>
+                    </div>
+
+                    <div className={styles.metricCard}>
+                        <div className={styles.metricHeader}>
+                            <div className={styles.metricIcon}>
+                                <Command size={24} />
+                            </div>
+                            <TrendingUp size={16} className={styles.trendingUp} />
+                        </div>
+                        <h3 className={styles.metricValue}>92.4K</h3>
+                        <p className={styles.metricLabel}>Commands Run</p>
+                        <div className={styles.metricChange}>
+                            <span className={styles.changePositive}>+15%</span>
+                            <span className={styles.changeText}>vs yesterday</span>
+                        </div>
+                    </div>
+
+                    <div className={styles.metricCard}>
+                        <div className={styles.metricHeader}>
+                            <div className={styles.metricIcon}>
+                                <Clock size={24} />
+                            </div>
+                            <Heart size={16} className={styles.healthy} />
+                        </div>
+                        <h3 className={styles.metricValue}>99.98%</h3>
+                        <p className={styles.metricLabel}>Uptime</p>
+                        <div className={styles.metricChange}>
+                            <span className={styles.changeNeutral}>Stable</span>
+                        </div>
+                    </div>
+                </section>
+
+                {/* System Status & Performance */}
+                <div className={styles.contentGrid}>
+                    {/* Bot Status */}
+                    <div className={styles.statusCard}>
+                        <div className={styles.cardHeader}>
+                            <h3 className={styles.cardTitle}>
+                                <FiWifi /> Bot Status
+                            </h3>
+                            <div className={styles.statusIndicator}>
+                                <div className={`${styles.statusDot} ${styles.online}`}></div>
+                                Online
                             </div>
                         </div>
-                    )}
-                </div>
+                        <div className={styles.statusGrid}>
+                            <div className={styles.statusItem}>
+                                <div className={styles.statusLabel}>Response Time</div>
+                                <div className={styles.statusValue}>42 ms</div>
+                                <div className={styles.statusSubtext}>Optimal</div>
+                            </div>
+                            <div className={styles.statusItem}>
+                                <div className={styles.statusLabel}>Last Heartbeat</div>
+                                <div className={styles.statusValue}>2m ago</div>
+                                <div className={styles.statusSubtext}>Active</div>
+                            </div>
+                            <div className={styles.statusItem}>
+                                <div className={styles.statusLabel}>API Latency</div>
+                                <div className={styles.statusValue}>128 ms</div>
+                                <div className={styles.statusSubtext}>Normal</div>
+                            </div>
+                        </div>
+                    </div>
 
-                {/* Логи ошибок */}
-                <div className={styles.section}>
-                    <h2><FiAlertTriangle /> Bot Logs</h2>
-                    {logs.length > 0 ? (
-                        <ul className={styles.logsList}>
-                            {logs.map((log, i) => (
-                                <li key={i} className={`${styles.logItem} ${getLogTypeClass(log.type as LogType)}`}>
-                                    <span className={styles.time}>{log.time}</span> — {log.message} by {log.user}
-                                </li>
+                    {/* System Performance */}
+                    <div className={styles.performanceCard}>
+                        <div className={styles.cardHeader}>
+                            <h3 className={styles.cardTitle}>
+                                <Cpu size={20} /> System Performance
+                            </h3>
+                            <div className={styles.cardActions}>
+                                <Filter size={16} />
+                                <Download size={16} />
+                            </div>
+                        </div>
+                        <div className={styles.performanceGrid}>
+                            <div className={styles.performanceItem}>
+                                <div className={styles.performanceHeader}>
+                                    <Cpu size={16} />
+                                    <span>CPU</span>
+                                </div>
+                                <div className={styles.performanceBar}>
+                                    <div
+                                        className={styles.performanceFill}
+                                        style={{ width: `${performanceData.cpu}%` }}
+                                    ></div>
+                                </div>
+                                <div className={styles.performanceValue}>{performanceData.cpu}%</div>
+                            </div>
+                            <div className={styles.performanceItem}>
+                                <div className={styles.performanceHeader}>
+                                    <Database size={16} />
+                                    <span>Memory</span>
+                                </div>
+                                <div className={styles.performanceBar}>
+                                    <div
+                                        className={styles.performanceFill}
+                                        style={{ width: `${performanceData.memory}%` }}
+                                    ></div>
+                                </div>
+                                <div className={styles.performanceValue}>{performanceData.memory}%</div>
+                            </div>
+                            <div className={styles.performanceItem}>
+                                <div className={styles.performanceHeader}>
+                                    <Network size={16} />
+                                    <span>Network</span>
+                                </div>
+                                <div className={styles.performanceBar}>
+                                    <div
+                                        className={styles.performanceFill}
+                                        style={{ width: `${performanceData.network}%` }}
+                                    ></div>
+                                </div>
+                                <div className={styles.performanceValue}>{performanceData.network}%</div>
+                            </div>
+                            <div className={styles.performanceItem}>
+                                <div className={styles.performanceHeader}>
+                                    <Server size={16} />
+                                    <span>Storage</span>
+                                </div>
+                                <div className={styles.performanceBar}>
+                                    <div
+                                        className={styles.performanceFill}
+                                        style={{ width: `${performanceData.storage}%` }}
+                                    ></div>
+                                </div>
+                                <div className={styles.performanceValue}>{performanceData.storage}%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Connected Guilds */}
+                    <div className={styles.guildsCard}>
+                        <div className={styles.cardHeader}>
+                            <h3 className={styles.cardTitle}>
+                                <Globe size={20} /> Connected Servers
+                            </h3>
+                            <span className={styles.guildCount}>{guilds.length} servers</span>
+                        </div>
+                        <div className={styles.guildsList}>
+                            {guilds.map((guild) => (
+                                <div key={guild.id} className={styles.guildItem}>
+                                    <div className={styles.guildInfo}>
+                                        <div className={styles.guildIcon}>{guild.icon}</div>
+                                        <div className={styles.guildDetails}>
+                                            <div className={styles.guildName}>{guild.name}</div>
+                                            <div className={styles.guildStats}>
+                                                <span>{guild.members.toLocaleString()} members</span>
+                                                <span className={styles.guildId}>#{guild.id.slice(-6)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        className={`${styles.guildToggle} ${guild.enabled ? styles.enabled : styles.disabled}`}
+                                        onClick={() => toggleGuildStatus(guild.id)}
+                                    >
+                                        <div className={styles.toggleIndicator}></div>
+                                        {guild.enabled ? 'Enabled' : 'Disabled'}
+                                    </button>
+                                </div>
                             ))}
-                        </ul>
-                    ) : (
-                        <div className={styles.emptyState}>
-                            <FiActivity className={styles.emptyStateIcon} />
-                            <div className={styles.emptyStateTitle}>No Logs Available</div>
-                            <div className={styles.emptyStateDescription}>
-                                Bot activity logs will appear here.
-                            </div>
                         </div>
-                    )}
+                    </div>
+
+                    {/* System Logs */}
+                    <div className={styles.logsCard}>
+                        <div className={styles.cardHeader}>
+                            <h3 className={styles.cardTitle}>
+                                <AlertTriangle size={20} /> System Logs
+                            </h3>
+                            <button className={styles.viewAllBtn}>View All</button>
+                        </div>
+                        <div className={styles.logsList}>
+                            {logs.map((log, index) => (
+                                <div key={index} className={`${styles.logItem} ${getLogTypeClass(log.type as LogType)}`}>
+                                    <div className={styles.logIcon}>
+                                        {getLogIcon(log.type as LogType)}
+                                    </div>
+                                    <div className={styles.logContent}>
+                                        <div className={styles.logMessage}>{log.message}</div>
+                                        <div className={styles.logMeta}>
+                                            <span className={styles.logTime}>{log.time}</span>
+                                            <span className={styles.logUser}>{log.user}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
 
-                {/* Дополнительная информация */}
-                <div className={styles.section}>
-                    <h2>Quick Actions</h2>
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                        gap: '1rem',
-                        marginTop: '1rem'
-                    }}>
-                        <button className={`${styles.guildToggle} ${styles.on}`} style={{ padding: '0.75rem 1rem' }}>
-                            Invite Bot
+                {/* Quick Actions */}
+                <div className={styles.actionsSection}>
+                    <h3 className={styles.sectionTitle}>Quick Actions</h3>
+                    <div className={styles.actionsGrid}>
+                        <button className={styles.actionBtn}>
+                            <FiServer size={20} />
+                            <span>Invite Bot</span>
                         </button>
-                        <button className={`${styles.guildToggle} ${styles.on}`} style={{ padding: '0.75rem 1rem' }}>
-                            View Documentation
+                        <button className={styles.actionBtn}>
+                            <FiBarChart2 size={20} />
+                            <span>View Analytics</span>
                         </button>
-                        <button className={`${styles.guildToggle} ${styles.off}`} style={{ padding: '0.75rem 1rem' }}>
-                            Support Server
+                        <button className={styles.actionBtn}>
+                            <FiShield size={20} />
+                            <span>Security Settings</span>
+                        </button>
+                        <button className={styles.actionBtn}>
+                            <FiDatabase size={20} />
+                            <span>Backup Data</span>
                         </button>
                     </div>
                 </div>

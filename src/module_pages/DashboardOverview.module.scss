@@ -3,7 +3,8 @@
 .layout {
   display: flex;
   min-height: 100vh;
-  background-color: var(--bg-primary);
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%);
+  color: #ffffff;
 }
 
 .overviewPage {
@@ -11,6 +12,7 @@
   margin-left: 280px;
   padding: 2rem;
   min-height: 100vh;
+  overflow-x: hidden;
   
   @include tablet {
     margin-left: 0;
@@ -22,81 +24,221 @@
   }
 }
 
+// Header
 .header {
   margin-bottom: 2rem;
+}
+
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   
-  h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0 0 0.5rem 0;
-    
-    @include mobile {
-      font-size: 2rem;
-    }
+  @include tablet {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}
+
+.headerText {
+  flex: 1;
+}
+
+.header h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.1;
+  
+  @include mobile {
+    font-size: 2rem;
   }
 }
 
 .subtitle {
   font-size: 1.125rem;
-  color: var(--text-secondary);
-  margin: 0;
+  color: #888;
+  font-weight: 500;
 }
 
-// Основная статистика
-.grid {
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  
+  @include mobile {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+.timeFilters {
+  display: flex;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 4px;
+  backdrop-filter: blur(20px);
+}
+
+.timeFilter {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  color: #888;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  
+  &.active {
+    background: rgba(99, 102, 241, 0.2);
+    color: #6366f1;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  }
+  
+  &:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
+}
+
+.refreshBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  color: #888;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(20px);
+  
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// Metrics Grid
+.metricsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
 }
 
-.card {
-  background: var(--modal-bg);
-  backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
+.metricCard {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
   padding: 1.5rem;
-  text-align: center;
   transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.5), transparent);
+  }
   
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  }
-  
-  &Icon {
-    width: 3rem;
-    height: 3rem;
-    margin: 0 auto 1rem;
-    padding: 0.75rem;
-    border-radius: 50%;
-    background: var(--bg-secondary);
-    color: var(--accent-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  h2 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin: 0 0 0.5rem 0;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  
-  p {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0;
+    transform: translateY(-4px);
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
   }
 }
 
-// Контейнер статуса
-.statusContainer {
+.metricHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.metricIcon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.trendingUp {
+  color: #10b981;
+}
+
+.healthy {
+  color: #10b981;
+}
+
+.metricValue {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 0.25rem 0;
+  line-height: 1;
+}
+
+.metricLabel {
+  font-size: 0.875rem;
+  color: #888;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.75rem 0;
+}
+
+.metricChange {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.changePositive {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.changeNegative {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.changeNeutral {
+  color: #f59e0b;
+  font-weight: 700;
+}
+
+.changeText {
+  color: #666;
+}
+
+// Content Grid
+.contentGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
@@ -104,309 +246,441 @@
   
   @include tablet {
     grid-template-columns: 1fr;
-    gap: 1rem;
   }
 }
 
-// Секции
-.section {
-  background: var(--modal-bg);
-  backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
+// Card Styles
+.statusCard,
+.performanceCard,
+.guildsCard,
+.logsCard {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 25px;
   padding: 1.5rem;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1.5rem;
-  
-  h2 {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0 0 1.5rem 0;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    
-    svg {
-      color: var(--accent-color);
-    }
-  }
 }
 
-// Статус бота
-.botStatus, .versionInfo {
-  .statusContainer {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    margin: 0;
-    
-    @include mobile {
-      grid-template-columns: 1fr;
-    }
-  }
+.cardTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.statusColumn {
-  text-align: center;
-  
-  p {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-    margin: 0 0 0.5rem 0;
-    font-weight: 500;
-  }
-  
-  span {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    color: var(--text-primary);
-    font-weight: 600;
-    
-    small {
-      font-weight: 400;
-      color: var(--text-secondary);
-    }
-  }
+.statusIndicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #10b981;
+  font-weight: 600;
 }
 
 .statusDot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  display: inline-block;
   
   &.online {
-    background-color: #22c55e;
-    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
+    background: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
   }
   
   &.offline {
-    background-color: #ef4444;
+    background: #ef4444;
     box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
   }
+}
+
+.cardActions {
+  display: flex;
+  gap: 0.75rem;
+  color: #888;
   
-  &.idle {
-    background-color: #f59e0b;
-    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+  svg {
+    cursor: pointer;
+    transition: color 0.3s ease;
+    
+    &:hover {
+      color: #ffffff;
+    }
   }
+}
+
+// Status Grid
+.statusGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.statusItem {
+  text-align: center;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.statusLabel {
+  font-size: 0.875rem;
+  color: #888;
+  margin-bottom: 0.5rem;
 }
 
 .statusValue {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.25rem;
 }
 
-// Таблица гильдий
-.guildsTable {
+.statusSubtext {
+  font-size: 0.75rem;
+  color: #10b981;
+  font-weight: 600;
+}
+
+// Performance Grid
+.performanceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.performanceItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.performanceHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.performanceBar {
   width: 100%;
-  border-collapse: collapse;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.performanceFill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.performanceValue {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #ffffff;
+  text-align: right;
+}
+
+// Guilds List
+.guildCount {
+  font-size: 0.875rem;
+  color: #888;
+  font-weight: 600;
+}
+
+.guildsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.guildItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.3s ease;
   
-  th {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    font-weight: 600;
-    text-align: left;
-    padding: 1rem;
-    border-bottom: 1px solid var(--border-color);
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
   }
-  
-  td {
-    padding: 1rem;
-    border-bottom: 1px solid var(--border-color);
-    color: var(--text-primary);
-  }
-  
-  tr {
-    transition: background-color 0.2s ease;
-    
-    &:hover {
-      background-color: var(--bg-secondary);
-    }
-    
-    &:last-child {
-      td {
-        border-bottom: none;
-      }
-    }
-  }
+}
+
+.guildInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.guildIcon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.guildDetails {
+  flex: 1;
+}
+
+.guildName {
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 0.25rem;
+}
+
+.guildStats {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: #888;
+}
+
+.guildId {
+  font-family: 'Courier New', monospace;
 }
 
 .guildToggle {
-  @include button-base;
-  padding: 0.375rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 20px;
   font-size: 0.75rem;
-  font-weight: 500;
-  border-radius: 9999px;
+  font-weight: 600;
+  cursor: pointer;
   transition: all 0.3s ease;
   
-  &.on {
-    background-color: #22c55e;
-    color: white;
+  &.enabled {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    
+    .toggleIndicator {
+      background: #10b981;
+    }
     
     &:hover {
-      background-color: #16a34a;
+      background: rgba(16, 185, 129, 0.3);
     }
   }
   
-  &.off {
-    background-color: #6b7280;
-    color: white;
+  &.disabled {
+    background: rgba(107, 114, 128, 0.2);
+    color: #6b7280;
+    
+    .toggleIndicator {
+      background: #6b7280;
+    }
     
     &:hover {
-      background-color: #4b5563;
+      background: rgba(107, 114, 128, 0.3);
     }
   }
 }
 
-// Логи
+.toggleIndicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+// Logs
+.viewAllBtn {
+  background: transparent;
+  border: none;
+  color: #6366f1;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.875rem;
+  
+  &:hover {
+    color: #8b5cf6;
+  }
+}
+
 .logsList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
 .logItem {
-  background: var(--bg-secondary);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
   padding: 1rem;
-  border-radius: 8px;
-  border-left: 4px solid var(--border-color);
-  font-size: 0.875rem;
-  color: var(--text-primary);
-  transition: background-color 0.2s ease;
+  border-radius: 10px;
+  transition: background 0.3s ease;
   
   &:hover {
-    background-color: var(--border-color);
+    background: rgba(255, 255, 255, 0.05);
   }
   
-  .time {
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-right: 0.5rem;
-  }
-  
-  // Типы логов
   &.error {
-    border-left-color: #ef4444;
+    border-left: 4px solid #ef4444;
     background: rgba(239, 68, 68, 0.05);
-    
-    [data-theme="dark"] & {
-      background: rgba(239, 68, 68, 0.1);
-    }
   }
   
   &.warn {
-    border-left-color: #f59e0b;
+    border-left: 4px solid #f59e0b;
     background: rgba(245, 158, 11, 0.05);
-    
-    [data-theme="dark"] & {
-      background: rgba(245, 158, 11, 0.1);
-    }
   }
   
   &.info {
-    border-left-color: #3b82f6;
+    border-left: 4px solid #3b82f6;
     background: rgba(59, 130, 246, 0.05);
-    
-    [data-theme="dark"] & {
-      background: rgba(59, 130, 246, 0.1);
-    }
+  }
+  
+  &.success {
+    border-left: 4px solid #10b981;
+    background: rgba(16, 185, 129, 0.05);
   }
 }
 
-// Дополнительные стили для улучшения UX
+.logIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.logContent {
+  flex: 1;
+}
+
+.logMessage {
+  color: #ffffff;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.logMeta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.logTime {
+  font-weight: 600;
+}
+
+.logUser {
+  font-family: 'Courier New', monospace;
+}
+
+// Quick Actions
+.actionsSection {
+  margin-top: 2rem;
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 1rem;
+}
+
+.actionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.actionBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  }
+  
+  svg {
+    color: #6366f1;
+  }
+}
+
+// Animations
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.metricCard,
+.statusCard,
+.performanceCard,
+.guildsCard,
+.logsCard,
+.actionBtn {
+  animation: fadeIn 0.6s ease-out;
+}
+
 .loading {
-  opacity: 0.6;
-  pointer-events: none;
+  animation: spin 1s linear infinite;
 }
 
-.emptyState {
-  text-align: center;
-  padding: 3rem;
-  color: var(--text-secondary);
-  
-  &Icon {
-    width: 4rem;
-    height: 4rem;
-    margin: 0 auto 1rem;
-    color: var(--text-secondary);
-    opacity: 0.5;
-  }
-  
-  &Title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 0.5rem;
-  }
-  
-  &Description {
-    color: var(--text-secondary);
-  }
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-// Адаптивность
-@include tablet {
-  .grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-  }
-  
-  .statusContainer {
-    grid-template-columns: 1fr;
-  }
-  
-  .guildsTable {
-    display: block;
-    overflow-x: auto;
-    
-    th, td {
-      padding: 0.75rem 0.5rem;
-    }
-  }
+.updating {
+  animation: pulse 1.5s ease-in-out infinite;
 }
 
-@include mobile {
-  .grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .card {
-    padding: 1rem;
-    
-    p {
-      font-size: 1.75rem;
-    }
-  }
-  
-  .section {
-    padding: 1rem;
-  }
-  
-  .botStatus, .versionInfo {
-    .statusContainer {
-      grid-template-columns: 1fr;
-    }
-  }
-  
-  .statusColumn {
-    text-align: left;
-    
-    span {
-      justify-content: flex-start;
-    }
-  }
-}
-
-// Анимации
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
@@ -416,23 +690,45 @@
   }
 }
 
-.updating {
-  animation: pulse 1.5s ease-in-out infinite;
+// Responsive Design
+@include tablet {
+  .metricsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .statusGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
-// Утилитарные классы
-.textSuccess {
-  color: #22c55e;
-}
-
-.textWarning {
-  color: #f59e0b;
-}
-
-.textError {
-  color: #ef4444;
-}
-
-.textMuted {
-  color: var(--text-secondary);
+@include mobile {
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .statusGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .performanceGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .actionsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .guildItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .guildToggle {
+    align-self: flex-end;
+  }
 }

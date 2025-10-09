@@ -1,7 +1,22 @@
 @use 'variables' as *;
 @use 'sass:map';
 
-// Media queries
+$breakpoints: (
+  mobile-sm: 360px,
+  mobile: 768px,
+  tablet: 1024px,
+  desktop: 1200px,
+  desktop-large: 1440px,
+  hd: 1920px
+);
+
+// Миксины для медиа-запросов
+@mixin mobile-sm {
+  @media (max-width: map.get($breakpoints, mobile-sm)) {
+    @content;
+  }
+}
+
 @mixin mobile {
   @media (max-width: map.get($breakpoints, mobile)) {
     @content;
@@ -16,6 +31,18 @@
 
 @mixin desktop {
   @media (min-width: map.get($breakpoints, desktop)) {
+    @content;
+  }
+}
+
+@mixin desktop-large {
+  @media (min-width: map.get($breakpoints, desktop-large)) {
+    @content;
+  }
+}
+
+@mixin hd {
+  @media (min-width: map.get($breakpoints, hd)) {
     @content;
   }
 }
@@ -70,45 +97,5 @@
 
   &:hover {
     background-color: #f87171;
-  }
-}
-
-
-$breakpoints: (
-  mobile-sm: 360px,
-  mobile: 768px,
-  tablet: 1024px,
-  desktop: 1440px,
-  hd: 1920px
-);
-
-// Миксины для медиа-запросов
-@mixin mobile-sm {
-  @media (max-width: map.get($breakpoints, mobile-sm)) {
-    @content;
-  }
-}
-
-@mixin mobile {
-  @media (max-width: map.get($breakpoints, mobile)) {
-    @content;
-  }
-}
-
-@mixin tablet {
-  @media (max-width: map.get($breakpoints, tablet)) {
-    @content;
-  }
-}
-
-@mixin desktop {
-  @media (min-width: map.get($breakpoints, desktop)) {
-    @content;
-  }
-}
-
-@mixin hd {
-  @media (min-width: map.get($breakpoints, hd)) {
-    @content;
   }
 }

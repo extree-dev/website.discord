@@ -1,4 +1,5 @@
 @use '../styles/abstracts/mixins' as *;
+@use "sass:list";
 
 .layout {
     display: flex;
@@ -618,8 +619,8 @@ $statusOptions: (
 
 // Generate status classes
 @each $status, $data in $statusOptions {
-    $color: nth($data, 1);
-    $label: nth($data, 2);
+    $color: list.nth($data, 1);
+    $label: list.nth($data, 2);
 
     .status-#{$status} {
         background: $color;

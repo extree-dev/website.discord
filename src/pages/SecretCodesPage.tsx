@@ -1,5 +1,24 @@
-import React, { useState, useEffect } from "react";
-import { Key, Copy, Trash2, Plus, CheckCircle, XCircle, Clock, User, AlertCircle, RefreshCw } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import {
+    Key,
+    Copy,
+    Trash2,
+    Plus,
+    CheckCircle,
+    XCircle,
+    Clock,
+    User,
+    AlertCircle,
+    RefreshCw,
+    BarChart3,
+    Zap,
+    Shield,
+    Download,
+    Filter,
+    Search,
+    MoreVertical,
+    Edit3
+} from "lucide-react";
 import Sidebars from "@/components/Saidbar.js";
 import styles from "../module_pages/SecretCodesPage.module.scss";
 
@@ -30,33 +49,47 @@ interface ApiError {
     details?: string;
 }
 
+interface Stats {
+    total: number;
+    active: number;
+    used: number;
+    expired: number;
+    usageRate: number;
+    recentActivity: number;
+}
+
 export const SecretCodesPage: React.FC = () => {
     const [codes, setCodes] = useState<SecretCode[]>([]);
+    const [filteredCodes, setFilteredCodes] = useState<SecretCode[]>([]);
     const [newCode, setNewCode] = useState("");
     const [expiryDays, setExpiryDays] = useState<number>(30);
     const [maxUses, setMaxUses] = useState<number>(1);
     const [copiedCode, setCopiedCode] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [stats, setStats] = useState({
+    const [stats, setStats] = useState<Stats>({
         total: 0,
         active: 0,
         used: 0,
         expired: 0,
-        usageRate: 0
+        usageRate: 0,
+        recentActivity: 0
     });
+    const [searchTerm, setSearchTerm] = useState("");
+    const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [showAdvanced, setShowAdvanced] = useState(false);
 
     // Получение токена
-    const getAuthToken = (): string => {
+    const getAuthToken = useCallback((): string => {
         const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
         if (!token) {
             throw new Error("No authentication token found");
         }
         return token;
-    };
+    }, []);
 
     // Загрузка кодов из базы данных
-    const loadCodesFromDatabase = async () => {
+    const loadCodesFromDatabase = useCallback(async () => {
         try {
             setIsLoading(true);
             setError(null);
@@ -92,6 +125,7 @@ export const SecretCodesPage: React.FC = () => {
             }));
 
             setCodes(formattedCodes);
+            setFilteredCodes(formattedCodes);
             localStorage.setItem("moderator_secret_codes", JSON.stringify(formattedCodes));
 
         } catch (error) {
@@ -102,20 +136,16 @@ export const SecretCodesPage: React.FC = () => {
             const localCodes = localStorage.getItem("moderator_secret_codes");
             if (localCodes) {
                 const parsedCodes = JSON.parse(localCodes);
-                setCodes(parsedCodes.map((code: any) => ({
-                    ...code,
-                    createdAt: new Date(code.createdAt),
-                    usedAt: code.usedAt ? new Date(code.usedAt) : undefined,
-                    expiresAt: code.expiresAt ? new Date(code.expiresAt) : undefined
-                })));
+                setCodes(parsedCodes);
+                setFilteredCodes(parsedCodes);
             }
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [getAuthToken]);
 
     // Загрузка статистики
-    const loadStats = async () => {
+    const loadStats = useCallback(async () => {
         try {
             const token = getAuthToken();
             const response = await fetch("http://localhost:4000/api/secret-codes/stats", {
@@ -133,26 +163,50 @@ export const SecretCodesPage: React.FC = () => {
         } catch (error) {
             console.error("Error loading stats:", error);
             // Calculate stats locally if API fails
-            const localStats = {
+            const now = new Date();
+            const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+            const localStats: Stats = {
                 total: codes.length,
                 active: codes.filter(code => !code.used && (!code.expiresAt || new Date() < code.expiresAt)).length,
                 used: codes.filter(code => code.used).length,
                 expired: codes.filter(code => code.expiresAt && new Date() > code.expiresAt && !code.used).length,
-                usageRate: codes.length > 0 ? (codes.filter(code => code.used).length / codes.length) * 100 : 0
+                usageRate: codes.length > 0 ? (codes.filter(code => code.used).length / codes.length) * 100 : 0,
+                recentActivity: codes.filter(code => code.createdAt > last24Hours).length
             };
             setStats(localStats);
         }
-    };
+    }, [codes, getAuthToken]);
+
+    // Фильтрация кодов
+    useEffect(() => {
+        let filtered = codes;
+
+        if (searchTerm) {
+            filtered = filtered.filter(code =>
+                code.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                code.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                code.user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                code.user?.discordId?.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+
+        if (statusFilter !== "all") {
+            filtered = filtered.filter(code => getCodeStatus(code) === statusFilter);
+        }
+
+        setFilteredCodes(filtered);
+    }, [codes, searchTerm, statusFilter]);
 
     useEffect(() => {
         loadCodesFromDatabase();
-    }, []);
+    }, [loadCodesFromDatabase]);
 
     useEffect(() => {
         if (codes.length > 0) {
             loadStats();
         }
-    }, [codes]);
+    }, [codes, loadStats]);
 
     // Генерация случайного кода
     const generateSecureCode = async (): Promise<string> => {
@@ -175,7 +229,7 @@ export const SecretCodesPage: React.FC = () => {
         }
 
         // Fallback local generation
-        const length = 12;
+        const length = 16;
         const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         const randomValues = new Uint32Array(length);
         crypto.getRandomValues(randomValues);
@@ -193,8 +247,8 @@ export const SecretCodesPage: React.FC = () => {
 
     // Создание нового кода
     const handleCreateCode = async () => {
-        if (codes.length >= 100) {
-            alert("Maximum number of codes (100) reached");
+        if (codes.length >= 500) {
+            alert("Maximum number of codes (500) reached");
             return;
         }
 
@@ -220,8 +274,6 @@ export const SecretCodesPage: React.FC = () => {
                 maxUses: maxUses || 1
             };
 
-            console.log("Creating code:", codeData);
-
             const response = await fetch("http://localhost:4000/api/secret-codes", {
                 method: "POST",
                 headers: {
@@ -237,9 +289,7 @@ export const SecretCodesPage: React.FC = () => {
             }
 
             const savedCode = await response.json();
-            console.log("Saved code:", savedCode);
 
-            // Обновляем локальное состояние
             const codeWithDbId: SecretCode = {
                 ...savedCode,
                 createdAt: new Date(savedCode.createdAt),
@@ -251,8 +301,8 @@ export const SecretCodesPage: React.FC = () => {
             setCodes(updatedCodes);
             localStorage.setItem("moderator_secret_codes", JSON.stringify(updatedCodes));
             setNewCode("");
+            setShowAdvanced(false);
 
-            // Обновляем статистику
             loadStats();
 
         } catch (error) {
@@ -272,7 +322,7 @@ export const SecretCodesPage: React.FC = () => {
 
     // Удаление кода
     const handleDeleteCode = async (id: string) => {
-        if (!window.confirm("Are you sure you want to delete this code?")) {
+        if (!window.confirm("Are you sure you want to delete this code? This action cannot be undone.")) {
             return;
         }
 
@@ -291,12 +341,10 @@ export const SecretCodesPage: React.FC = () => {
                 throw new Error(errorData.error || "Failed to delete code from database");
             }
 
-            // Обновляем локальное состояние
             const updatedCodes = codes.filter(code => code.id !== id);
             setCodes(updatedCodes);
             localStorage.setItem("moderator_secret_codes", JSON.stringify(updatedCodes));
 
-            // Обновляем статистику
             loadStats();
 
         } catch (error) {
@@ -305,31 +353,41 @@ export const SecretCodesPage: React.FC = () => {
         }
     };
 
+    // Экспорт кодов
+    const handleExportCodes = () => {
+        const dataStr = JSON.stringify(codes, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `secret-codes-${new Date().toISOString().split('T')[0]}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+    };
+
     const getCodeStatus = (code: SecretCode) => {
         if (code.used) return "used";
         if (code.expiresAt && new Date() > code.expiresAt) return "expired";
+        if (code.maxUses && code.uses && code.uses >= code.maxUses) return "used";
         return "active";
     };
 
     const renderUserInfo = (code: SecretCode) => {
         if (!code.used || !code.user) {
-            return "—";
+            return <span className={styles.emptyValue}>—</span>;
         }
 
         return (
-            <div className="user-info">
-                <div className="user-info-main">
-                    <User className="w-3 h-3" />
-                    {code.user.name || code.user.nickname || code.user.email || code.usedBy}
+            <div className={styles.userInfo}>
+                <div className={styles.userInfoMain}>
+                    <User className={styles.userIcon} />
+                    <span className={styles.userName}>
+                        {code.user.name || code.user.nickname || code.user.email || code.usedBy}
+                    </span>
                 </div>
                 {code.user.discordId && (
-                    <div className="user-info-discord">
+                    <div className={styles.userInfoMeta}>
                         Discord: {code.user.discordId}
-                    </div>
-                )}
-                {code.user.createdAt && (
-                    <div className="user-info-date">
-                        Registered: {new Date(code.user.createdAt).toLocaleDateString()}
                     </div>
                 )}
             </div>
@@ -341,115 +399,176 @@ export const SecretCodesPage: React.FC = () => {
         return `${code.uses || 0}/${code.maxUses || 1}`;
     };
 
+    const getStatusCount = (status: string) => {
+        return codes.filter(code => getCodeStatus(code) === status).length;
+    };
+
     return (
         <div className={styles.container}>
             <Sidebars />
             <div className={styles.contentArea}>
                 <div className={styles.fullscreen}>
+                    {/* Header Section */}
                     <div className={styles.header}>
-                        <div className={styles.top}>
-                            <h1 className={styles.title}>
-                                <Key className="w-8 h-8" />
-                                Secret Codes Management
-                            </h1>
-                            <button
-                                onClick={loadCodesFromDatabase}
-                                className={styles.refreshButton}
-                                disabled={isLoading}
-                            >
-                                <RefreshCw className={`w-4 h-4 ${isLoading ? styles.animateSpin : ''}`} />
-                                Refresh
-                            </button>
+                        <div className={styles.headerTop}>
+                            <div className={styles.headerTitle}>
+                                <div className={styles.titleIcon}>
+                                    <Key className={styles.icon} />
+                                </div>
+                                <div>
+                                    <h1 className={styles.title}>Secret Codes</h1>
+                                    <p className={styles.subtitle}>
+                                        Generate and manage moderator registration codes
+                                    </p>
+                                </div>
+                            </div>
+                            <div className={styles.headerActions}>
+                                <button
+                                    onClick={handleExportCodes}
+                                    className={styles.exportButton}
+                                    disabled={codes.length === 0}
+                                >
+                                    <Download className={styles.buttonIcon} />
+                                    Export
+                                </button>
+                                <button
+                                    onClick={loadCodesFromDatabase}
+                                    className={styles.refreshButton}
+                                    disabled={isLoading}
+                                >
+                                    <RefreshCw className={`${styles.buttonIcon} ${isLoading ? styles.animateSpin : ''}`} />
+                                    Refresh
+                                </button>
+                            </div>
                         </div>
-                        <p className={styles.subtitle}>
-                            Generate and manage secret codes for moderator registration
-                        </p>
                     </div>
 
-                    {/* Отображение ошибок */}
+                    {/* Stats Grid */}
+                    <div className={styles.statsGrid}>
+                        <div className={styles.statCard}>
+                            <div className={styles.statIcon}>
+                                <BarChart3 className={styles.icon} />
+                            </div>
+                            <div className={styles.statContent}>
+                                <div className={styles.statNumber}>{stats.total}</div>
+                                <div className={styles.statLabel}>Total Codes</div>
+                            </div>
+                        </div>
+                        <div className={styles.statCard}>
+                            <div className={styles.statIcon}>
+                                <Zap className={styles.icon} />
+                            </div>
+                            <div className={styles.statContent}>
+                                <div className={`${styles.statNumber} ${styles.statActive}`}>{stats.active}</div>
+                                <div className={styles.statLabel}>Active</div>
+                            </div>
+                        </div>
+                        <div className={styles.statCard}>
+                            <div className={styles.statIcon}>
+                                <CheckCircle className={styles.icon} />
+                            </div>
+                            <div className={styles.statContent}>
+                                <div className={`${styles.statNumber} ${styles.statUsed}`}>{stats.used}</div>
+                                <div className={styles.statLabel}>Used</div>
+                            </div>
+                        </div>
+                        <div className={styles.statCard}>
+                            <div className={styles.statIcon}>
+                                <Shield className={styles.icon} />
+                            </div>
+                            <div className={styles.statContent}>
+                                <div className={`${styles.statNumber} ${styles.statExpired}`}>{stats.expired}</div>
+                                <div className={styles.statLabel}>Expired</div>
+                            </div>
+                        </div>
+                        <div className={styles.statCard}>
+                            <div className={styles.statIcon}>
+                                <BarChart3 className={styles.icon} />
+                            </div>
+                            <div className={styles.statContent}>
+                                <div className={styles.statNumber}>
+                                    {stats.usageRate.toFixed(1)}%
+                                </div>
+                                <div className={styles.statLabel}>Usage Rate</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Error Banner */}
                     {error && (
                         <div className={styles.errorBanner}>
-                            <AlertCircle className="w-4 h-4" />
-                            {error}
+                            <div className={styles.errorContent}>
+                                <AlertCircle className={styles.errorIcon} />
+                                <span className={styles.errorText}>{error}</span>
+                            </div>
                             <button onClick={() => setError(null)} className={styles.errorClose}>
                                 ×
                             </button>
                         </div>
                     )}
 
-                    {/* Статистика */}
-                    <div className={styles.statsGrid}>
-                        <div className={styles.statCard}>
-                            <div className={styles.statNumber}>{stats.total}</div>
-                            <div className={styles.statLabel}>Total Codes</div>
-                        </div>
-                        <div className={styles.statCard}>
-                            <div className={`${styles.statNumber} ${styles.statActive}`}>{stats.active}</div>
-                            <div className={styles.statLabel}>Active</div>
-                        </div>
-                        <div className={styles.statCard}>
-                            <div className={`${styles.statNumber} ${styles.statUsed}`}>{stats.used}</div>
-                            <div className={styles.statLabel}>Used</div>
-                        </div>
-                        <div className={styles.statCard}>
-                            <div className={`${styles.statNumber} ${styles.statExpired}`}>{stats.expired}</div>
-                            <div className={styles.statLabel}>Expired</div>
-                        </div>
-                        <div className={styles.statCard}>
-                            <div className={styles.statNumber}>
-                                {stats.usageRate.toFixed(1)}%
-                            </div>
-                            <div className={styles.statLabel}>Usage Rate</div>
-                        </div>
-                    </div>
-
-                    {/* Генератор кодов */}
+                    {/* Code Generator */}
                     <div className={styles.codeGenerator}>
-                        <h2 className={styles.generatorTitle}>
-                            Generate New Code
-                        </h2>
+                        <div className={styles.generatorHeader}>
+                            <h2 className={styles.generatorTitle}>Generate New Code</h2>
+                            <button
+                                onClick={() => setShowAdvanced(!showAdvanced)}
+                                className={styles.advancedToggle}
+                            >
+                                <Edit3 className={styles.buttonIcon} />
+                                {showAdvanced ? 'Simple' : 'Advanced'}
+                            </button>
+                        </div>
+
                         <div className={styles.generatorGrid}>
                             <div className={styles.formGroup}>
                                 <label className={styles.formLabel}>
-                                    Custom Code (optional)
+                                    Code
+                                    <span className={styles.optional}>(optional)</span>
                                 </label>
                                 <input
                                     type="text"
                                     value={newCode}
-                                    onChange={(e) => setNewCode(e.target.value.toUpperCase())}
-                                    placeholder="Leave empty for auto-generation"
+                                    onChange={(e) => setNewCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))}
+                                    placeholder="Auto-generate secure code"
                                     className={styles.formInput}
                                     disabled={isLoading}
                                 />
                             </div>
-                            <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>
-                                    Expiry Days (0 = never)
-                                </label>
-                                <input
-                                    type="number"
-                                    value={expiryDays}
-                                    onChange={(e) => setExpiryDays(parseInt(e.target.value) || 0)}
-                                    min="0"
-                                    max="365"
-                                    className={styles.formInput}
-                                    disabled={isLoading}
-                                />
-                            </div>
-                            <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>
-                                    Max Uses
-                                </label>
-                                <input
-                                    type="number"
-                                    value={maxUses}
-                                    onChange={(e) => setMaxUses(parseInt(e.target.value) || 1)}
-                                    min="1"
-                                    max="100"
-                                    className={styles.formInput}
-                                    disabled={isLoading}
-                                />
-                            </div>
+
+                            {showAdvanced && (
+                                <>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.formLabel}>
+                                            Expiry Days
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={expiryDays}
+                                            onChange={(e) => setExpiryDays(parseInt(e.target.value) || 0)}
+                                            min="0"
+                                            max="365"
+                                            className={styles.formInput}
+                                            disabled={isLoading}
+                                        />
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.formLabel}>
+                                            Max Uses
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={maxUses}
+                                            onChange={(e) => setMaxUses(parseInt(e.target.value) || 1)}
+                                            min="1"
+                                            max="100"
+                                            className={styles.formInput}
+                                            disabled={isLoading}
+                                        />
+                                    </div>
+                                </>
+                            )}
+
                             <div className={styles.formGroup}>
                                 <button
                                     onClick={handleCreateCode}
@@ -457,9 +576,9 @@ export const SecretCodesPage: React.FC = () => {
                                     disabled={isLoading}
                                 >
                                     {isLoading ? (
-                                        <Clock className="w-4 h-4 animate-spin" />
+                                        <Clock className={`${styles.buttonIcon} ${styles.animateSpin}`} />
                                     ) : (
-                                        <Plus className="w-4 h-4" />
+                                        <Plus className={styles.buttonIcon} />
                                     )}
                                     {isLoading ? "Creating..." : "Generate Code"}
                                 </button>
@@ -467,168 +586,171 @@ export const SecretCodesPage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Список активных кодов */}
+                    {/* Filters and Search */}
+                    <div className={styles.filtersSection}>
+                        <div className={styles.searchBox}>
+                            <Search className={styles.searchIcon} />
+                            <input
+                                type="text"
+                                placeholder="Search codes, users, emails..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className={styles.searchInput}
+                            />
+                        </div>
+                        <div className={styles.filterButtons}>
+                            <button
+                                onClick={() => setStatusFilter("all")}
+                                className={`${styles.filterButton} ${statusFilter === "all" ? styles.active : ''}`}
+                            >
+                                All ({codes.length})
+                            </button>
+                            <button
+                                onClick={() => setStatusFilter("active")}
+                                className={`${styles.filterButton} ${statusFilter === "active" ? styles.active : ''}`}
+                            >
+                                Active ({getStatusCount("active")})
+                            </button>
+                            <button
+                                onClick={() => setStatusFilter("used")}
+                                className={`${styles.filterButton} ${statusFilter === "used" ? styles.active : ''}`}
+                            >
+                                Used ({getStatusCount("used")})
+                            </button>
+                            <button
+                                onClick={() => setStatusFilter("expired")}
+                                className={`${styles.filterButton} ${statusFilter === "expired" ? styles.active : ''}`}
+                            >
+                                Expired ({getStatusCount("expired")})
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Codes Table */}
                     <div className={styles.tableContainer}>
                         <div className={styles.tableHeader}>
                             <h2 className={styles.tableTitle}>
-                                Active Codes ({stats.active})
+                                Secret Codes
+                                <span className={styles.tableCount}>({filteredCodes.length})</span>
                             </h2>
                         </div>
-                        <table className={styles.table}>
-                            <thead>
-                                <tr>
-                                    <th>Code</th>
-                                    <th>Status</th>
-                                    <th>Usage</th>
-                                    <th>Created</th>
-                                    <th>Expires</th>
-                                    <th>Used By</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {codes.filter(code => getCodeStatus(code) === "active").map((code) => (
-                                    <tr key={code.id}>
-                                        <td>
-                                            <code className={styles.codeDisplay}>
-                                                {code.code}
-                                            </code>
-                                        </td>
-                                        <td>
-                                            <span className={`${styles.statusBadge} ${styles.statusActive}`}>
-                                                <CheckCircle className="w-3 h-3" />
-                                                Active
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span className={styles.usageBadge}>
-                                                {formatUsage(code)}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            {code.createdAt.toLocaleDateString()}
-                                        </td>
-                                        <td>
-                                            {code.expiresAt ? code.expiresAt.toLocaleDateString() : "Never"}
-                                        </td>
-                                        <td>
-                                            {renderUserInfo(code)}
-                                        </td>
-                                        <td>
-                                            <div style={{ display: 'flex', gap: '8px' }}>
-                                                <button
-                                                    onClick={() => handleCopyCode(code.code)}
-                                                    className={`${styles.actionButton} ${styles.copyButton}`}
-                                                >
-                                                    {copiedCode === code.code ? (
-                                                        <>Copied!</>
-                                                    ) : (
-                                                        <>
-                                                            <Copy className="w-3 h-3" />
-                                                            Copy
-                                                        </>
-                                                    )}
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteCode(code.id)}
-                                                    className={`${styles.actionButton} ${styles.deleteButton}`}
-                                                >
-                                                    <Trash2 className="w-3 h-3" />
-                                                    Delete
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
 
-                    {/* Использованные/просроченные коды */}
-                    {(stats.used > 0 || stats.expired > 0) && (
-                        <div className={styles.tableContainer}>
-                            <div className={styles.tableHeader}>
-                                <h2 className={styles.tableTitle}>
-                                    Used & Expired Codes ({stats.used + stats.expired})
-                                </h2>
-                            </div>
+                        <div className={styles.tableWrapper}>
                             <table className={styles.table}>
                                 <thead>
                                     <tr>
                                         <th>Code</th>
                                         <th>Status</th>
                                         <th>Usage</th>
+                                        <th>Created</th>
+                                        <th>Expires</th>
                                         <th>Used By</th>
-                                        <th>Used At</th>
-                                        <th>Registration Date</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {codes.filter(code => getCodeStatus(code) !== "active").map((code) => (
-                                        <tr key={code.id}>
-                                            <td>
-                                                <code className={`${styles.codeDisplay} ${styles.used}`}>
-                                                    {code.code}
-                                                </code>
-                                            </td>
-                                            <td>
-                                                {getCodeStatus(code) === "used" ? (
-                                                    <span className={`${styles.statusBadge} ${styles.statusUsed}`}>
-                                                        <CheckCircle className="w-3 h-3" />
-                                                        Used
+                                    {filteredCodes.map((code) => {
+                                        const status = getCodeStatus(code);
+                                        return (
+                                            <tr key={code.id} className={styles.tableRow}>
+                                                <td>
+                                                    <div className={styles.codeCell}>
+                                                        <code className={styles.codeDisplay}>
+                                                            {code.code}
+                                                        </code>
+                                                        <button
+                                                            onClick={() => handleCopyCode(code.code)}
+                                                            className={styles.copyButton}
+                                                        >
+                                                            {copiedCode === code.code ? (
+                                                                <CheckCircle className={styles.copyIcon} />
+                                                            ) : (
+                                                                <Copy className={styles.copyIcon} />
+                                                            )}
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span className={`${styles.statusBadge} ${styles[`status${status.charAt(0).toUpperCase() + status.slice(1)}`]}`}>
+                                                        {status === "active" && <CheckCircle className={styles.statusIcon} />}
+                                                        {status === "used" && <CheckCircle className={styles.statusIcon} />}
+                                                        {status === "expired" && <XCircle className={styles.statusIcon} />}
+                                                        {status}
                                                     </span>
-                                                ) : (
-                                                    <span className={`${styles.statusBadge} ${styles.statusExpired}`}>
-                                                        <XCircle className="w-3 h-3" />
-                                                        Expired
+                                                </td>
+                                                <td>
+                                                    <span className={styles.usageBadge}>
+                                                        {formatUsage(code)}
                                                     </span>
-                                                )}
-                                            </td>
-                                            <td>
-                                                <span className={styles.usageBadge}>
-                                                    {formatUsage(code)}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                {renderUserInfo(code)}
-                                            </td>
-                                            <td>
-                                                {code.usedAt ? code.usedAt.toLocaleDateString() : "N/A"}
-                                            </td>
-                                            <td>
-                                                {code.user?.createdAt ? new Date(code.user.createdAt).toLocaleDateString() : "N/A"}
-                                            </td>
-                                            <td>
-                                                <button
-                                                    onClick={() => handleDeleteCode(code.id)}
-                                                    className={`${styles.actionButton} ${styles.deleteButton}`}
-                                                >
-                                                    <Trash2 className="w-3 h-3" />
-                                                    Delete
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                </td>
+                                                <td>
+                                                    <div className={styles.dateCell}>
+                                                        {code.createdAt.toLocaleDateString()}
+                                                        <span className={styles.timeText}>
+                                                            {code.createdAt.toLocaleTimeString()}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    {code.expiresAt ? (
+                                                        <div className={styles.dateCell}>
+                                                            {code.expiresAt.toLocaleDateString()}
+                                                            <span className={styles.timeText}>
+                                                                {code.expiresAt.toLocaleTimeString()}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className={styles.emptyValue}>Never</span>
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    {renderUserInfo(code)}
+                                                </td>
+                                                <td>
+                                                    <div className={styles.actionButtons}>
+                                                        <button
+                                                            onClick={() => handleCopyCode(code.code)}
+                                                            className={styles.actionButton}
+                                                            title="Copy code"
+                                                        >
+                                                            <Copy className={styles.actionIcon} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteCode(code.id)}
+                                                            className={`${styles.actionButton} ${styles.deleteButton}`}
+                                                            title="Delete code"
+                                                        >
+                                                            <Trash2 className={styles.actionIcon} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
-                    )}
 
-                    {codes.length === 0 && !isLoading && (
-                        <div className={styles.emptyState}>
-                            <Key className={styles.emptyIcon} />
-                            <p className={styles.emptyTitle}>No secret codes generated yet</p>
-                            <p className={styles.emptyDescription}>Create your first code using the form above</p>
-                        </div>
-                    )}
+                        {filteredCodes.length === 0 && !isLoading && (
+                            <div className={styles.emptyState}>
+                                <Key className={styles.emptyIcon} />
+                                <p className={styles.emptyTitle}>No codes found</p>
+                                <p className={styles.emptyDescription}>
+                                    {searchTerm || statusFilter !== "all"
+                                        ? "Try adjusting your search or filters"
+                                        : "Generate your first code to get started"
+                                    }
+                                </p>
+                            </div>
+                        )}
 
-                    {isLoading && codes.length === 0 && (
-                        <div className={styles.loadingState}>
-                            <RefreshCw className={`${styles.loadingIcon} ${styles.animateSpin}`} />
-                            <p>Loading codes...</p>
-                        </div>
-                    )}
+                        {isLoading && filteredCodes.length === 0 && (
+                            <div className={styles.loadingState}>
+                                <RefreshCw className={`${styles.loadingIcon} ${styles.animateSpin}`} />
+                                <p>Loading codes...</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

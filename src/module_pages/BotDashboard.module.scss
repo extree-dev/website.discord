@@ -3,14 +3,16 @@
 .layout {
   display: flex;
   min-height: 100vh;
-  background-color: var(--bg-primary);
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%);
+  color: #ffffff;
 }
 
-.main {
+.botDashboard {
   flex: 1;
   margin-left: 280px;
   padding: 2rem;
   min-height: 100vh;
+  overflow-x: hidden;
   
   @include tablet {
     margin-left: 0;
@@ -20,438 +22,113 @@
   @include mobile {
     padding: 1rem;
   }
-  
-  //&.botDashboard {
-    // Специфические стили для BotDashboard
-  //}
 }
 
+// Header
 .header {
   margin-bottom: 2rem;
-  
-  &__title {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0 0 0.5rem 0;
-    
-    @include mobile {
-      font-size: 2rem;
-    }
-  }
-  
-  &__subtitle {
-    font-size: 1.125rem;
-    color: var(--text-secondary);
-    margin: 0;
-  }
 }
 
-// Основная сетка
-.botGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-// Карточки
-.botCard {
-  background: var(--modal-bg);
-  backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 1.5rem;
-  transition: all 0.3s ease;
-  
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  }
-  
-  &__title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0 0 1rem 0;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  &__value {
-    color: var(--text-secondary);
-    margin: 0 0 1rem 0;
-    font-size: 0.875rem;
-  }
-}
-
-// Список команд
-.botList {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 1.5rem 0;
+.headerContent {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  
-  li {
-    background: var(--bg-secondary);
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    color: var(--text-primary);
-    font-size: 0.875rem;
-    border-left: 3px solid var(--accent-color);
-    transition: background-color 0.2s ease;
-    
-    &:hover {
-      background: var(--border-color);
-    }
-  }
-}
-
-// Кнопки действий
-.botAction {
-  @include button-base;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  justify-content: center;
-  
-  &.addCommand {
-    background: var(--button-bg);
-    color: var(--button-text);
-    
-    &:hover {
-      background: var(--button-hover);
-      transform: translateY(-1px);
-    }
-  }
-  
-  &.restart {
-    background: #ef4444;
-    color: white;
-    
-    &:hover {
-      background: #dc2626;
-      transform: translateY(-1px);
-    }
-  }
-}
-
-// Интеграции
-.integrationButtons {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.integrationButton {
-  @include button-base;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  padding: 1rem;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  transition: all 0.3s ease;
-  text-align: left;
-  
-  &:hover {
-    background: var(--border-color);
-    transform: translateY(-1px);
-  }
-  
-  .iconContainer {
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-  }
-  
-  &.youtube {
-    .iconContainer {
-      background: #ff0000;
-      color: white;
-    }
-    
-    .integrationText {
-      color: #ff0000;
-      font-weight: 600;
-    }
-  }
-  
-  &.twitch {
-    .iconContainer {
-      background: #9146ff;
-      color: white;
-    }
-    
-    .integrationText {
-      color: #9146ff;
-      font-weight: 600;
-    }
-  }
-  
-  &.webhooks {
-    .iconContainer {
-      background: var(--accent-color);
-      color: white;
-    }
-    
-    .integrationText {
-      color: var(--accent-color);
-      font-weight: 600;
-    }
-  }
-}
-
-.integrationContent {
-  flex: 1;
-  
-  .integrationText {
-    font-size: 0.875rem;
-    margin: 0;
-  }
-  
-  .integrationDescription {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    margin: 0.25rem 0 0 0;
-  }
-}
-
-// Dropdown для статуса
-.glassDropdown {
-  position: relative;
-  width: 100%;
-  
-  &.open {
-    .glassOptions {
-      display: block;
-    }
-    
-    .glassSelected .arrow {
-      transform: rotate(180deg);
-    }
-  }
-}
-
-.glassSelected {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
   justify-content: space-between;
-  color: var(--text-primary);
-  transition: all 0.3s ease;
+  align-items: flex-start;
   
-  &:hover {
-    border-color: var(--accent-color);
-  }
-  
-  .arrow {
-    width: 0;
-    height: 0;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 5px solid var(--text-secondary);
-    transition: transform 0.3s ease;
-  }
-}
-
-.glassOptions {
-  display: none;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: var(--modal-bg);
-  backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  margin-top: 0.5rem;
-  padding: 0.5rem;
-  list-style: none;
-  z-index: 1000;
-  max-height: 200px;
-  overflow-y: auto;
-  
-  li {
-    padding: 0.75rem 1rem;
-    border-radius: 6px;
-    cursor: pointer;
-    color: var(--text-primary);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    transition: background-color 0.2s ease;
-    
-    &:hover {
-      background: var(--bg-secondary);
-    }
-    
-    &.active {
-      background: var(--accent-color);
-      color: white;
-    }
-    
-    // Статусные цвета
-    &.online {
-      color: #22c55e;
-      
-      &.active {
-        background: #22c55e;
-        color: white;
-      }
-    }
-    
-    &.idle {
-      color: #f59e0b;
-      
-      &.active {
-        background: #f59e0b;
-        color: white;
-      }
-    }
-    
-    &.dnd {
-      color: #ef4444;
-      
-      &.active {
-        background: #ef4444;
-        color: white;
-      }
-    }
-    
-    &.offline {
-      color: #6b7280;
-      
-      &.active {
-        background: #6b7280;
-        color: white;
-      }
-    }
-  }
-}
-
-.optCheck {
-  font-weight: bold;
-}
-
-// Контейнер для перезагрузки
-.botRestartContainer {
-  display: flex;
-  justify-content: center;
-  margin-top: 2rem;
-  
-  .botAction.restart {
-    width: auto;
-    min-width: 200px;
-  }
-}
-
-.restartIcon {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-// Стили для графиков
-.rechartsWrapper {
-  .recharts-cartesian-grid-horizontal line,
-  .recharts-cartesian-grid-vertical line {
-    stroke: var(--border-color);
-  }
-  
-  .recharts-text {
-    fill: var(--text-secondary);
-    font-size: 12px;
-  }
-  
-  .recharts-tooltip-wrapper {
-    .recharts-default-tooltip {
-      background: var(--modal-bg) !important;
-      border: 1px solid var(--border-color) !important;
-      border-radius: 8px;
-      
-      .recharts-tooltip-label {
-        color: var(--text-primary);
-      }
-      
-      .recharts-tooltip-item {
-        color: var(--text-primary);
-      }
-    }
-  }
-}
-
-// Адаптивность
-@include tablet {
-  .botGrid {
-    grid-template-columns: repeat(2, 1fr);
+  @include tablet {
+    flex-direction: column;
     gap: 1rem;
   }
 }
 
-@include mobile {
-  .botGrid {
+.headerText {
+  flex: 1;
+}
+
+.header h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.1;
+  
+  @include mobile {
+    font-size: 2rem;
+  }
+}
+
+.subtitle {
+  font-size: 1.125rem;
+  color: #888;
+  font-weight: 500;
+}
+
+.headerActions {
+  display: flex;
+  gap: 1rem;
+}
+
+.primaryBtn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none;
+  border-radius: 10px;
+  padding: 0.75rem 1.5rem;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+  }
+}
+
+// Status Section
+.statusSection {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  
+  @include tablet {
     grid-template-columns: 1fr;
-  }
-  
-  .botCard {
-    padding: 1rem;
-  }
-  
-  .integrationButton {
-    padding: 0.75rem;
-    gap: 0.75rem;
-    
-    .iconContainer {
-      width: 2rem;
-      height: 2rem;
-      font-size: 1rem;
-    }
-  }
-  
-  .glassSelected {
-    padding: 0.5rem 0.75rem;
+    gap: 1rem;
   }
 }
 
-// Утилитарные классы
-.textCenter {
-  text-align: center;
+.statusCard {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
 }
 
-.mt2 {
-  margin-top: 2rem;
+.statusHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.mb1 {
-  margin-bottom: 1rem;
+.statusInfo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
-// Анимации для hover эффектов
+.statusIndicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
@@ -461,6 +138,406 @@
   }
 }
 
-.loading {
-  animation: pulse 1.5s ease-in-out infinite;
+.statusInfo h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 0.25rem 0;
+}
+
+.statusInfo p {
+  font-size: 0.875rem;
+  color: #888;
+  margin: 0;
+}
+
+.statusActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.statusBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid;
+  border-radius: 20px;
+  padding: 0.5rem 1rem;
+  color: #888;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
+  
+  &.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
+}
+
+// Quick Stats
+.quickStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  
+  @include mobile {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.quickStat {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 24px;
+  padding: 1rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-2px);
+  }
+}
+
+.statValue {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 0.25rem;
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.statChange {
+  font-size: 0.75rem;
+  font-weight: 600;
+  
+  &.up {
+    color: #10b981;
+  }
+  
+  &.down {
+    color: #ef4444;
+  }
+  
+  &.neutral {
+    color: #f59e0b;
+  }
+}
+
+// Performance Section
+.sectionTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 1.5rem;
+}
+
+.performanceSection {
+  margin-bottom: 2rem;
+}
+
+.performanceGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  
+  @include tablet {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.performanceCard {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.performanceHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.performanceBar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.performanceFill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.performanceValue {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: right;
+}
+
+// Charts Grid
+.chartsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  
+  @include desktop-large {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @include tablet {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chartCard {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 1.5rem;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.cardTitle {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cardActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.iconBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
+}
+
+.chartContainer {
+  height: 200px;
+}
+
+// Integrations
+.integrationsSection {
+  margin-bottom: 2rem;
+}
+
+.integrationsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.integrationCard {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  }
+  
+  &.connected {
+    border-color: rgba(16, 185, 129, 0.3);
+  }
+}
+
+.integrationHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.integrationIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.connected {
+  color: #10b981;
+}
+
+.disconnected {
+  color: #6b7280;
+}
+
+.integrationContent {
+  h4 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  p {
+    font-size: 0.875rem;
+    color: #888;
+    margin: 0 0 1rem 0;
+  }
+}
+
+.integrationActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.integrationBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+// Actions Section
+.actionsSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  
+  @include mobile {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.restartBtn {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  border: none;
+  border-radius: 24px;
+  padding: 1rem 2rem;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  &.loading {
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.actionButtons {
+  display: flex;
+  gap: 1rem;
+  
+  @include mobile {
+    justify-content: space-between;
+  }
+}
+
+.secondaryBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 0.75rem 1.5rem;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(20px);
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
 }

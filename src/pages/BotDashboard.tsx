@@ -1,7 +1,30 @@
-// BotDashboard.tsx
 import React, { useState } from "react";
 import Sidebars from "@/components/Saidbar.js";
-import { FaSyncAlt, FaYoutube, FaTwitch, FaLink, FaRobot, FaCode, FaChartLine } from "react-icons/fa";
+import {
+    RefreshCw,
+    Play,
+    StopCircle,
+    Settings,
+    Shield,
+    Zap,
+    Database,
+    Network,
+    Cpu,
+    HardDrive,
+    Bot,
+    Link,
+    BarChart3,
+    Activity,
+    Server,
+    Globe,
+    Clock,
+    Users,
+    MessageCircle,
+    Code,
+    AlertTriangle,
+    CheckCircle,
+    XCircle
+} from "lucide-react";
 import {
     LineChart,
     Line,
@@ -12,24 +35,55 @@ import {
     BarChart,
     Bar,
     ResponsiveContainer,
+    PieChart,
+    Pie,
+    Cell,
+    PieLabelRenderProps // Добавляем импорт типа
 } from "recharts";
 import styles from "../module_pages/BotDashboard.module.scss";
 
 type Status = "online" | "idle" | "dnd" | "offline";
 
+// Используем правильный тип для данных Pie chart
+interface PieDataItem {
+    name: string;
+    value: number;
+    [key: string]: any; // Добавляем индексную сигнатуру
+}
+
+// Правильная типизация для функции label
+const renderCustomizedLabel = (props: PieLabelRenderProps) => {
+    const { cx, cy, midAngle, innerRadius, outerRadius, percent, name } = props;
+
+    // Проверяем что percent существует и является числом
+    if (percent === undefined || percent === null || typeof percent !== 'number') {
+        return null;
+    }
+
+    return `${name} ${(percent * 100).toFixed(0)}%`;
+};
+
 export default function BotDashboard() {
     const [status, setStatus] = useState<Status>("online");
-    const [open, setOpen] = useState(false);
     const [isRestarting, setIsRestarting] = useState(false);
+    const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
 
     const statuses = [
-        { value: "online", label: "🟢 Online", description: "Bot is fully operational" },
-        { value: "idle", label: "🌙 Idle", description: "Bot is online but inactive" },
-        { value: "dnd", label: "⛔ Do Not Disturb", description: "Bot is busy or in maintenance" },
-        { value: "offline", label: "⚫ Offline", description: "Bot is completely offline" },
+        { value: "online", label: "Online", description: "Bot is fully operational", color: "#10b981" },
+        { value: "idle", label: "Idle", description: "Bot is online but inactive", color: "#f59e0b" },
+        { value: "dnd", label: "Do Not Disturb", description: "Bot is busy or in maintenance", color: "#ef4444" },
+        { value: "offline", label: "Offline", description: "Bot is completely offline", color: "#6b7280" },
     ];
 
-    // Data for charts
+    // Performance metrics
+    const performanceData = {
+        cpu: 24,
+        memory: 68,
+        network: 45,
+        storage: 82
+    };
+
+    // Online users data
     const onlineData = [
         { hour: "00:00", users: 120 },
         { hour: "02:00", users: 98 },
@@ -45,234 +99,388 @@ export default function BotDashboard() {
         { hour: "22:00", users: 290 },
     ];
 
+    // Command usage data
     const commandData = [
-        { command: "/help", count: 45 },
-        { command: "/stats", count: 32 },
-        { command: "/ping", count: 60 },
-        { command: "/play", count: 25 },
-        { command: "/ban", count: 18 },
-        { command: "/mute", count: 22 },
+        { command: "/help", count: 45, category: "Utility" },
+        { command: "/stats", count: 32, category: "Utility" },
+        { command: "/ping", count: 60, category: "Utility" },
+        { command: "/play", count: 25, category: "Music" },
+        { command: "/ban", count: 18, category: "Moderation" },
+        { command: "/mute", count: 22, category: "Moderation" },
+    ];
+
+    // Server distribution data - используем правильный тип
+    const serverData: PieDataItem[] = [
+        { name: "Gaming", value: 35 },
+        { name: "Community", value: 25 },
+        { name: "Education", value: 20 },
+        { name: "Other", value: 20 },
+    ];
+
+    const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b'];
+
+    const integrations = [
+        {
+            id: "youtube",
+            name: "YouTube",
+            description: "Live stream notifications and updates",
+            connected: true,
+            icon: "▶️",
+            color: "#ff0000"
+        },
+        {
+            id: "twitch",
+            name: "Twitch",
+            description: "Stream alerts and chat integration",
+            connected: false,
+            icon: "📺",
+            color: "#9146ff"
+        },
+        {
+            id: "webhooks",
+            name: "Webhooks",
+            description: "Custom integrations and automation",
+            connected: true,
+            icon: "🔗",
+            color: "#3b82f6"
+        },
+        {
+            id: "api",
+            name: "API",
+            description: "Developer API and endpoints",
+            connected: true,
+            icon: "⚡",
+            color: "#10b981"
+        }
     ];
 
     const handleRestart = async () => {
         setIsRestarting(true);
-        // Simulate restart process
         await new Promise(resolve => setTimeout(resolve, 2000));
         setIsRestarting(false);
-        alert("Bot restarted successfully!");
     };
 
     const currentStatus = statuses.find(s => s.value === status);
 
+    const quickStats = [
+        { label: "Servers", value: "245", change: "+12", trend: "up" },
+        { label: "Users", value: "18.3K", change: "+2.1%", trend: "up" },
+        { label: "Uptime", value: "99.8%", change: "Stable", trend: "neutral" },
+        { label: "Response Time", value: "42ms", change: "-5ms", trend: "up" },
+        { label: "Commands Today", value: "1.2K", change: "+15%", trend: "up" },
+        { label: "Memory Usage", value: "64%", change: "+8%", trend: "down" },
+    ];
+
     return (
         <div className={styles.layout}>
             <Sidebars />
-            <main className={`${styles.main} ${styles.botDashboard}`}>
+
+            <main className={styles.botDashboard}>
+                {/* Header */}
                 <header className={styles.header}>
-                    <h1 className={styles.header__title}>
-                        <FaRobot style={{ marginRight: '0.5rem' }} />
-                        Bot Dashboard
-                    </h1>
-                    <p className={styles.header__subtitle}>
-                        Manage your bot and view real-time statistics
-                    </p>
+                    <div className={styles.headerContent}>
+                        <div className={styles.headerText}>
+                            <h1>Bot Control Panel</h1>
+                            <span className={styles.subtitle}>
+                                Monitor performance and manage bot settings
+                            </span>
+                        </div>
+                        <div className={styles.headerActions}>
+                            <button
+                                className={styles.primaryBtn}
+                                onClick={() => console.log('Open settings')}
+                            >
+                                <Settings size={16} />
+                                Settings
+                            </button>
+                        </div>
+                    </div>
                 </header>
 
-                <div className={styles.botGrid}>
-                    {/* Status Card */}
-                    <div className={styles.botCard}>
-                        <h2 className={styles.botCard__title}>
-                            <FaRobot />
-                            Bot Status
-                        </h2>
-                        <p className={styles.botCard__value}>
-                            Current status: <strong>{currentStatus?.label}</strong>
-                        </p>
-                        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                            {currentStatus?.description}
-                        </p>
-                        <div className={`${styles.glassDropdown} ${open ? styles.open : ''}`}>
-                            <div
-                                className={styles.glassSelected}
-                                onClick={() => setOpen(!open)}
-                                tabIndex={0}
-                            >
-                                <span>{currentStatus?.label}</span>
-                                <span className={styles.arrow} />
+                {/* Status and Quick Stats */}
+                <section className={styles.statusSection}>
+                    <div className={styles.statusCard}>
+                        <div className={styles.statusHeader}>
+                            <div className={styles.statusInfo}>
+                                <div
+                                    className={styles.statusIndicator}
+                                    style={{ backgroundColor: currentStatus?.color }}
+                                ></div>
+                                <div>
+                                    <h3>Bot Status</h3>
+                                    <p>{currentStatus?.description}</p>
+                                </div>
                             </div>
-                            {open && (
-                                <ul className={styles.glassOptions}>
-                                    {statuses.map((s) => (
-                                        <li
-                                            key={s.value}
-                                            className={`${s.value} ${status === s.value ? styles.active : ''}`}
-                                            onClick={() => {
-                                                setStatus(s.value as Status);
-                                                setOpen(false);
-                                            }}
-                                        >
-                                            {s.label}
-                                            {status === s.value && (
-                                                <span className={styles.optCheck}>✔</span>
-                                            )}
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
+                            <div className={styles.statusActions}>
+                                {statuses.map((s) => (
+                                    <button
+                                        key={s.value}
+                                        className={`${styles.statusBtn} ${status === s.value ? styles.active : ''}`}
+                                        onClick={() => setStatus(s.value as Status)}
+                                        style={{ borderColor: s.color }}
+                                    >
+                                        {s.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Integrations Card */}
-                    <div className={styles.botCard}>
-                        <h2 className={styles.botCard__title}>
-                            <FaLink />
-                            Integrations
-                        </h2>
-                        <div className={styles.integrationButtons}>
-                            <button 
-                                className={`${styles.integrationButton} ${styles.youtube}`}
-                                onClick={() => alert("Connecting YouTube API...")}
-                            >
-                                <span className={styles.iconContainer}>
-                                    <FaYoutube />
-                                </span>
-                                <div className={styles.integrationContent}>
-                                    <p className={styles.integrationText}>Connect YouTube</p>
-                                    <p className={styles.integrationDescription}>Live stream notifications</p>
+                    {/* Quick Stats Grid */}
+                    <div className={styles.quickStats}>
+                        {quickStats.map((stat, index) => (
+                            <div key={index} className={styles.quickStat}>
+                                <div className={styles.statValue}>{stat.value}</div>
+                                <div className={styles.statLabel}>{stat.label}</div>
+                                <div className={`${styles.statChange} ${styles[stat.trend]}`}>
+                                    {stat.change}
                                 </div>
-                            </button>
+                            </div>
+                        ))}
+                    </div>
+                </section>
 
-                            <button 
-                                className={`${styles.integrationButton} ${styles.twitch}`}
-                                onClick={() => alert("Connecting Twitch...")}
-                            >
-                                <span className={styles.iconContainer}>
-                                    <FaTwitch />
-                                </span>
-                                <div className={styles.integrationContent}>
-                                    <p className={styles.integrationText}>Connect Twitch</p>
-                                    <p className={styles.integrationDescription}>Stream alerts and commands</p>
-                                </div>
-                            </button>
+                {/* Performance Metrics */}
+                <section className={styles.performanceSection}>
+                    <h2 className={styles.sectionTitle}>System Performance</h2>
+                    <div className={styles.performanceGrid}>
+                        <div className={styles.performanceCard}>
+                            <div className={styles.performanceHeader}>
+                                <Cpu size={20} />
+                                <span>CPU Usage</span>
+                            </div>
+                            <div className={styles.performanceBar}>
+                                <div
+                                    className={styles.performanceFill}
+                                    style={{ width: `${performanceData.cpu}%` }}
+                                ></div>
+                            </div>
+                            <div className={styles.performanceValue}>{performanceData.cpu}%</div>
+                        </div>
 
-                            <button 
-                                className={`${styles.integrationButton} ${styles.webhooks}`}
-                                onClick={() => alert("Configuring webhooks...")}
-                            >
-                                <span className={styles.iconContainer}>
-                                    <FaLink />
-                                </span>
-                                <div className={styles.integrationContent}>
-                                    <p className={styles.integrationText}>Configure Webhooks</p>
-                                    <p className={styles.integrationDescription}>Custom integrations</p>
-                                </div>
-                            </button>
+                        <div className={styles.performanceCard}>
+                            <div className={styles.performanceHeader}>
+                                <HardDrive size={20} />
+                                <span>Memory</span>
+                            </div>
+                            <div className={styles.performanceBar}>
+                                <div
+                                    className={styles.performanceFill}
+                                    style={{ width: `${performanceData.memory}%` }}
+                                ></div>
+                            </div>
+                            <div className={styles.performanceValue}>{performanceData.memory}%</div>
+                        </div>
+
+                        <div className={styles.performanceCard}>
+                            <div className={styles.performanceHeader}>
+                                <Network size={20} />
+                                <span>Network</span>
+                            </div>
+                            <div className={styles.performanceBar}>
+                                <div
+                                    className={styles.performanceFill}
+                                    style={{ width: `${performanceData.network}%` }}
+                                ></div>
+                            </div>
+                            <div className={styles.performanceValue}>{performanceData.network}%</div>
+                        </div>
+
+                        <div className={styles.performanceCard}>
+                            <div className={styles.performanceHeader}>
+                                <Database size={20} />
+                                <span>Storage</span>
+                            </div>
+                            <div className={styles.performanceBar}>
+                                <div
+                                    className={styles.performanceFill}
+                                    style={{ width: `${performanceData.storage}%` }}
+                                ></div>
+                            </div>
+                            <div className={styles.performanceValue}>{performanceData.storage}%</div>
                         </div>
                     </div>
+                </section>
 
-                    {/* Commands Card */}
-                    <div className={styles.botCard}>
-                        <h2 className={styles.botCard__title}>
-                            <FaCode />
-                            Popular Commands
-                        </h2>
-                        <ul className={styles.botList}>
-                            {commandData.slice(0, 4).map((cmd, index) => (
-                                <li key={cmd.command}>
-                                    <strong>{cmd.command}</strong> — {cmd.count} uses today
-                                </li>
-                            ))}
-                        </ul>
-                        <button
-                            className={`${styles.botAction} ${styles.addCommand}`}
-                            onClick={() => alert("Opening command creation window...")}
-                        >
-                            <FaCode />
-                            Add New Command
-                        </button>
-                    </div>
-
+                {/* Charts Grid */}
+                <div className={styles.chartsGrid}>
                     {/* Online Users Chart */}
-                    <div className={styles.botCard}>
-                        <h2 className={styles.botCard__title}>
-                            <FaChartLine />
-                            Online Users (24h)
-                        </h2>
-                        <div className={styles.rechartsWrapper}>
+                    <div className={styles.chartCard}>
+                        <div className={styles.cardHeader}>
+                            <h3 className={styles.cardTitle}>
+                                <Users size={20} />
+                                Online Users (24h)
+                            </h3>
+                            <div className={styles.cardActions}>
+                                <button className={styles.iconBtn}>
+                                    <BarChart3 size={16} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className={styles.chartContainer}>
                             <ResponsiveContainer width="100%" height={200}>
                                 <LineChart data={onlineData}>
                                     <Line
                                         type="monotone"
                                         dataKey="users"
-                                        stroke="#00ffaa"
+                                        stroke="#6366f1"
                                         strokeWidth={2}
-                                        dot={{ fill: '#00ffaa', strokeWidth: 2 }}
+                                        dot={{ fill: '#6366f1', strokeWidth: 2 }}
                                     />
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="hour" />
-                                    <YAxis />
-                                    <Tooltip />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                                    <XAxis dataKey="hour" stroke="#888" />
+                                    <YAxis stroke="#888" />
+                                    <Tooltip
+                                        contentStyle={{
+                                            background: 'rgba(0, 0, 0, 0.8)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            borderRadius: '8px'
+                                        }}
+                                    />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
 
                     {/* Command Usage Chart */}
-                    <div className={styles.botCard}>
-                        <h2 className={styles.botCard__title}>
-                            <FaChartLine />
-                            Command Usage
-                        </h2>
-                        <div className={styles.rechartsWrapper}>
+                    <div className={styles.chartCard}>
+                        <div className={styles.cardHeader}>
+                            <h3 className={styles.cardTitle}>
+                                <MessageCircle size={20} />
+                                Command Usage
+                            </h3>
+                            <div className={styles.cardActions}>
+                                <button className={styles.iconBtn}>
+                                    <Activity size={16} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className={styles.chartContainer}>
                             <ResponsiveContainer width="100%" height={200}>
                                 <BarChart data={commandData}>
-                                    <Bar dataKey="count" fill="#5865F2" radius={[4, 4, 0, 0]} />
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="command" />
-                                    <YAxis />
-                                    <Tooltip />
+                                    <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                                    <XAxis dataKey="command" stroke="#888" />
+                                    <YAxis stroke="#888" />
+                                    <Tooltip
+                                        contentStyle={{
+                                            background: 'rgba(0, 0, 0, 0.8)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            borderRadius: '8px'
+                                        }}
+                                    />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
 
-                    {/* Bot Statistics */}
-                    <div className={styles.botCard}>
-                        <h2 className={styles.botCard__title}>
-                            <FaRobot />
-                            Quick Stats
-                        </h2>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ color: 'var(--text-secondary)' }}>Servers</span>
-                                <strong style={{ color: 'var(--text-primary)' }}>245</strong>
+                    {/* Server Distribution */}
+                    <div className={styles.chartCard}>
+                        <div className={styles.cardHeader}>
+                            <h3 className={styles.cardTitle}>
+                                <Globe size={20} />
+                                Server Distribution
+                            </h3>
+                            <div className={styles.cardActions}>
+                                <button className={styles.iconBtn}>
+                                    <Server size={16} />
+                                </button>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ color: 'var(--text-secondary)' }}>Uptime</span>
-                                <strong style={{ color: '#22c55e' }}>99.8%</strong>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ color: 'var(--text-secondary)' }}>Response Time</span>
-                                <strong style={{ color: 'var(--text-primary)' }}>42ms</strong>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ color: 'var(--text-secondary)' }}>Memory Usage</span>
-                                <strong style={{ color: '#f59e0b' }}>64%</strong>
-                            </div>
+                        </div>
+                        <div className={styles.chartContainer}>
+                            <ResponsiveContainer width="100%" height={200}>
+                                <PieChart>
+                                    <Pie
+                                        data={serverData}
+                                        cx="50%"
+                                        cy="50%"
+                                        labelLine={false}
+                                        outerRadius={80}
+                                        fill="#8884d8"
+                                        dataKey="value"
+                                        label={renderCustomizedLabel}
+                                    >
+                                        {serverData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip
+                                        contentStyle={{
+                                            background: 'rgba(0, 0, 0, 0.8)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            borderRadius: '8px'
+                                        }}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
                         </div>
                     </div>
                 </div>
 
-                {/* Restart Button */}
-                <div className={styles.botRestartContainer}>
+                {/* Integrations */}
+                <section className={styles.integrationsSection}>
+                    <h2 className={styles.sectionTitle}>Integrations</h2>
+                    <div className={styles.integrationsGrid}>
+                        {integrations.map((integration) => (
+                            <div
+                                key={integration.id}
+                                className={`${styles.integrationCard} ${integration.connected ? styles.connected : ''}`}
+                                onClick={() => setSelectedIntegration(integration.id)}
+                            >
+                                <div className={styles.integrationHeader}>
+                                    <div
+                                        className={styles.integrationIcon}
+                                        style={{ backgroundColor: integration.color }}
+                                    >
+                                        {integration.icon}
+                                    </div>
+                                    <div className={styles.integrationStatus}>
+                                        {integration.connected ? (
+                                            <CheckCircle size={16} className={styles.connected} />
+                                        ) : (
+                                            <XCircle size={16} className={styles.disconnected} />
+                                        )}
+                                    </div>
+                                </div>
+                                <div className={styles.integrationContent}>
+                                    <h4>{integration.name}</h4>
+                                    <p>{integration.description}</p>
+                                </div>
+                                <div className={styles.integrationActions}>
+                                    <button className={styles.integrationBtn}>
+                                        {integration.connected ? 'Configure' : 'Connect'}
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                {/* Actions */}
+                <div className={styles.actionsSection}>
                     <button
-                        className={`${styles.botAction} ${styles.restart} ${isRestarting ? styles.loading : ''}`}
+                        className={`${styles.restartBtn} ${isRestarting ? styles.loading : ''}`}
                         onClick={handleRestart}
                         disabled={isRestarting}
                     >
-                        <FaSyncAlt className={isRestarting ? styles.restartIcon : ''} />
-                        {isRestarting ? "Restarting..." : "Restart Bot"}
+                        <RefreshCw size={16} className={isRestarting ? styles.spinning : ''} />
+                        {isRestarting ? 'Restarting...' : 'Restart Bot'}
                     </button>
+
+                    <div className={styles.actionButtons}>
+                        <button className={styles.secondaryBtn}>
+                            <Play size={16} />
+                            Start
+                        </button>
+                        <button className={styles.secondaryBtn}>
+                            <StopCircle size={16} />
+                            Stop
+                        </button>
+                        <button className={styles.secondaryBtn}>
+                            <Code size={16} />
+                            Logs
+                        </button>
+                    </div>
                 </div>
             </main>
         </div>

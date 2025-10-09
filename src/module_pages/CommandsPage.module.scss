@@ -3,7 +3,8 @@
 .layout {
   display: flex;
   min-height: 100vh;
-  background-color: var(--bg-primary);
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%);
+  color: #ffffff;
 }
 
 .commandsPage {
@@ -11,6 +12,7 @@
   margin-left: 280px;
   padding: 2rem;
   min-height: 100vh;
+  overflow-x: hidden;
   
   @include tablet {
     margin-left: 0;
@@ -22,118 +24,169 @@
   }
 }
 
+// Header
 .header {
-  @include flex-between;
   margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
+}
+
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   
-  h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0;
-    
-    @include mobile {
-      font-size: 2rem;
-    }
+  @include tablet {
+    flex-direction: column;
+    gap: 1rem;
   }
 }
 
-.createButton {
-  @include button-primary;
+.headerText {
+  flex: 1;
+}
+
+.header h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.1;
+  
+  @include mobile {
+    font-size: 2rem;
+  }
+}
+
+.subtitle {
+  font-size: 1.125rem;
+  color: #888;
+  font-weight: 500;
+}
+
+.headerActions {
+  display: flex;
+  gap: 1rem;
+  
+  @include mobile {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+.primaryBtn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none;
+  border-radius: 10px;
+  padding: 0.75rem 1.5rem;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  font-weight: 600;
-  
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(88, 101, 242, 0.3);
-  }
-}
-
-// Empty State
-.emptyState {
-  text-align: center;
-  padding: 4rem 2rem;
-  color: var(--text-secondary);
-  
-  &Icon {
-    width: 4rem;
-    height: 4rem;
-    margin: 0 auto 1rem;
-    color: var(--text-secondary);
-    opacity: 0.5;
-  }
-  
-  &Title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 0.5rem;
-  }
-  
-  &Description {
-    color: var(--text-secondary);
-    margin-bottom: 2rem;
-  }
-  
-  &Action {
-    @include button-primary;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-}
-
-// Stats Overview
-.statsOverview {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-.statCard {
-  background: var(--modal-bg);
-  backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 1.5rem;
-  text-align: center;
   transition: all 0.3s ease;
   
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+  }
+}
+
+.secondaryBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 0.75rem 1.5rem;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(20px);
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+}
+
+// Stats Grid
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.statCard {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.statIcon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.statContent {
+  flex: 1;
+  
+  h3 {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0 0 0.25rem 0;
+    line-height: 1;
   }
   
-  &__value {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 0.5rem;
-    
-    &.enabled {
-      color: #22c55e;
-    }
-    
-    &.disabled {
-      color: #6b7280;
-    }
-    
-    &.total {
-      color: var(--accent-color);
-    }
-  }
-  
-  &__label {
+  p {
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: #888;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    margin: 0 0 0.5rem 0;
+  }
+}
+
+.statChange {
+  font-size: 0.75rem;
+  
+  .changePositive {
+    color: #10b981;
+    font-weight: 600;
+  }
+  
+  .changeNegative {
+    color: #ef4444;
+    font-weight: 600;
+  }
+  
+  .changeNeutral {
+    color: #f59e0b;
     font-weight: 600;
   }
 }
@@ -146,83 +199,513 @@
   flex-wrap: wrap;
 }
 
-.actionButton {
-  @include button-base;
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  padding: 0.75rem 1.5rem;
+.actionBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 0.75rem 1rem;
+  color: #888;
+  font-size: 0.875rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(20px);
+  
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// Controls
+.controls {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  align-items: center;
+  
+  @include tablet {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.searchBox {
+  flex: 1;
+  position: relative;
+  max-width: 400px;
+  
+  @include tablet {
+    max-width: none;
+  }
+  
+  svg {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #888;
+  }
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  color: #ffffff;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(20px);
+  
+  &::placeholder {
+    color: #888;
+  }
+  
+  &:focus {
+    outline: none;
+    border-color: rgba(99, 102, 241, 0.5);
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.filters {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  
+  @include mobile {
+    flex-direction: column;
+  }
+}
+
+.filterSelect {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 0.75rem 1rem;
+  color: #ffffff;
+  font-size: 0.875rem;
+  cursor: pointer;
+  backdrop-filter: blur(20px);
+  transition: all 0.3s ease;
+  
+  &:focus {
+    outline: none;
+    border-color: rgba(99, 102, 241, 0.5);
+  }
+  
+  option {
+    background: #1a1a1a;
+    color: #ffffff;
+  }
+}
+
+.filterBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 0.75rem 1rem;
+  color: #888;
+  font-size: 0.875rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(20px);
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
+}
+
+// Table Container
+.tableContainer {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.tableHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  
+  @include mobile {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+}
+
+.tableInfo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: #888;
+}
+
+.selectedCount {
+  background: rgba(99, 102, 241, 0.2);
+  color: #6366f1;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.tableActions {
+  display: flex;
+  gap: 0.5rem;
+  
+  @include mobile {
+    justify-content: space-between;
+  }
+}
+
+.batchBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  font-weight: 500;
+  padding: 0.5rem 1rem;
+  color: #ffffff;
+  font-size: 0.75rem;
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   transition: all 0.3s ease;
   
   &:hover {
-    background: var(--border-color);
-    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+}
+
+// Table
+.table {
+  display: flex;
+  flex-direction: column;
+}
+
+.tableRow {
+  display: grid;
+  grid-template-columns: 60px 1fr 120px 120px 140px 100px 140px;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.3s ease;
+  align-items: center;
+  
+  @include desktop-large {
+    grid-template-columns: 60px 1fr 120px 120px 140px 100px 120px;
   }
   
-  &.primary {
-    background: var(--button-bg);
-    color: var(--button-text);
-    border-color: var(--button-bg);
+  @include tablet {
+    grid-template-columns: 60px 1fr 120px 120px 140px 100px 100px;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+  
+  @include mobile {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    margin: 0.5rem;
     
-    &:hover {
-      background: var(--button-hover);
+    &:not(:last-child) {
+      margin-bottom: 0.5rem;
+    }
+  }
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+  
+  &.selected {
+    background: rgba(99, 102, 241, 0.1);
+  }
+  
+  &.tableHeaderRow {
+    background: rgba(255, 255, 255, 0.03);
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    
+    @include mobile {
+      display: none;
     }
   }
 }
 
-// Filter Bar
-.filterBar {
+.tableCell {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
   align-items: center;
-}
-
-.searchInput {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  color: var(--text-primary);
-  font-size: 0.875rem;
-  min-width: 250px;
-  
-  &:focus {
-    outline: none;
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.1);
-  }
   
   @include mobile {
-    min-width: 100%;
+    justify-content: space-between;
+    
+    &::before {
+      content: attr(data-label);
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
   }
 }
 
-.filterSelect {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  color: var(--text-primary);
-  font-size: 0.875rem;
+// Checkbox
+.checkboxCell {
+  justify-content: center;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  background: transparent;
   cursor: pointer;
+  transition: all 0.3s ease;
   
-  &:focus {
-    outline: none;
-    border-color: var(--accent-color);
+  &:checked {
+    background: #6366f1;
+    border-color: #6366f1;
   }
 }
 
-// Loading States
+// Command Cell
+.commandInfo {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.commandIcon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.commandDetails {
+  flex: 1;
+}
+
+.commandName {
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 0.25rem;
+  font-family: 'Courier New', monospace;
+}
+
+.commandDescription {
+  font-size: 0.875rem;
+  color: #888;
+  margin-bottom: 0.25rem;
+}
+
+.commandParams {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+// Category
+.categoryBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  white-space: nowrap;
+}
+
+// Usage
+.usageInfo {
+  .usageCount {
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 0.25rem;
+  }
+  
+  .lastUsed {
+    font-size: 0.75rem;
+    color: #888;
+  }
+}
+
+// Performance
+.performanceInfo {
+  .responseTime {
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 0.5rem;
+  }
+}
+
+.successRate {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rateBar {
+  width: 60px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.rateFill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+// Toggle Switch
+.toggleSwitch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    
+    &:checked + .slider {
+      background: #10b981;
+      
+      &:before {
+        transform: translateX(20px);
+      }
+    }
+  }
+  
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #6b7280;
+    transition: .3s;
+    border-radius: 24px;
+    
+    &:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+  }
+}
+
+// Actions
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  
+  @include mobile {
+    justify-content: flex-end;
+  }
+}
+
+.iconBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 0.5rem;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
+  
+  &.danger:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+}
+
+// Empty State
+.emptyState {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #888;
+  
+  &Icon {
+    margin: 0 auto 1rem;
+    color: #888;
+    opacity: 0.5;
+  }
+  
+  &Title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 0.5rem;
+  }
+  
+  &Description {
+    color: #888;
+    margin-bottom: 2rem;
+  }
+}
+
+// Animations
 .loading {
-  opacity: 0.6;
-  pointer-events: none;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .updating {
@@ -238,146 +721,12 @@
   }
 }
 
-// Responsive Adjustments
-@include tablet {
-  .statsOverview {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
+// Responsive table labels for mobile
 @include mobile {
-  .statsOverview {
-    grid-template-columns: 1fr;
-  }
-  
-  .quickActions {
-    flex-direction: column;
-    
-    .actionButton {
-      width: 100%;
-      justify-content: center;
-    }
-  }
-  
-  .filterBar {
-    flex-direction: column;
-    align-items: stretch;
-    
-    .searchInput,
-    .filterSelect {
-      width: 100%;
-    }
-  }
-}
-
-// Utility Classes
-.textSuccess {
-  color: #22c55e;
-}
-
-.textWarning {
-  color: #f59e0b;
-}
-
-.textError {
-  color: #ef4444;
-}
-
-.textMuted {
-  color: var(--text-secondary);
-}
-
-// Import Button Styles from CommandTable
-:global {
-  .command-table {
-    width: 100%;
-    
-    .table-header {
-      @include flex-between;
-      margin-bottom: 1.5rem;
-    }
-    
-    .table-actions {
-      display: flex;
-      gap: 0.5rem;
-    }
-    
-    .action-btn {
-      @include button-base;
-      padding: 0.375rem 0.75rem;
-      font-size: 0.75rem;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-      
-      &.edit {
-        background: #3b82f6;
-        color: white;
-        
-        &:hover {
-          background: #2563eb;
-        }
-      }
-      
-      &.delete {
-        background: #ef4444;
-        color: white;
-        
-        &:hover {
-          background: #dc2626;
-        }
-      }
-    }
-    
-    .toggle-switch {
-      position: relative;
-      display: inline-block;
-      width: 44px;
-      height: 24px;
-      
-      input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-        
-        &:checked + .slider {
-          background: #22c55e;
-          
-          &:before {
-            transform: translateX(20px);
-          }
-        }
-      }
-      
-      .slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: #6b7280;
-        transition: .3s;
-        border-radius: 24px;
-        
-        &:before {
-          position: absolute;
-          content: "";
-          height: 18px;
-          width: 18px;
-          left: 3px;
-          bottom: 3px;
-          background: white;
-          transition: .3s;
-          border-radius: 50%;
-        }
-      }
-    }
-  }
+  .commandCell { &::before { content: 'Command'; } }
+  .categoryCell { &::before { content: 'Category'; } }
+  .usageCell { &::before { content: 'Usage'; } }
+  .performanceCell { &::before { content: 'Performance'; } }
+  .statusCell { &::before { content: 'Status'; } }
+  .actionsCell { &::before { content: 'Actions'; } }
 }

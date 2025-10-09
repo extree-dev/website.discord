@@ -41,6 +41,11 @@ import Profile from "@/pages/Profile.js";
 
 // Стили
 import styles from './App.module.scss';
+import Users from "./pages/Users.js";
+import AnalyticsPage from "./pages/AnalyticsPage.js";
+import ReportsPage from "./pages/ReportsPage.js";
+import NotificationsPage from "./pages/NotificationsPage.js";
+import SupportPage from "./pages/SupportPage.js";
 
 function App() {
   const [lockUntil, setLockUntil] = useState<number | null>(null);
@@ -74,6 +79,11 @@ function App() {
                 <Route path="/moderation" element={<Moderation />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/dashboard/settings" element={<SettingsPage />} />
+                <Route path="/dashboard/users" element={<Users />}/>
+                <Route path="/dashboard/analytics" element={<AnalyticsPage/>}/>
+                <Route path="/dashboard/reports" element={<ReportsPage />}/>
+                <Route path="/dashboard/notifications" element={<NotificationsPage />}/>
+                <Route path="/dashboard/support" element={<SupportPage />}/>
                 <Route path="/dashboard/bot" element={<BotDashboard />} />
                 <Route path="/dashboard/commands" element={<CommandsPage />} />
                 <Route path="/dashboard/overview" element={<DashboardOverview />} />

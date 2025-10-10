@@ -3,7 +3,8 @@
 .container {
   display: flex;
   min-height: 100vh;
-  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%);
+  color: #ffffff;
 }
 
 .contentArea {
@@ -15,11 +16,11 @@
 .fullscreen {
   padding: 2rem;
   min-height: 100vh;
-  
+
   @include tablet {
     padding: 1.5rem;
   }
-  
+
   @include mobile {
     padding: 1rem;
   }
@@ -28,14 +29,15 @@
 // Header Styles
 .header {
   margin-bottom: 2rem;
+  animation: morphIn 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) both;
 }
 
 .headerTop {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: 1rem;
-  
+
   @include mobile {
     flex-direction: column;
     gap: 1rem;
@@ -55,7 +57,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  
+  animation: floatIn 0.7s ease-out 0.2s both;
+
   .icon {
     width: 1.5rem;
     height: 1.5rem;
@@ -72,7 +75,8 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  
+  animation: waveIn 0.8s ease-out 0.3s both;
+
   @include mobile {
     font-size: 1.75rem;
   }
@@ -83,26 +87,29 @@
   color: var(--text-secondary);
   margin: 0;
   font-weight: 400;
+  animation: waveIn 0.8s ease-out 0.4s both;
 }
 
 .headerActions {
   display: flex;
   gap: 0.75rem;
-  
+  animation: waveIn 0.8s ease-out 0.5s both;
+
   @include mobile {
     width: 100%;
     justify-content: stretch;
-    
+
     button {
       flex: 1;
     }
   }
 }
 
-.resetButton, .saveButton {
+.resetButton,
+.saveButton {
   @include button-base;
   padding: 0.75rem 1.25rem;
-  border-radius: 8px;
+  border-radius: 24px;
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -114,7 +121,7 @@
   background: var(--bg-secondary);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
-  
+
   &:hover:not(:disabled) {
     background: var(--border-color);
     transform: translateY(-1px);
@@ -124,12 +131,12 @@
 .saveButton {
   background: var(--accent-color);
   color: white;
-  
+
   &:hover:not(:disabled) {
     background: var(--accent-secondary);
     transform: translateY(-1px);
   }
-  
+
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
@@ -152,17 +159,18 @@
   background: #dcfce7;
   color: #166534;
   border: 1px solid #bbf7d0;
-  
+  animation: waveIn 0.8s ease-out 0.6s both;
+
   &.error {
     background: #fef2f2;
     color: #dc2626;
     border-color: #fecaca;
   }
-  
+
   [data-theme="dark"] & {
     background: rgba(34, 197, 94, 0.2);
     border-color: rgba(34, 197, 94, 0.3);
-    
+
     &.error {
       background: rgba(220, 38, 38, 0.2);
       border-color: rgba(220, 38, 38, 0.3);
@@ -180,7 +188,7 @@
   display: grid;
   grid-template-columns: 280px 1fr;
   gap: 2rem;
-  
+
   @include tablet {
     grid-template-columns: 1fr;
     gap: 1.5rem;
@@ -189,7 +197,7 @@
 
 // Navigation
 .navigation {
-  background: var(--modal-bg);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
   backdrop-filter: blur(20px);
   border: 1px solid var(--border-color);
   border-radius: 24px;
@@ -197,7 +205,8 @@
   height: fit-content;
   position: sticky;
   top: 2rem;
-  
+  animation: morphIn 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) 0.7s both;
+
   @include tablet {
     position: static;
   }
@@ -217,21 +226,28 @@
   transition: all 0.2s ease;
   margin-bottom: 0.55rem;
   position: relative;
-  
+  animation: waveIn 0.5s ease-out both;
+
+  @for $i from 1 through 8 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{0.8 + ($i * 0.1)}s;
+    }
+  }
+
   &:hover {
     background: var(--bg-secondary);
     color: var(--text-primary);
   }
-  
+
   &.active {
     background: var(--accent-color);
     color: white;
-    
+
     .navIcon {
       color: white;
     }
   }
-  
+
   &:last-child {
     margin-bottom: 0;
   }
@@ -247,6 +263,7 @@
   height: 1px;
   background: var(--border-color);
   margin: 1rem 0;
+  animation: waveIn 0.8s ease-out 1.6s both;
 }
 
 .fileInput {
@@ -261,12 +278,13 @@
 
 // Settings Content
 .settingsContent {
-  background: var(--modal-bg);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
   backdrop-filter: blur(20px);
   border: 1px solid var(--border-color);
   border-radius: 24px;
   padding: 2rem;
-  
+  animation: morphIn 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) 0.8s both;
+
   @include mobile {
     padding: 1.5rem;
   }
@@ -281,8 +299,9 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    animation: waveIn 0.8s ease-out 0.9s both;
   }
-  
+
   .sectionIcon {
     width: 1.5rem;
     height: 1.5rem;
@@ -304,8 +323,15 @@
     color: var(--text-primary);
     margin-bottom: 1rem;
     font-size: 1rem;
+    animation: waveIn 0.8s ease-out both;
+
+    @for $i from 1 through 10 {
+      &:nth-child(#{$i}) {
+        animation-delay: #{1.0 + ($i * 0.1)}s;
+      }
+    }
   }
-  
+
   .settingValue {
     font-weight: 500;
     color: var(--text-secondary);
@@ -323,11 +349,11 @@
 .themeOption {
   input[type="radio"] {
     display: none;
-    
-    &:checked + .themeCard {
+
+    &:checked+.themeCard {
       border-color: var(--accent-color);
       background: var(--bg-secondary);
-      
+
       .themeIcon {
         color: var(--accent-color);
       }
@@ -336,13 +362,26 @@
 }
 
 .themeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem; // Меньшее расстояние
   border: 2px solid var(--border-color);
   border-radius: 24px;
-  padding: 1.5rem 1rem;
+  padding: 1rem; // Меньшие отступы
   text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  
+  animation: floatIn 0.7s ease-out both;
+  min-height: 100px;
+
+  @for $i from 1 through 4 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{1.1 + ($i * 0.1)}s;
+    }
+  }
+
   &:hover {
     border-color: var(--accent-color);
     transform: translateY(-2px);
@@ -350,10 +389,9 @@
 }
 
 .themeIcon {
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   color: var(--text-secondary);
-  margin-bottom: 0.5rem;
 }
 
 // Color Options
@@ -366,8 +404,8 @@
 .colorOption {
   input[type="radio"] {
     display: none;
-    
-    &:checked + .colorSwatch {
+
+    &:checked+.colorSwatch {
       transform: scale(1.1);
       box-shadow: 0 0 0 3px var(--bg-secondary), 0 0 0 5px currentColor;
     }
@@ -380,7 +418,14 @@
   border-radius: 24px;
   cursor: pointer;
   transition: all 0.2s ease;
-  
+  animation: waveIn 0.5s ease-out both;
+
+  @for $i from 1 through 8 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{1.2 + ($i * 0.05)}s;
+    }
+  }
+
   &:hover {
     transform: scale(1.05);
   }
@@ -394,7 +439,8 @@
   background: var(--border-color);
   outline: none;
   appearance: none;
-  
+  animation: waveIn 0.8s ease-out 1.3s both;
+
   &::-webkit-slider-thumb {
     appearance: none;
     width: 20px;
@@ -405,7 +451,7 @@
     border: 2px solid white;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   }
-  
+
   &::-moz-range-thumb {
     width: 20px;
     height: 20px;
@@ -423,6 +469,7 @@
   margin-top: 0.5rem;
   font-size: 0.75rem;
   color: var(--text-secondary);
+  animation: waveIn 0.8s ease-out 1.4s both;
 }
 
 // Checkbox Group
@@ -440,17 +487,24 @@
   padding: 0.5rem;
   border-radius: 6px;
   transition: background-color 0.2s ease;
-  
+  animation: waveIn 0.5s ease-out both;
+
+  @for $i from 1 through 6 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{1.5 + ($i * 0.1)}s;
+    }
+  }
+
   &:hover {
     background: var(--bg-secondary);
   }
-  
+
   input[type="checkbox"] {
     width: 1.125rem;
     height: 1.125rem;
     accent-color: var(--accent-color);
   }
-  
+
   span {
     font-weight: 500;
     color: var(--text-primary);
@@ -466,7 +520,8 @@
   padding: 0.75rem;
   color: var(--text-primary);
   font-size: 0.875rem;
-  
+  animation: waveIn 0.8s ease-out 1.6s both;
+
   &:focus {
     outline: none;
     border-color: var(--accent-color);
@@ -480,6 +535,7 @@
   align-items: center;
   gap: 1rem;
   margin-top: 1rem;
+  animation: waveIn 0.8s ease-out 1.7s both;
 }
 
 .timeInput {
@@ -489,7 +545,7 @@
   padding: 0.5rem;
   color: var(--text-primary);
   font-size: 0.875rem;
-  
+
   &:focus {
     outline: none;
     border-color: var(--accent-color);
@@ -501,9 +557,11 @@
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+  animation: waveIn 0.8s ease-out 1.8s both;
 }
 
-.secondaryButton, .dangerButton {
+.secondaryButton,
+.dangerButton {
   @include button-base;
   padding: 0.75rem 1.25rem;
   border-radius: 8px;
@@ -518,7 +576,7 @@
   background: var(--bg-secondary);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
-  
+
   &:hover {
     background: var(--border-color);
   }
@@ -528,18 +586,71 @@
   background: #fef2f2;
   color: #dc2626;
   border: 1px solid #fecaca;
-  
+
   &:hover {
     background: #fee2e2;
   }
-  
+
   [data-theme="dark"] & {
     background: rgba(220, 38, 38, 0.1);
     border-color: rgba(220, 38, 38, 0.3);
-    
+
     &:hover {
       background: rgba(220, 38, 38, 0.2);
     }
+  }
+}
+
+// Enhanced Morphing Animations
+@keyframes morphIn {
+  0% {
+    opacity: 0;
+    transform: translateY(40px) rotateX(90deg);
+    filter: blur(20px);
+  }
+
+  50% {
+    opacity: 0.5;
+    filter: blur(5px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotateX(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes floatIn {
+  0% {
+    opacity: 0;
+    transform: translateY(50px) scale(0.9);
+  }
+
+  60% {
+    transform: translateY(-5px) scale(1.02);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes waveIn {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+
+  70% {
+    opacity: 0.7;
+    transform: translateY(-2px) scale(1.01);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -551,6 +662,7 @@
   justify-content: center;
   padding: 4rem 2rem;
   text-align: center;
+  animation: morphIn 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 .loadingIcon {
@@ -565,6 +677,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -579,15 +692,15 @@
   .contentArea {
     margin-left: 0;
   }
-  
+
   .settingsLayout {
     grid-template-columns: 1fr;
   }
-  
+
   .navigation {
     position: static;
   }
-  
+
   .themeOptions {
     grid-template-columns: 1fr;
   }
@@ -597,16 +710,16 @@
   .headerActions {
     flex-direction: column;
   }
-  
+
   .buttonGroup {
     flex-direction: column;
-    
+
     button {
       width: 100%;
       justify-content: center;
     }
   }
-  
+
   .timeRange {
     flex-direction: column;
     align-items: stretch;

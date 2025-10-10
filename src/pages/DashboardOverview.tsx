@@ -47,6 +47,9 @@ import {
 import styles from "../module_pages/DashboardOverview.module.scss";
 
 export default function DashboardOverview() {
+
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
     const [guilds, setGuilds] = useState([
         { id: "123456789", name: "Main Server", members: 1542, enabled: true, icon: "🏠" },
         { id: "987654321", name: "Test Server", members: 243, enabled: false, icon: "🧪" },
@@ -109,8 +112,16 @@ export default function DashboardOverview() {
     };
 
     return (
-        <div className={styles.layout}>
-            <Sidebars />
+        <div
+            className={styles.layout}
+            style={{
+                '--sidebar-width': sidebarCollapsed ? '82px' : '280px'
+            } as React.CSSProperties}
+        >
+            <Sidebars
+                onCollapseChange={setSidebarCollapsed}
+                collapsed={sidebarCollapsed}
+            />
             <div className={`${styles.overviewPage} ${isRefreshing ? styles.updating : ''}`}>
 
                 {/* Header */}

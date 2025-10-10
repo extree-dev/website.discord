@@ -13,7 +13,12 @@
   --sidebar-surface-hover: rgba(255, 255, 255, 0.08);
   --sidebar-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   --sidebar-radius: 16px;
-  --sidebar-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --sidebar-transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --sidebar-smooth-transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out-back: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .sidebar {
@@ -28,15 +33,135 @@
   top: 0;
   height: 100vh;
   z-index: 1000;
-  transition: var(--sidebar-transition);
+  transition: all 0.5s var(--ease-smooth);
+  will-change: transform, width; // Оптимизация для браузера
   box-shadow: var(--sidebar-shadow);
+  overflow: hidden;
 
   &.expanded {
     width: 280px;
+    transition: all 0.5s var(--ease-out-back);
+
+    // Первая группа - основные элементы
+    .brand,
+    .brandSubtitle {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(0);
+      transition:
+        opacity 0.3s var(--ease-out-quad) 0.1s,
+        visibility 0.3s var(--ease-out-quad) 0.1s,
+        transform 0.3s var(--ease-out-quad) 0.1s;
+    }
+
+    // Вторая группа - навигация
+    .categoryLabel,
+    .label,
+    .search {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(0);
+      transition:
+        opacity 0.3s var(--ease-out-quad) 0.2s,
+        visibility 0.3s var(--ease-out-quad) 0.2s,
+        transform 0.3s var(--ease-out-quad) 0.2s;
+    }
+
+    // Третья группа - профиль и футер
+    .profileInfo,
+    .badge,
+    .footerActions span,
+    .profile {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(0);
+      transition:
+        opacity 0.3s var(--ease-out-quad) 0.3s,
+        visibility 0.3s var(--ease-out-quad) 0.3s,
+        transform 0.3s var(--ease-out-quad) 0.3s;
+    }
   }
 
   &.collapsed {
-    width: 72px;
+    width: 82px; // Уменьшил для более компактного вида
+    transition: all 0.5s var(--ease-out-back);
+
+    // Скрываем все текстовые элементы
+    .brand,
+    .brandSubtitle,
+    .categoryLabel,
+    .label,
+    .search,
+    .profileInfo,
+    .badge,
+    .footerActions span,
+    .footer>div:first-child,
+    .profile,
+    .avatarContainer,
+    .discordBadge,
+    .badge,
+
+    .status {
+      opacity: 0;
+      visibility: hidden;
+      transform: translateX(-10px);
+      transition:
+        opacity 0.2s var(--ease-out-quad),
+        visibility 0.2s var(--ease-out-quad),
+        transform 0.2s var(--ease-out-quad);
+    }
+
+    // Центрируем иконки
+    .navItem {
+      justify-content: center;
+      padding: 0.75rem;
+      transition: var(--sidebar-smooth-transition);
+
+      .icon {
+        margin: 0;
+        transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      }
+
+      // Уменьшаем паддинги при ховере
+      &:hover:not(.disabled) {
+        padding: 0.75rem;
+        transform: scale(1.1);
+        transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      }
+    }
+
+    // Компактный хедер
+    .header {
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    // Компактный футер
+    .footer {
+      padding: 0.75rem;
+    }
+
+    // Компактный профиль
+    .profile {
+      display: none;
+    }
+
+    // Центрируем кнопки в футере
+    .footerActions {
+      flex-direction: column; // Кнопки друг под другом
+      gap: 0.5rem;
+      padding-top: 0;
+
+      .supportBtn,
+      .logoutBtn {
+        width: 100%;
+        padding: 0.75rem;
+
+        span {
+          display: none; // Скрываем текст в кнопках
+        }
+      }
+    }
   }
 }
 
@@ -61,12 +186,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.5rem 1.25rem 1rem;
+  padding: 1.5rem;
   border-bottom: 1px solid var(--sidebar-border);
+  transition: var(--sidebar-transition);
+  overflow: hidden;
 }
 
 .brand {
   flex: 1;
+  transition: var(--sidebar-transition);
+  overflow: hidden;
 }
 
 .logo {
@@ -74,6 +203,13 @@
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 0.25rem;
+  transition: all 0.4s var(--ease-out-quad);
+  overflow: hidden; // Добавляем чтобы текст не вылазил
+
+  .sidebar.collapsed & {
+    gap: 0;
+    justify-content: center;
+  }
 }
 
 .logoText {
@@ -83,23 +219,44 @@
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  transition:
+    all 0.4s var(--ease-out-quad),
+    opacity 0.3s var(--ease-out-quad);
+  white-space: nowrap;
+
+  .sidebar.collapsed & {
+    opacity: 0;
+    width: 0;
+    transform: translateX(-10px);
+  }
+
+  .sidebar.expanded & {
+    opacity: 1;
+    width: auto;
+    transform: translateX(0);
+    transition:
+      all 0.4s var(--ease-out-quad) 0.2s,
+      opacity 0.3s var(--ease-out-quad) 0.2s;
+  }
 }
 
 .brandSubtitle {
   font-size: 0.75rem;
   color: var(--sidebar-text-secondary);
   font-weight: 500;
+  transition: var(--sidebar-transition);
 }
 
 .collapseBtn {
   background: var(--sidebar-surface);
   border: 1px solid var(--sidebar-border);
-  border-radius: 8px;
+  border-radius: 24px;
   cursor: pointer;
   color: var(--sidebar-text-secondary);
-  padding: 0.5rem;
   transition: var(--sidebar-transition);
   backdrop-filter: blur(10px);
+  padding: 0.75rem;
+  flex-shrink: 0;
 
   &:focus {
     outline: none;
@@ -126,6 +283,16 @@
 .search {
   position: relative;
   margin: 1rem 1.25rem 0.5rem;
+  transition:
+    all 0.4s var(--ease-out-quad),
+    opacity 0.3s var(--ease-out-quad),
+    visibility 0.3s var(--ease-out-quad);
+
+  .sidebar.collapsed & {
+    margin: 1rem 0.75rem 0.5rem;
+    opacity: 0;
+    visibility: hidden;
+  }
 }
 
 .searchIcon {
@@ -135,6 +302,7 @@
   transform: translateY(-50%);
   color: var(--sidebar-text-secondary);
   pointer-events: none;
+  z-index: 2;
 }
 
 .searchInput {
@@ -142,7 +310,7 @@
   padding: 0.75rem 0.75rem 0.75rem 2.5rem;
   background: var(--sidebar-surface);
   border: 1px solid var(--sidebar-border);
-  border-radius: 10px;
+  border-radius: 24px;
   color: var(--sidebar-text);
   font-size: 0.875rem;
   transition: var(--sidebar-transition);
@@ -189,14 +357,27 @@
   display: flex;
   flex-direction: column;
   padding: 0.5rem 0.75rem;
-  gap: 0.5rem;
+  gap: 0.25rem;
   flex: 1;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--sidebar-accent) transparent;
+  overflow-y: auto; // Важно оставить для возможности скролла
 
+  .sidebar.collapsed & {
+    padding: 0.5rem 0.5rem;
+    gap: 0.125rem;
+  }
+
+  // Скрываем скроллбар для всех браузеров
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+
+  /* WebKit browsers (Chrome, Safari) */
   &::-webkit-scrollbar {
-    width: 4px;
+    display: none;
+    width: 0;
+    height: 0;
+    background: transparent;
   }
 
   &::-webkit-scrollbar-track {
@@ -204,13 +385,17 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: var(--sidebar-accent);
-    border-radius: 2px;
+    background: transparent;
   }
 }
 
 .category {
   margin-bottom: 0.5rem;
+
+  .sidebar.collapsed & {
+    margin-bottom: 0.25rem;
+  }
+
 }
 
 .categoryLabel {
@@ -221,6 +406,12 @@
   letter-spacing: 0.05em;
   padding: 0.75rem 0.5rem 0.5rem;
   margin-bottom: 0.25rem;
+  transition: var(--sidebar-transition);
+
+  // В collapsed состоянии полностью скрываем
+  .sidebar.collapsed & {
+    display: none;
+  }
 }
 
 .navItem {
@@ -230,34 +421,21 @@
   padding: 0.75rem;
   background: transparent;
   border: none;
-  border-radius: 10px;
+  border-radius: 24px;
   cursor: pointer;
   color: var(--sidebar-text-secondary);
   font-size: 0.875rem;
-  transition: var(--sidebar-transition);
+  transition: all 0.3s var(--ease-out-quad);
   position: relative;
   text-align: left;
   width: 100%;
   backdrop-filter: blur(10px);
 
-  &:focus {
-    outline: none;
-  }
-
-  // Убираем стандартные outline при активном состоянии
-  &:active {
-    outline: none;
-  }
-
   &:hover:not(.disabled) {
     background: var(--sidebar-surface-hover);
     color: var(--sidebar-text);
     transform: translateX(4px);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--sidebar-accent);
-    outline-offset: 2px;
+    padding-left: 1rem;
   }
 
   &.active {
@@ -265,23 +443,45 @@
     color: var(--sidebar-text);
     border: 1px solid color.adjust(#6366f1, $alpha: -0.5);
     box-shadow: 0 4px 12px color.adjust(#6366f1, $alpha: -0.9);
+  }
 
-    &::before {
-      content: '';
-      position: absolute;
-      left: -4px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 3px;
-      height: 60%;
-      background: var(--sidebar-accent);
-      border-radius: 2px;
+  // Для collapsed состояния - ВАЖНОЕ ИСПРАВЛЕНИЕ
+  .sidebar.collapsed & {
+    justify-content: center;
+    padding: 0.75rem;
+    gap: 0;
+    min-height: 42px; // Фиксированная высота для выравнивания
+
+    .content {
+      display: none;
+    }
+
+    .icon {
+      margin: 0 !important;
+      transform: none;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    &:hover:not(.disabled) {
+      background: var(--sidebar-surface-hover);
+      transform: scale(1.05);
+      padding: 0.75rem;
+    }
+
+    &.active {
+      background: linear-gradient(135deg, color.adjust(#6366f1, $alpha: -0.8), color.adjust(#8b5cf6, $alpha: -0.9));
+      transform: scale(1.05);
     }
   }
 
-  &.disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
+  // Убираем transform при ховере в collapsed состоянии
+  .sidebar.collapsed &:hover:not(.disabled) {
+    transform: scale(1.05); // Только масштаб, без смещения
+    padding: 0.75rem; // Фиксированные паддинги
   }
 }
 
@@ -290,11 +490,29 @@
   align-items: center;
   justify-content: center;
   width: 20px;
+  height: 20px;
   flex-shrink: 0;
   transition: transform 0.2s ease;
 
+  // Гарантируем одинаковые размеры для всех иконок
+  svg,
+  img {
+    width: 100%;
+    height: 100%;
+  }
+
   .navItem:hover & {
     transform: scale(1.1);
+  }
+
+  .navItem.active & {
+    color: var(--sidebar-accent);
+  }
+
+  // В collapsed состоянии убираем любые трансформации
+  .sidebar.collapsed & {
+    transform: none !important;
+    margin: 0 !important;
   }
 }
 
@@ -304,6 +522,7 @@
   align-items: center;
   justify-content: space-between;
   min-width: 0;
+  transition: var(--sidebar-transition);
 }
 
 .label {
@@ -311,6 +530,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 500;
+  transition: var(--sidebar-transition);
 }
 
 .meta {
@@ -318,6 +538,7 @@
   align-items: center;
   gap: 0.375rem;
   margin-left: 0.5rem;
+  transition: var(--sidebar-transition);
 }
 
 .newBadge {
@@ -353,6 +574,17 @@
   text-align: center;
   flex-shrink: 0;
   backdrop-filter: blur(10px);
+
+  // Гарантируем полное скрытие в collapsed состоянии
+  .sidebar.collapsed & {
+    display: none !important;
+    opacity: 0;
+    visibility: hidden;
+    width: 0;
+    height: 0;
+    padding: 0;
+    margin: 0;
+  }
 }
 
 .noResults {
@@ -368,7 +600,7 @@
   background: rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(20px);
   transition: var(--sidebar-transition);
-  cursor: pointer; // курсор при наведении
+  cursor: pointer;
 
   &:hover {
     background: var(--sidebar-surface-hover);
@@ -465,6 +697,7 @@
 .profileInfo {
   flex: 1;
   min-width: 0;
+  transition: var(--sidebar-transition);
 }
 
 .profileName {
@@ -502,7 +735,13 @@
 .footerActions {
   display: flex;
   gap: 0.5rem;
-  padding-top: 40px;
+  padding-top: 1.25rem;
+  transition: all 0.4s var(--ease-out-quad);
+  overflow: hidden; // Важно!
+
+  .sidebar.collapsed & {
+    gap: 0.25rem;
+  }
 }
 
 .supportBtn,
@@ -515,42 +754,43 @@
   padding: 0.75rem;
   background: var(--sidebar-surface);
   border: 1px solid var(--sidebar-border);
-  border-radius: 8px;
+  border-radius: 24px;
   cursor: pointer;
   color: var(--sidebar-text-secondary);
   font-size: 0.875rem;
   font-weight: 500;
-  transition: var(--sidebar-transition);
+  transition: all 0.4s var(--ease-out-quad);
   backdrop-filter: blur(10px);
+  white-space: nowrap;
+  overflow: hidden;
+  min-width: 0;
 
-  &:focus {
-    outline: none;
+  // Для collapsed состояния
+  .sidebar.collapsed & {
+    padding: 0.75rem;
+    gap: 0;
+
+    span {
+      opacity: 0;
+      width: 0;
+      transform: translateX(-5px);
+      transition:
+        opacity 0.2s var(--ease-out-quad),
+        width 0.2s var(--ease-out-quad),
+        transform 0.2s var(--ease-out-quad);
+    }
   }
 
-  &:active {
-    outline: none;
-  }
-
-  &:hover {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
-    border-color: rgba(239, 68, 68, 0.3);
-    transform: translateY(-1px);
-  }
-
-  &:focus-visible {
-    outline: 2px solid #ef4444;
-    outline-offset: 2px;
-  }
-
-  &.confirm {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
-    border-color: #ef4444;
-    animation: pulse 1s infinite;
-
-    &:hover {
-      background: rgba(239, 68, 68, 0.25);
+  // Для expanded состояния
+  .sidebar.expanded & {
+    span {
+      opacity: 1;
+      width: auto;
+      transform: translateX(0);
+      transition:
+        opacity 0.3s var(--ease-out-quad) 0.3s,
+        width 0.3s var(--ease-out-quad) 0.3s,
+        transform 0.3s var(--ease-out-quad) 0.3s;
     }
   }
 }
@@ -604,7 +844,7 @@
   padding: 0.75rem;
   background: var(--sidebar-surface);
   border: 1px solid var(--sidebar-border);
-  border-radius: 8px;
+  border-radius: 24px;
   cursor: pointer;
   color: var(--sidebar-text-secondary);
   font-size: 0.875rem;

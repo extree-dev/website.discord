@@ -80,6 +80,8 @@ interface SidebarProps {
     className?: string;
     user?: User | null;
     authToken?: string;
+    onCollapseChange?: (collapsed: boolean) => void;
+    collapsed?: boolean;
 }
 
 const STORAGE_KEY = "sentinel_sidebar_state_v2";
@@ -199,17 +201,31 @@ const Sidebar: React.FC<SidebarProps> = ({
     active: externalActive,
     className,
     user = null,
-    authToken
+    authToken,
+    onCollapseChange,
+    collapsed: externalCollapsed
 }) => {
+
     const navigate = useNavigate();
     const location = useLocation();
-    const [collapsed, setCollapsed] = useState<boolean>(initialCollapsed);
+    const [internalCollapsed, setInternalCollapsed] = useState<boolean>(initialCollapsed);
+    const collapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed;
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [hoverTip, setHoverTip] = useState<{ text: string; position: number } | null>(null);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
     const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
     const [jwtUser, setJwtUser] = useState<ExtendedUserFromToken | null>(null);
     const [loadingUser, setLoadingUser] = useState<boolean>(true);
+
+    const handleCollapse = (newCollapsed: boolean) => {
+        if (externalCollapsed === undefined) {
+            // Если управление внутреннее
+            setInternalCollapsed(newCollapsed);
+        } else {
+            // Если управление внешнее - вызываем callback
+            onCollapseChange?.(newCollapsed);
+        }
+    };
 
     const getActiveIdFromPath = useCallback((): SidebarId => {
         const path = location.pathname;
@@ -594,7 +610,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             {!collapsed && (
                 <div
                     className={styles.overlay}
-                    onClick={() => setCollapsed(true)}
+                    onClick={() => handleCollapse(true)}
                     aria-hidden="true"
                 />
             )}
@@ -633,7 +649,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
                     <button
                         className={styles.collapseBtn}
-                        onClick={() => setCollapsed(prev => !prev)}
+                        onClick={() => handleCollapse(!collapsed)}
                         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                         title={collapsed ? "Expand" : "Collapse"}
                     >
@@ -698,7 +714,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                             description: "Мой профиль и настройки",
                             path: "/dashboard/profile"
                         })}
-                        style={{ cursor: "pointer", marginBottom: "10px" }}
+                        style={{ cursor: "pointer" }}
                         title="Click to view profile"
                     >
                         <DiscordProfileCard

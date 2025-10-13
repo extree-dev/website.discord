@@ -1957,4 +1957,231 @@ router.get("/secret-codes/stats", async (req, res) => {
   }
 });
 
+// ==================== DISCORD SERVER DATA API ====================
+
+// Проверка наличия бота на сервере
+router.get("/discord/bot-status", async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  try {
+    const decoded = verifyToken(token);
+    
+    // Проверяем подключение к Discord API
+    const response = await fetch(`https://discord.com/api/v10/guilds/${process.env.DISCORD_SERVER_ID}`, {
+      headers: {
+        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const botStatus = {
+      isOnServer: response.ok,
+      serverName: null as string | null,
+      serverId: process.env.DISCORD_CLIENT_ID,
+      lastChecked: new Date().toISOString()
+    };
+
+    if (response.ok) {
+      const guildData = await response.json();
+      botStatus.serverName = guildData.name;
+    }
+
+    console.log('Bot status check:', botStatus);
+    res.json(botStatus);
+
+  } catch (error) {
+    console.error('Bot status check error:', error);
+    res.json({
+      isOnServer: false,
+      serverName: null,
+      serverId: process.env.DISCORD_CLIENT_ID,
+      lastChecked: new Date().toISOString(),
+      error: "Failed to check bot status"
+    });
+  }
+});
+
+// Получение статистики сервера
+router.get("/discord/server-stats", async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  try {
+    const decoded = verifyToken(token);
+
+    // Получаем данные сервера
+    const guildResponse = await fetch(`https://discord.com/api/v10/guilds/${process.env.DISCORD_CLIENT_ID}`, {
+      headers: {
+        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!guildResponse.ok) {
+      return res.status(404).json({ error: "Bot is not on the server or server not found" });
+    }
+
+    const guildData = await guildResponse.json();
+
+    // Получаем список участников
+    const membersResponse = await fetch(`https://discord.com/api/v10/guilds/${process.env.DISCORD_CLIENT_ID}/members?limit=1000`, {
+      headers: {
+        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    let members = [];
+    if (membersResponse.ok) {
+      members = await membersResponse.json();
+    }
+
+    // Получаем список каналов
+    const channelsResponse = await fetch(`https://discord.com/api/v10/guilds/${process.env.DISCORD_CLIENT_ID}/channels`, {
+      headers: {
+        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    let channels = [];
+    if (channelsResponse.ok) {
+      channels = await channelsResponse.json();
+    }
+
+    // Фильтруем онлайн участников
+    const onlineMembers = members.filter((member: any) => 
+      member.status === 'online' || member.status === 'idle' || member.status === 'dnd'
+    ).length;
+
+    // Считаем текстовые и голосовые каналы
+    const textChannels = channels.filter((channel: any) => channel.type === 0).length;
+    const voiceChannels = channels.filter((channel: any) => channel.type === 2).length;
+
+    const stats = {
+      server: {
+        name: guildData.name,
+        id: guildData.id,
+        icon: guildData.icon ? `https://cdn.discordapp.com/icons/${guildData.id}/${guildData.icon}.png` : null,
+        owner: guildData.owner_id,
+        created: new Date(guildData.created_timestamp).toISOString()
+      },
+      members: {
+        total: guildData.approximate_member_count || members.length,
+        online: onlineMembers,
+        offline: (guildData.approximate_member_count || members.length) - onlineMembers
+      },
+      channels: {
+        total: channels.length,
+        text: textChannels,
+        voice: voiceChannels
+      },
+      boosts: guildData.premium_subscription_count || 0,
+      tier: guildData.premium_tier || 0
+    };
+
+    res.json(stats);
+
+  } catch (error) {
+    console.error('Server stats fetch error:', error);
+    res.status(500).json({ error: "Failed to fetch server statistics" });
+  }
+});
+
+// Получение активности модерации (заглушка - в реальности нужно брать из БД)
+router.get("/discord/moderation-activity", async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  try {
+    const decoded = verifyToken(token);
+
+    // Здесь должна быть логика получения данных модерации из вашей БД
+    // Пока возвращаем mock данные
+    const mockActivities = [
+      { user: "Alex", action: "banned", target: "@spammer123", time: "2 min ago", status: "success" },
+      { user: "Maria", action: "muted", target: "@toxic_user", time: "5 min ago", status: "success" },
+      { user: "John", action: "warned", target: "@rule_breaker", time: "12 min ago", status: "warning" },
+      { user: "Sarah", action: "kicked", target: "@advertiser", time: "25 min ago", status: "success" },
+      { user: "Mike", action: "cleared", target: "#general (50 messages)", time: "1 hour ago", status: "success" }
+    ];
+
+    const mockCommands = [
+      { name: "/ban", usage: 45, success: 98 },
+      { name: "/mute", usage: 32, success: 95 },
+      { name: "/warn", usage: 28, success: 92 },
+      { name: "/clear", usage: 25, success: 100 },
+      { name: "/kick", usage: 18, success: 96 }
+    ];
+
+    res.json({
+      recentActivities: mockActivities,
+      commandStats: mockCommands,
+      period: '24h',
+      generatedAt: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Moderation activity fetch error:', error);
+    res.status(500).json({ error: "Failed to fetch moderation activity" });
+  }
+});
+
+// Получение ролей сервера для статистики
+router.get("/discord/server-roles", async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  try {
+    const decoded = verifyToken(token);
+
+    const rolesResponse = await fetch(`https://discord.com/api/v10/guilds/${process.env.DISCORD_CLIENT_ID}/roles`, {
+      headers: {
+        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!rolesResponse.ok) {
+      return res.status(404).json({ error: "Failed to fetch server roles" });
+    }
+
+    const roles = await rolesResponse.json();
+
+    // Фильтруем и форматируем роли
+    const formattedRoles = roles
+      .filter((role: any) => !role.managed && role.name !== '@everyone')
+      .sort((a: any, b: any) => b.position - a.position)
+      .map((role: any) => ({
+        id: role.id,
+        name: role.name,
+        color: role.color,
+        memberCount: 0, // Нужно считать из members
+        permissions: role.permissions
+      }));
+
+    res.json({
+      roles: formattedRoles,
+      total: formattedRoles.length
+    });
+
+  } catch (error) {
+    console.error('Server roles fetch error:', error);
+    res.status(500).json({ error: "Failed to fetch server roles" });
+  }
+});
+
 export default router;

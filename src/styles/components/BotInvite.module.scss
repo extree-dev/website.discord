@@ -1,0 +1,201 @@
+@use '../abstracts/mixins' as *;
+
+.botInvite {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 3rem 2rem;
+    min-height: 80vh;
+    text-align: center;
+    border-radius: 32px;
+    backdrop-filter: blur(25px);
+    animation: morphIn 0.8s ease-out both;
+}
+
+.container {
+    max-width: 700px;
+    width: 100%;
+}
+
+.header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 2rem;
+    animation: waveIn 0.6s ease-out both;
+}
+
+.icon {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    padding: 1rem;
+    border-radius: 16px;
+    color: #fff;
+    margin-bottom: 1rem;
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+}
+
+.title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    font-size: 1.125rem;
+    color: #aaa;
+    max-width: 500px;
+}
+
+.features {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+
+    @include tablet {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
+.feature {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 1.25rem;
+    width: 200px;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+
+    &:hover {
+        transform: translateY(-6px);
+        border-color: rgba(99, 102, 241, 0.4);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    h3 {
+        color: #fff;
+        font-weight: 700;
+        font-size: 1rem;
+        margin-bottom: 0.25rem;
+    }
+
+    p {
+        color: #aaa;
+        font-size: 0.875rem;
+    }
+}
+
+.featureIcon {
+    margin-bottom: 0.75rem;
+    color: #6366f1;
+}
+
+.actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.inviteButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    padding: 0.875rem 2rem;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 24px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+
+    &:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 28px rgba(99, 102, 241, 0.5);
+    }
+}
+
+.refreshButton {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 0.75rem 1.5rem;
+    color: #ccc;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+    }
+}
+
+.instructions {
+    text-align: left;
+    color: #aaa;
+    font-size: 0.9rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    animation: floatIn 0.8s ease-out both;
+
+    h4 {
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 0.5rem;
+    }
+
+    ol {
+        margin-left: 1.5rem;
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+    }
+}
+
+/* 🔥 Анимации под Dashboard стиль */
+@keyframes morphIn {
+    0% {
+        opacity: 0;
+        transform: translateY(30px) rotateX(90deg);
+        filter: blur(10px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) rotateX(0);
+        filter: blur(0);
+    }
+}
+
+@keyframes waveIn {
+    0% {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes floatIn {
+    0% {
+        opacity: 0;
+        transform: translateY(40px) scale(0.95);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}

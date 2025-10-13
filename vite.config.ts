@@ -4,7 +4,7 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [
-    react(), // только React
+    react(),
   ],
 
   resolve: {
@@ -46,5 +46,12 @@ export default defineConfig({
 
   server: {
     open: '/login',
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 })

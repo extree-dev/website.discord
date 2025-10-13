@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from "react";
 import Saidbar from "../components/Saidbar.js";
+import BotInvite from "../components/BotInvite.js";
 import styles from "../module_pages/Dashboard.module.scss";
 import {
   Users,
@@ -17,21 +18,119 @@ import {
   Download,
   MoreHorizontal,
   Bell,
-  Calendar
+  Calendar,
+  RefreshCw
 } from "lucide-react";
 import { SidebarContext } from "@/App.js";
+
+interface BotStatus {
+  isOnServer: boolean;
+  serverName: string | null;
+  serverId: string;
+  lastChecked: string;
+}
+
+interface ServerStats {
+  server: {
+    name: string;
+    id: string;
+    icon: string | null;
+    owner: string;
+    created: string;
+  };
+  members: {
+    total: number;
+    online: number;
+    offline: number;
+  };
+  channels: {
+    total: number;
+    text: number;
+    voice: number;
+  };
+  boosts: number;
+  tier: number;
+}
 
 const Dashboard: React.FC = () => {
   const [activeTimeRange, setActiveTimeRange] = useState<'24h' | '7d' | '30d'>('24h');
   const [notifications, setNotifications] = useState(3);
+  const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
+  const [serverStats, setServerStats] = useState<ServerStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const sidebarContext = useContext(SidebarContext);
   const isSidebarCollapsed = sidebarContext?.isCollapsed || false;
 
-  // Mock data for charts and stats
-  const statsData = {
-    totalMembers: { value: 1250, change: +12 },
-    onlineNow: { value: 312, change: +5 },
+  // Функция загрузки данных
+  const loadDashboardData = async () => {
+    try {
+      setRefreshing(true);
+      const token = localStorage.getItem('auth_token');
+
+      if (!token) {
+        console.error('❌ No auth token found in localStorage');
+        return;
+      }
+
+      console.log('🔑 Token from localStorage:', token.substring(0, 50) + '...');
+
+      // Test with simple endpoint first
+      const testResponse = await fetch('/api/discord/bot-status', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('📊 Response status:', testResponse.status);
+      console.log('📊 Response headers:', Object.fromEntries(testResponse.headers.entries()));
+
+      const responseText = await testResponse.text();
+      console.log('📄 Response text:', responseText);
+
+      if (!testResponse.ok) {
+        console.error('❌ API returned error:', responseText);
+        return;
+      }
+
+      try {
+        const botData = JSON.parse(responseText);
+        console.log('✅ Bot status data:', botData);
+        setBotStatus(botData);
+
+        // Continue with other endpoints...
+      } catch (e) {
+        console.error('❌ JSON parse failed:', e);
+      }
+
+    } catch (error) {
+      console.error('💥 Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboardData();
+
+    // ✅ Автоматическая проверка статуса каждые 3 секунды, если бот не на сервере
+    const interval = setInterval(() => {
+      if (!botStatus?.isOnServer) {
+        console.log('🔄 Auto-checking bot status...');
+        loadDashboardData();
+      }
+    }, 3000); // Проверяем каждые 3 секунды
+
+    return () => clearInterval(interval);
+  }, [botStatus?.isOnServer]); // ✅ Зависимость от статуса бота
+
+  // Mock data для случая, когда нет реальных данных
+  const mockStatsData = {
+    totalMembers: { value: serverStats?.members.total || 1250, change: +12 },
+    onlineNow: { value: serverStats?.members.online || 312, change: +5 },
     commandsToday: { value: 45, change: -2 },
     activeModerators: { value: 8, change: 0 }
   };
@@ -52,6 +151,34 @@ const Dashboard: React.FC = () => {
     { name: "/kick", usage: 18, success: 96 }
   ];
 
+  // Если бот не на сервере, показываем компонент приглашения
+  if (!loading && botStatus && !botStatus.isOnServer) {
+    return (
+      <div className={`layout ${styles.layout} ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        <Saidbar />
+        <main className={styles.main}>
+          {/* ✅ Просто передаем serverId, onBotAdded не нужен */}
+          <BotInvite serverId={botStatus.serverId} />
+        </main>
+      </div>
+    );
+  }
+
+  // Показываем загрузку
+  if (loading) {
+    return (
+      <div className={`layout ${styles.layout} ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        <Saidbar />
+        <main className={styles.main}>
+          <div className={styles.loading}>
+            <RefreshCw size={32} className={styles.spinner} />
+            <p>Loading dashboard data...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className={`layout ${styles.layout} ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <Saidbar />
@@ -60,9 +187,12 @@ const Dashboard: React.FC = () => {
         {/* Header with controls */}
         <header className={styles.header}>
           <div className={styles.header__left}>
-            <h1 className={styles.header__title}>Dashboard Overview</h1>
+            <h1 className={styles.header__title}>
+              {serverStats ? `${serverStats.server.name} Dashboard` : 'Dashboard Overview'}
+            </h1>
             <span className={styles.header__subtitle}>
               Real-time insights and moderation analytics
+              {botStatus?.serverName && ` • ${botStatus.serverName}`}
             </span>
           </div>
           <div className={styles.header__right}>
@@ -77,6 +207,13 @@ const Dashboard: React.FC = () => {
                 </button>
               ))}
             </div>
+            <button
+              className={styles.refreshBtn}
+              onClick={loadDashboardData}
+              disabled={refreshing}
+            >
+              <RefreshCw size={20} className={refreshing ? styles.spinning : ''} />
+            </button>
             <button className={styles.notificationBtn}>
               <Bell size={20} />
               {notifications > 0 && <span className={styles.notificationBadge}>{notifications}</span>}
@@ -93,10 +230,10 @@ const Dashboard: React.FC = () => {
               </div>
               <TrendingUp size={16} className={styles.trendingUp} />
             </div>
-            <h3 className={styles.metricValue}>{statsData.totalMembers.value.toLocaleString()}</h3>
+            <h3 className={styles.metricValue}>{mockStatsData.totalMembers.value.toLocaleString()}</h3>
             <p className={styles.metricLabel}>Total Members</p>
             <div className={styles.metricChange}>
-              <span className={styles.changePositive}>+{statsData.totalMembers.change}%</span>
+              <span className={styles.changePositive}>+{mockStatsData.totalMembers.change}%</span>
               <span className={styles.changeText}>from yesterday</span>
             </div>
           </div>
@@ -108,10 +245,10 @@ const Dashboard: React.FC = () => {
               </div>
               <TrendingUp size={16} className={styles.trendingUp} />
             </div>
-            <h3 className={styles.metricValue}>{statsData.onlineNow.value}</h3>
+            <h3 className={styles.metricValue}>{mockStatsData.onlineNow.value}</h3>
             <p className={styles.metricLabel}>Online Now</p>
             <div className={styles.metricChange}>
-              <span className={styles.changePositive}>+{statsData.onlineNow.change}%</span>
+              <span className={styles.changePositive}>+{mockStatsData.onlineNow.change}%</span>
               <span className={styles.changeText}>peak today</span>
             </div>
           </div>
@@ -121,13 +258,13 @@ const Dashboard: React.FC = () => {
               <div className={styles.metricIcon}>
                 <Command size={24} />
               </div>
-              <TrendingUp size={16} className={statsData.commandsToday.change >= 0 ? styles.trendingUp : styles.trendingDown} />
+              <TrendingUp size={16} className={mockStatsData.commandsToday.change >= 0 ? styles.trendingUp : styles.trendingDown} />
             </div>
-            <h3 className={styles.metricValue}>{statsData.commandsToday.value}</h3>
+            <h3 className={styles.metricValue}>{mockStatsData.commandsToday.value}</h3>
             <p className={styles.metricLabel}>Commands Today</p>
             <div className={styles.metricChange}>
-              <span className={statsData.commandsToday.change >= 0 ? styles.changePositive : styles.changeNegative}>
-                {statsData.commandsToday.change >= 0 ? '+' : ''}{statsData.commandsToday.change}%
+              <span className={mockStatsData.commandsToday.change >= 0 ? styles.changePositive : styles.changeNegative}>
+                {mockStatsData.commandsToday.change >= 0 ? '+' : ''}{mockStatsData.commandsToday.change}%
               </span>
               <span className={styles.changeText}>vs average</span>
             </div>
@@ -139,7 +276,7 @@ const Dashboard: React.FC = () => {
                 <Shield size={24} />
               </div>
             </div>
-            <h3 className={styles.metricValue}>{statsData.activeModerators.value}</h3>
+            <h3 className={styles.metricValue}>{mockStatsData.activeModerators.value}</h3>
             <p className={styles.metricLabel}>Active Moderators</p>
             <div className={styles.metricChange}>
               <span className={styles.changeNeutral}>On duty</span>

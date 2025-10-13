@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react";
 import {
     Flag,
     Filter,
@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import Sidebars from "@/components/Saidbar.js";
 import styles from "../module_pages/ReportsPage.module.scss";
+import { SidebarContext } from "@/App.js";
 
 interface Report {
     id: string;
@@ -111,6 +112,9 @@ export const ReportsPage: React.FC = () => {
         dateRange: { start: null, end: null },
         assigned: "all"
     });
+
+    const sidebarContext = useContext(SidebarContext);
+    const isSidebarCollapsed = sidebarContext?.isCollapsed || false;
 
     const statusOptions = [
         { value: 'pending', label: 'Pending', color: '#f59e0b', icon: Clock },
@@ -449,443 +453,445 @@ export const ReportsPage: React.FC = () => {
     }
 
     return (
-        <div className={styles.container}>
+        <div className={`layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
             <Sidebars />
-            <div className={styles.contentArea}>
-                <div className={styles.fullscreen}>
-                    {/* Header */}
-                    <div className={styles.header}>
-                        <div className={styles.headerTop}>
-                            <div className={styles.headerTitle}>
-                                <div className={styles.titleIcon}>
-                                    <Flag className={styles.icon} />
+            <main className="main">
+                <div className={styles.contentArea}>
+                    <div className={styles.fullscreen}>
+                        {/* Header */}
+                        <div className={styles.header}>
+                            <div className={styles.headerTop}>
+                                <div className={styles.headerTitle}>
+                                    <div className={styles.titleIcon}>
+                                        <Flag className={styles.icon} />
+                                    </div>
+                                    <div>
+                                        <h1 className={styles.title}>Reports Management</h1>
+                                        <p className={styles.subtitle}>
+                                            Review and manage user reports and moderation cases
+                                        </p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h1 className={styles.title}>Reports Management</h1>
-                                    <p className={styles.subtitle}>
-                                        Review and manage user reports and moderation cases
-                                    </p>
+                                <div className={styles.headerActions}>
+                                    <button
+                                        onClick={handleExportReports}
+                                        className={styles.exportButton}
+                                        disabled={filteredReports.length === 0}
+                                    >
+                                        <Download className={styles.buttonIcon} />
+                                        Export
+                                    </button>
+                                    <button
+                                        onClick={loadReports}
+                                        className={styles.refreshButton}
+                                        disabled={isLoading}
+                                    >
+                                        <RefreshCw className={`${styles.buttonIcon} ${isLoading ? styles.animateSpin : ''}`} />
+                                        Refresh
+                                    </button>
                                 </div>
                             </div>
-                            <div className={styles.headerActions}>
-                                <button
-                                    onClick={handleExportReports}
-                                    className={styles.exportButton}
-                                    disabled={filteredReports.length === 0}
-                                >
-                                    <Download className={styles.buttonIcon} />
-                                    Export
-                                </button>
-                                <button
-                                    onClick={loadReports}
-                                    className={styles.refreshButton}
-                                    disabled={isLoading}
-                                >
-                                    <RefreshCw className={`${styles.buttonIcon} ${isLoading ? styles.animateSpin : ''}`} />
-                                    Refresh
+                        </div>
+
+                        {/* Error Banner */}
+                        {error && (
+                            <div className={styles.errorBanner}>
+                                <div className={styles.errorContent}>
+                                    <AlertTriangle className={styles.errorIcon} />
+                                    <span className={styles.errorText}>{error}</span>
+                                </div>
+                                <button onClick={() => setError(null)} className={styles.errorClose}>
+                                    ×
                                 </button>
                             </div>
-                        </div>
-                    </div>
+                        )}
 
-                    {/* Error Banner */}
-                    {error && (
-                        <div className={styles.errorBanner}>
-                            <div className={styles.errorContent}>
-                                <AlertTriangle className={styles.errorIcon} />
-                                <span className={styles.errorText}>{error}</span>
+                        {/* Stats Grid */}
+                        <div className={styles.statsGrid}>
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <FileText className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={styles.statNumber}>{stats.total}</div>
+                                    <div className={styles.statLabel}>Total Reports</div>
+                                </div>
                             </div>
-                            <button onClick={() => setError(null)} className={styles.errorClose}>
-                                ×
-                            </button>
-                        </div>
-                    )}
 
-                    {/* Stats Grid */}
-                    <div className={styles.statsGrid}>
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <FileText className={styles.icon} />
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <Clock className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={`${styles.statNumber} ${styles.statPending}`}>{stats.pending}</div>
+                                    <div className={styles.statLabel}>Pending Review</div>
+                                </div>
                             </div>
-                            <div className={styles.statContent}>
-                                <div className={styles.statNumber}>{stats.total}</div>
-                                <div className={styles.statLabel}>Total Reports</div>
-                            </div>
-                        </div>
 
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <Clock className={styles.icon} />
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <Eye className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={`${styles.statNumber} ${styles.statReviewed}`}>{stats.reviewed}</div>
+                                    <div className={styles.statLabel}>Under Review</div>
+                                </div>
                             </div>
-                            <div className={styles.statContent}>
-                                <div className={`${styles.statNumber} ${styles.statPending}`}>{stats.pending}</div>
-                                <div className={styles.statLabel}>Pending Review</div>
-                            </div>
-                        </div>
 
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <Eye className={styles.icon} />
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <CheckCircle className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={`${styles.statNumber} ${styles.statResolved}`}>{stats.resolved}</div>
+                                    <div className={styles.statLabel}>Resolved</div>
+                                </div>
                             </div>
-                            <div className={styles.statContent}>
-                                <div className={`${styles.statNumber} ${styles.statReviewed}`}>{stats.reviewed}</div>
-                                <div className={styles.statLabel}>Under Review</div>
-                            </div>
-                        </div>
 
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <CheckCircle className={styles.icon} />
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <AlertTriangle className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={`${styles.statNumber} ${styles.statCritical}`}>{stats.highPriority}</div>
+                                    <div className={styles.statLabel}>High Priority</div>
+                                </div>
                             </div>
-                            <div className={styles.statContent}>
-                                <div className={`${styles.statNumber} ${styles.statResolved}`}>{stats.resolved}</div>
-                                <div className={styles.statLabel}>Resolved</div>
-                            </div>
-                        </div>
 
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <AlertTriangle className={styles.icon} />
-                            </div>
-                            <div className={styles.statContent}>
-                                <div className={`${styles.statNumber} ${styles.statCritical}`}>{stats.highPriority}</div>
-                                <div className={styles.statLabel}>High Priority</div>
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <Zap className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={styles.statNumber}>{stats.avgResponseTime}h</div>
+                                    <div className={styles.statLabel}>Avg. Response Time</div>
+                                </div>
                             </div>
                         </div>
 
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <Zap className={styles.icon} />
+                        {/* Filters and Search */}
+                        <div className={styles.filtersSection}>
+                            <div className={styles.searchBox}>
+                                <Search className={styles.searchIcon} />
+                                <input
+                                    type="text"
+                                    placeholder="Search reports, users, content..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className={styles.searchInput}
+                                />
                             </div>
-                            <div className={styles.statContent}>
-                                <div className={styles.statNumber}>{stats.avgResponseTime}h</div>
-                                <div className={styles.statLabel}>Avg. Response Time</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Filters and Search */}
-                    <div className={styles.filtersSection}>
-                        <div className={styles.searchBox}>
-                            <Search className={styles.searchIcon} />
-                            <input
-                                type="text"
-                                placeholder="Search reports, users, content..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className={styles.searchInput}
-                            />
-                        </div>
-                        <div className={styles.filterButtons}>
-                            <button
-                                onClick={() => setShowFilters(!showFilters)}
-                                className={`${styles.filterToggle} ${showFilters ? styles.active : ''}`}
-                            >
-                                <Filter className={styles.buttonIcon} />
-                                Filters
-                                {(filters.status.length > 0 || filters.type.length > 0 || filters.severity.length > 0) && (
-                                    <span className={styles.filterCount}>
-                                        {filters.status.length + filters.type.length + filters.severity.length}
-                                    </span>
-                                )}
-                            </button>
-
-                            <div className={styles.quickFilters}>
+                            <div className={styles.filterButtons}>
                                 <button
-                                    onClick={() => setFilters(prev => ({ ...prev, status: ['pending'] }))}
-                                    className={`${styles.quickFilter} ${filters.status.includes('pending') ? styles.active : ''}`}
+                                    onClick={() => setShowFilters(!showFilters)}
+                                    className={`${styles.filterToggle} ${showFilters ? styles.active : ''}`}
                                 >
-                                    Pending ({stats.pending})
+                                    <Filter className={styles.buttonIcon} />
+                                    Filters
+                                    {(filters.status.length > 0 || filters.type.length > 0 || filters.severity.length > 0) && (
+                                        <span className={styles.filterCount}>
+                                            {filters.status.length + filters.type.length + filters.severity.length}
+                                        </span>
+                                    )}
                                 </button>
-                                <button
-                                    onClick={() => setFilters(prev => ({ ...prev, severity: ['high', 'critical'] }))}
-                                    className={`${styles.quickFilter} ${styles.critical}`}
-                                >
-                                    Critical ({stats.highPriority})
-                                </button>
-                                <button
-                                    onClick={() => setFilters(prev => ({ ...prev, assigned: 'unassigned' }))}
-                                    className={`${styles.quickFilter} ${filters.assigned === 'unassigned' ? styles.active : ''}`}
-                                >
-                                    Unassigned
-                                </button>
-                            </div>
-                        </div>
 
-                        {/* Advanced Filters */}
-                        {showFilters && (
-                            <div className={styles.advancedFilters}>
-                                <div className={styles.filterGroup}>
-                                    <label className={styles.filterLabel}>Status</label>
-                                    <div className={styles.filterOptions}>
-                                        {statusOptions.map(option => {
-                                            const IconComponent = option.icon;
-                                            return (
+                                <div className={styles.quickFilters}>
+                                    <button
+                                        onClick={() => setFilters(prev => ({ ...prev, status: ['pending'] }))}
+                                        className={`${styles.quickFilter} ${filters.status.includes('pending') ? styles.active : ''}`}
+                                    >
+                                        Pending ({stats.pending})
+                                    </button>
+                                    <button
+                                        onClick={() => setFilters(prev => ({ ...prev, severity: ['high', 'critical'] }))}
+                                        className={`${styles.quickFilter} ${styles.critical}`}
+                                    >
+                                        Critical ({stats.highPriority})
+                                    </button>
+                                    <button
+                                        onClick={() => setFilters(prev => ({ ...prev, assigned: 'unassigned' }))}
+                                        className={`${styles.quickFilter} ${filters.assigned === 'unassigned' ? styles.active : ''}`}
+                                    >
+                                        Unassigned
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Advanced Filters */}
+                            {showFilters && (
+                                <div className={styles.advancedFilters}>
+                                    <div className={styles.filterGroup}>
+                                        <label className={styles.filterLabel}>Status</label>
+                                        <div className={styles.filterOptions}>
+                                            {statusOptions.map(option => {
+                                                const IconComponent = option.icon;
+                                                return (
+                                                    <label key={option.value} className={styles.filterOption}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={filters.status.includes(option.value as any)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setFilters(prev => ({
+                                                                        ...prev,
+                                                                        status: [...prev.status, option.value]
+                                                                    }));
+                                                                } else {
+                                                                    setFilters(prev => ({
+                                                                        ...prev,
+                                                                        status: prev.status.filter(s => s !== option.value)
+                                                                    }));
+                                                                }
+                                                            }}
+                                                        />
+                                                        <IconComponent className={styles.optionIcon} style={{ color: option.color }} />
+                                                        <span>{option.label}</span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <div className={styles.filterGroup}>
+                                        <label className={styles.filterLabel}>Report Type</label>
+                                        <div className={styles.filterOptions}>
+                                            {typeOptions.map(option => (
                                                 <label key={option.value} className={styles.filterOption}>
                                                     <input
                                                         type="checkbox"
-                                                        checked={filters.status.includes(option.value as any)}
+                                                        checked={filters.type.includes(option.value)}
                                                         onChange={(e) => {
                                                             if (e.target.checked) {
                                                                 setFilters(prev => ({
                                                                     ...prev,
-                                                                    status: [...prev.status, option.value]
+                                                                    type: [...prev.type, option.value]
                                                                 }));
                                                             } else {
                                                                 setFilters(prev => ({
                                                                     ...prev,
-                                                                    status: prev.status.filter(s => s !== option.value)
+                                                                    type: prev.type.filter(t => t !== option.value)
                                                                 }));
                                                             }
                                                         }}
                                                     />
-                                                    <IconComponent className={styles.optionIcon} style={{ color: option.color }} />
+                                                    <div
+                                                        className={styles.optionColor}
+                                                        style={{ backgroundColor: option.color }}
+                                                    />
                                                     <span>{option.label}</span>
                                                 </label>
-                                            );
-                                        })}
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className={styles.filterGroup}>
+                                        <label className={styles.filterLabel}>Severity</label>
+                                        <div className={styles.filterOptions}>
+                                            {severityOptions.map(option => (
+                                                <label key={option.value} className={styles.filterOption}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={filters.severity.includes(option.value)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setFilters(prev => ({
+                                                                    ...prev,
+                                                                    severity: [...prev.severity, option.value]
+                                                                }));
+                                                            } else {
+                                                                setFilters(prev => ({
+                                                                    ...prev,
+                                                                    severity: prev.severity.filter(s => s !== option.value)
+                                                                }));
+                                                            }
+                                                        }}
+                                                    />
+                                                    <div
+                                                        className={styles.optionColor}
+                                                        style={{ backgroundColor: option.color }}
+                                                    />
+                                                    <span>{option.label}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className={styles.filterActions}>
+                                        <button
+                                            onClick={() => setFilters({
+                                                status: [],
+                                                type: [],
+                                                severity: [],
+                                                dateRange: { start: null, end: null },
+                                                assigned: "all"
+                                            })}
+                                            className={styles.clearFilters}
+                                        >
+                                            Clear All
+                                        </button>
                                     </div>
                                 </div>
-
-                                <div className={styles.filterGroup}>
-                                    <label className={styles.filterLabel}>Report Type</label>
-                                    <div className={styles.filterOptions}>
-                                        {typeOptions.map(option => (
-                                            <label key={option.value} className={styles.filterOption}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={filters.type.includes(option.value)}
-                                                    onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            setFilters(prev => ({
-                                                                ...prev,
-                                                                type: [...prev.type, option.value]
-                                                            }));
-                                                        } else {
-                                                            setFilters(prev => ({
-                                                                ...prev,
-                                                                type: prev.type.filter(t => t !== option.value)
-                                                            }));
-                                                        }
-                                                    }}
-                                                />
-                                                <div
-                                                    className={styles.optionColor}
-                                                    style={{ backgroundColor: option.color }}
-                                                />
-                                                <span>{option.label}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className={styles.filterGroup}>
-                                    <label className={styles.filterLabel}>Severity</label>
-                                    <div className={styles.filterOptions}>
-                                        {severityOptions.map(option => (
-                                            <label key={option.value} className={styles.filterOption}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={filters.severity.includes(option.value)}
-                                                    onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            setFilters(prev => ({
-                                                                ...prev,
-                                                                severity: [...prev.severity, option.value]
-                                                            }));
-                                                        } else {
-                                                            setFilters(prev => ({
-                                                                ...prev,
-                                                                severity: prev.severity.filter(s => s !== option.value)
-                                                            }));
-                                                        }
-                                                    }}
-                                                />
-                                                <div
-                                                    className={styles.optionColor}
-                                                    style={{ backgroundColor: option.color }}
-                                                />
-                                                <span>{option.label}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className={styles.filterActions}>
-                                    <button
-                                        onClick={() => setFilters({
-                                            status: [],
-                                            type: [],
-                                            severity: [],
-                                            dateRange: { start: null, end: null },
-                                            assigned: "all"
-                                        })}
-                                        className={styles.clearFilters}
-                                    >
-                                        Clear All
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Reports Table */}
-                    <div className={styles.tableContainer}>
-                        <div className={styles.tableHeader}>
-                            <h2 className={styles.tableTitle}>
-                                Reports
-                                <span className={styles.tableCount}>({filteredReports.length})</span>
-                            </h2>
-                            <div className={styles.tableActions}>
-                                <span className={styles.sortLabel}>Sort by:</span>
-                                <select className={styles.sortSelect}>
-                                    <option value="priority">Priority</option>
-                                    <option value="newest">Newest First</option>
-                                    <option value="oldest">Oldest First</option>
-                                    <option value="severity">Severity</option>
-                                </select>
-                            </div>
+                            )}
                         </div>
 
-                        <div className={styles.tableWrapper}>
-                            <table className={styles.table}>
-                                <thead>
-                                    <tr>
-                                        <th>Report</th>
-                                        <th>Type</th>
-                                        <th>Severity</th>
-                                        <th>Status</th>
-                                        <th>Reported User</th>
-                                        <th>Date</th>
-                                        <th>Assigned To</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredReports.map((report) => (
-                                        <tr key={report.id} className={styles.tableRow}>
-                                            <td>
-                                                <div className={styles.reportCell}>
-                                                    <div className={styles.reportTitle}>
-                                                        {report.title}
-                                                    </div>
-                                                    <div className={styles.reportDescription}>
-                                                        {report.description.substring(0, 60)}...
-                                                    </div>
-                                                    <div className={styles.reportMeta}>
-                                                        <MessageCircle className={styles.metaIcon} />
-                                                        <span>{report.messageCount} messages</span>
-                                                        <span className={styles.reportId}>#{report.id}</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span className={`${styles.typeBadge} ${styles[`type${report.type.charAt(0).toUpperCase() + report.type.slice(1)}`]}`}>
-                                                    {report.type}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                {getSeverityBadge(report.severity)}
-                                            </td>
-                                            <td>
-                                                <div className={styles.statusCell}>
-                                                    {getStatusIcon(report.status)}
-                                                    <span className={styles.statusText}>{report.status}</span>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div className={styles.userCell}>
-                                                    <User className={styles.userIcon} />
-                                                    <div>
-                                                        <div className={styles.userName}>
-                                                            {report.reportedUser.name}
-                                                        </div>
-                                                        <div className={styles.userEmail}>
-                                                            {report.reportedUser.email}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div className={styles.dateCell}>
-                                                    <div className={styles.date}>
-                                                        {report.createdAt.toLocaleDateString()}
-                                                    </div>
-                                                    <div className={styles.timeAgo}>
-                                                        {getTimeAgo(report.createdAt)}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                {report.assignedModerator ? (
-                                                    <div className={styles.assignedCell}>
-                                                        <Shield className={styles.moderatorIcon} />
-                                                        <span className={styles.moderatorName}>
-                                                            {report.assignedModerator.name}
-                                                        </span>
-                                                    </div>
-                                                ) : (
-                                                    <span className={styles.unassigned}>Unassigned</span>
-                                                )}
-                                            </td>
-                                            <td>
-                                                <div className={styles.actionButtons}>
-                                                    {!report.assignedModerator && (
-                                                        <button
-                                                            onClick={() => handleAssignToMe(report.id)}
-                                                            className={styles.assignButton}
-                                                            title="Assign to me"
-                                                        >
-                                                            <User className={styles.actionIcon} />
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        onClick={() => setSelectedReport(report)}
-                                                        className={styles.viewButton}
-                                                        title="View details"
-                                                    >
-                                                        <Eye className={styles.actionIcon} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleStatusChange(report.id, 'resolved')}
-                                                        className={styles.resolveButton}
-                                                        title="Mark as resolved"
-                                                    >
-                                                        <CheckCircle className={styles.actionIcon} />
-                                                    </button>
-                                                    <button className={styles.moreButton}>
-                                                        <MoreVertical className={styles.actionIcon} />
-                                                    </button>
-                                                </div>
-                                            </td>
+                        {/* Reports Table */}
+                        <div className={styles.tableContainer}>
+                            <div className={styles.tableHeader}>
+                                <h2 className={styles.tableTitle}>
+                                    Reports
+                                    <span className={styles.tableCount}>({filteredReports.length})</span>
+                                </h2>
+                                <div className={styles.tableActions}>
+                                    <span className={styles.sortLabel}>Sort by:</span>
+                                    <select className={styles.sortSelect}>
+                                        <option value="priority">Priority</option>
+                                        <option value="newest">Newest First</option>
+                                        <option value="oldest">Oldest First</option>
+                                        <option value="severity">Severity</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className={styles.tableWrapper}>
+                                <table className={styles.table}>
+                                    <thead>
+                                        <tr>
+                                            <th>Report</th>
+                                            <th>Type</th>
+                                            <th>Severity</th>
+                                            <th>Status</th>
+                                            <th>Reported User</th>
+                                            <th>Date</th>
+                                            <th>Assigned To</th>
+                                            <th>Actions</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {filteredReports.map((report) => (
+                                            <tr key={report.id} className={styles.tableRow}>
+                                                <td>
+                                                    <div className={styles.reportCell}>
+                                                        <div className={styles.reportTitle}>
+                                                            {report.title}
+                                                        </div>
+                                                        <div className={styles.reportDescription}>
+                                                            {report.description.substring(0, 60)}...
+                                                        </div>
+                                                        <div className={styles.reportMeta}>
+                                                            <MessageCircle className={styles.metaIcon} />
+                                                            <span>{report.messageCount} messages</span>
+                                                            <span className={styles.reportId}>#{report.id}</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span className={`${styles.typeBadge} ${styles[`type${report.type.charAt(0).toUpperCase() + report.type.slice(1)}`]}`}>
+                                                        {report.type}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {getSeverityBadge(report.severity)}
+                                                </td>
+                                                <td>
+                                                    <div className={styles.statusCell}>
+                                                        {getStatusIcon(report.status)}
+                                                        <span className={styles.statusText}>{report.status}</span>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div className={styles.userCell}>
+                                                        <User className={styles.userIcon} />
+                                                        <div>
+                                                            <div className={styles.userName}>
+                                                                {report.reportedUser.name}
+                                                            </div>
+                                                            <div className={styles.userEmail}>
+                                                                {report.reportedUser.email}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div className={styles.dateCell}>
+                                                        <div className={styles.date}>
+                                                            {report.createdAt.toLocaleDateString()}
+                                                        </div>
+                                                        <div className={styles.timeAgo}>
+                                                            {getTimeAgo(report.createdAt)}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    {report.assignedModerator ? (
+                                                        <div className={styles.assignedCell}>
+                                                            <Shield className={styles.moderatorIcon} />
+                                                            <span className={styles.moderatorName}>
+                                                                {report.assignedModerator.name}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className={styles.unassigned}>Unassigned</span>
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    <div className={styles.actionButtons}>
+                                                        {!report.assignedModerator && (
+                                                            <button
+                                                                onClick={() => handleAssignToMe(report.id)}
+                                                                className={styles.assignButton}
+                                                                title="Assign to me"
+                                                            >
+                                                                <User className={styles.actionIcon} />
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={() => setSelectedReport(report)}
+                                                            className={styles.viewButton}
+                                                            title="View details"
+                                                        >
+                                                            <Eye className={styles.actionIcon} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleStatusChange(report.id, 'resolved')}
+                                                            className={styles.resolveButton}
+                                                            title="Mark as resolved"
+                                                        >
+                                                            <CheckCircle className={styles.actionIcon} />
+                                                        </button>
+                                                        <button className={styles.moreButton}>
+                                                            <MoreVertical className={styles.actionIcon} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {filteredReports.length === 0 && !isLoading && (
+                                <div className={styles.emptyState}>
+                                    <Flag className={styles.emptyIcon} />
+                                    <p className={styles.emptyTitle}>No reports found</p>
+                                    <p className={styles.emptyDescription}>
+                                        {searchTerm || filters.status.length > 0 || filters.type.length > 0
+                                            ? "Try adjusting your search or filters"
+                                            : "All reports have been processed"
+                                        }
+                                    </p>
+                                </div>
+                            )}
+
+                            {isLoading && filteredReports.length === 0 && (
+                                <div className={styles.loadingState}>
+                                    <RefreshCw className={`${styles.loadingIcon} ${styles.animateSpin}`} />
+                                    <p>Loading reports...</p>
+                                </div>
+                            )}
                         </div>
-
-                        {filteredReports.length === 0 && !isLoading && (
-                            <div className={styles.emptyState}>
-                                <Flag className={styles.emptyIcon} />
-                                <p className={styles.emptyTitle}>No reports found</p>
-                                <p className={styles.emptyDescription}>
-                                    {searchTerm || filters.status.length > 0 || filters.type.length > 0
-                                        ? "Try adjusting your search or filters"
-                                        : "All reports have been processed"
-                                    }
-                                </p>
-                            </div>
-                        )}
-
-                        {isLoading && filteredReports.length === 0 && (
-                            <div className={styles.loadingState}>
-                                <RefreshCw className={`${styles.loadingIcon} ${styles.animateSpin}`} />
-                                <p>Loading reports...</p>
-                            </div>
-                        )}
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
     );
 };

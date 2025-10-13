@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react";
 import {
     Bell,
     Filter,
@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import Sidebars from "@/components/Saidbar.js";
 import styles from "../module_pages/NotificationsPage.module.scss";
+import { SidebarContext } from "@/App.js";
 
 interface Notification {
     id: string;
@@ -97,6 +98,9 @@ export const NotificationsPage: React.FC = () => {
     });
     const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+    const sidebarContext = useContext(SidebarContext);
+    const isSidebarCollapsed = sidebarContext?.isCollapsed || false;
 
     const typeOptions = [
         { value: 'info', label: 'Information', color: '#3b82f6', icon: Info },
@@ -612,473 +616,475 @@ export const NotificationsPage: React.FC = () => {
     }
 
     return (
-        <div className={styles.container}>
+        <div className={`layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
             <Sidebars />
-            <div className={styles.contentArea}>
-                <div className={styles.fullscreen}>
-                    {/* Header */}
-                    <div className={styles.header}>
-                        <div className={styles.headerTop}>
-                            <div className={styles.headerTitle}>
-                                <div>
-                                    <h1 className={styles.title}>Notifications</h1>
-                                    <p className={styles.subtitle}>
-                                        Manage and review system and user notifications
-                                    </p>
-                                </div>
-                            </div>
-                            <div className={styles.headerActions}>
-                                <button
-                                    onClick={() => setIsSettingsOpen(true)}
-                                    className={styles.settingsButton}
-                                >
-                                    <Settings className={styles.buttonIcon} />
-                                    Settings
-                                </button>
-                                <button
-                                    onClick={loadNotifications}
-                                    className={styles.refreshButton}
-                                    disabled={isLoading}
-                                >
-                                    <RefreshCw className={`${styles.buttonIcon} ${isLoading ? styles.animateSpin : ''}`} />
-                                    Refresh
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Error Banner */}
-                    {error && (
-                        <div className={styles.errorBanner}>
-                            <div className={styles.errorContent}>
-                                <AlertTriangle className={styles.errorIcon} />
-                                <span className={styles.errorText}>{error}</span>
-                            </div>
-                            <button onClick={() => setError(null)} className={styles.errorClose}>
-                                ×
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Stats Grid */}
-                    <div className={styles.statsGrid}>
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <Bell className={styles.icon} />
-                            </div>
-                            <div className={styles.statContent}>
-                                <div className={styles.statNumber}>{stats.total}</div>
-                                <div className={styles.statLabel}>Total</div>
-                            </div>
-                        </div>
-
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <Eye className={styles.icon} />
-                            </div>
-                            <div className={styles.statContent}>
-                                <div className={`${styles.statNumber} ${styles.statUnread}`}>{stats.unread}</div>
-                                <div className={styles.statLabel}>Unread</div>
-                            </div>
-                        </div>
-
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <CheckCircle className={styles.icon} />
-                            </div>
-                            <div className={styles.statContent}>
-                                <div className={`${styles.statNumber} ${styles.statRead}`}>{stats.read}</div>
-                                <div className={styles.statLabel}>Read</div>
-                            </div>
-                        </div>
-
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <Archive className={styles.icon} />
-                            </div>
-                            <div className={styles.statContent}>
-                                <div className={`${styles.statNumber} ${styles.statArchived}`}>{stats.archived}</div>
-                                <div className={styles.statLabel}>Archived</div>
-                            </div>
-                        </div>
-
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <AlertTriangle className={styles.icon} />
-                            </div>
-                            <div className={styles.statContent}>
-                                <div className={`${styles.statNumber} ${styles.statCritical}`}>{stats.highPriority}</div>
-                                <div className={styles.statLabel}>High Priority</div>
-                            </div>
-                        </div>
-
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <Zap className={styles.icon} />
-                            </div>
-                            <div className={styles.statContent}>
-                                <div className={styles.statNumber}>{stats.today}</div>
-                                <div className={styles.statLabel}>Today</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Bulk Actions */}
-                    {selectedNotifications.length > 0 && (
-                        <div className={styles.bulkActions}>
-                            <div className={styles.bulkInfo}>
-                                <span className={styles.bulkCount}>
-                                    {selectedNotifications.length} selected
-                                </span>
-                            </div>
-                            <div className={styles.bulkButtons}>
-                                <button
-                                    onClick={bulkMarkAsRead}
-                                    className={styles.bulkButton}
-                                >
-                                    <CheckCircle className={styles.buttonIcon} />
-                                    Mark as Read
-                                </button>
-                                <button
-                                    onClick={bulkArchive}
-                                    className={styles.bulkButton}
-                                >
-                                    <Archive className={styles.buttonIcon} />
-                                    Archive
-                                </button>
-                                <button
-                                    onClick={() => setSelectedNotifications([])}
-                                    className={styles.bulkCancel}
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Filters and Search */}
-                    <div className={styles.filtersSection}>
-                        <div className={styles.searchBox}>
-                            <Search className={styles.searchIcon} />
-                            <input
-                                type="text"
-                                placeholder="Search notifications..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className={styles.searchInput}
-                            />
-                        </div>
-                        <div className={styles.filterButtons}>
-                            <button
-                                onClick={() => setShowFilters(!showFilters)}
-                                className={`${styles.filterToggle} ${showFilters ? styles.active : ''}`}
-                            >
-                                <Filter className={styles.buttonIcon} />
-                                Filters
-                                {(filters.type.length > 0 || filters.priority.length > 0 || filters.status.length > 0) && (
-                                    <span className={styles.filterCount}>
-                                        {filters.type.length + filters.priority.length + filters.status.length}
-                                    </span>
-                                )}
-                            </button>
-
-                            <div className={styles.quickFilters}>
-                                <button
-                                    onClick={() => setFilters(prev => ({ ...prev, status: ['unread'] }))}
-                                    className={`${styles.quickFilter} ${filters.status.includes('unread') ? styles.active : ''}`}
-                                >
-                                    Unread ({stats.unread})
-                                </button>
-                                <button
-                                    onClick={() => setFilters(prev => ({ ...prev, priority: ['high', 'critical'] }))}
-                                    className={`${styles.quickFilter} ${styles.critical}`}
-                                >
-                                    Critical ({stats.highPriority})
-                                </button>
-                                <button
-                                    onClick={() => setFilters(prev => ({ ...prev, status: ['archived'] }))}
-                                    className={`${styles.quickFilter} ${filters.status.includes('archived') ? styles.active : ''}`}
-                                >
-                                    Archived ({stats.archived})
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Advanced Filters */}
-                        {showFilters && (
-                            <div className={styles.advancedFilters}>
-                                <div className={styles.filterGroup}>
-                                    <label className={styles.filterLabel}>Type</label>
-                                    <div className={styles.filterOptions}>
-                                        {typeOptions.map(option => {
-                                            const IconComponent = option.icon;
-                                            return (
-                                                <label key={option.value} className={styles.filterOption}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={filters.type.includes(option.value)}
-                                                        onChange={(e) => {
-                                                            if (e.target.checked) {
-                                                                setFilters(prev => ({
-                                                                    ...prev,
-                                                                    type: [...prev.type, option.value]
-                                                                }));
-                                                            } else {
-                                                                setFilters(prev => ({
-                                                                    ...prev,
-                                                                    type: prev.type.filter(t => t !== option.value)
-                                                                }));
-                                                            }
-                                                        }}
-                                                    />
-                                                    <IconComponent className={styles.optionIcon} style={{ color: option.color }} />
-                                                    <span>{option.label}</span>
-                                                </label>
-                                            );
-                                        })}
+            <main className="main">
+                <div className={styles.contentArea}>
+                    <div className={styles.fullscreen}>
+                        {/* Header */}
+                        <div className={styles.header}>
+                            <div className={styles.headerTop}>
+                                <div className={styles.headerTitle}>
+                                    <div>
+                                        <h1 className={styles.title}>Notifications</h1>
+                                        <p className={styles.subtitle}>
+                                            Manage and review system and user notifications
+                                        </p>
                                     </div>
                                 </div>
-
-                                <div className={styles.filterGroup}>
-                                    <label className={styles.filterLabel}>Priority</label>
-                                    <div className={styles.filterOptions}>
-                                        {priorityOptions.map(option => (
-                                            <label key={option.value} className={styles.filterOption}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={filters.priority.includes(option.value)}
-                                                    onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            setFilters(prev => ({
-                                                                ...prev,
-                                                                priority: [...prev.priority, option.value]
-                                                            }));
-                                                        } else {
-                                                            setFilters(prev => ({
-                                                                ...prev,
-                                                                priority: prev.priority.filter(p => p !== option.value)
-                                                            }));
-                                                        }
-                                                    }}
-                                                />
-                                                <div
-                                                    className={styles.optionColor}
-                                                    style={{ backgroundColor: option.color }}
-                                                />
-                                                <span>{option.label}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className={styles.filterGroup}>
-                                    <label className={styles.filterLabel}>Status</label>
-                                    <div className={styles.filterOptions}>
-                                        {statusOptions.map(option => (
-                                            <label key={option.value} className={styles.filterOption}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={filters.status.includes(option.value)}
-                                                    onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            setFilters(prev => ({
-                                                                ...prev,
-                                                                status: [...prev.status, option.value]
-                                                            }));
-                                                        } else {
-                                                            setFilters(prev => ({
-                                                                ...prev,
-                                                                status: prev.status.filter(s => s !== option.value)
-                                                            }));
-                                                        }
-                                                    }}
-                                                />
-                                                <span>{option.label}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className={styles.filterActions}>
+                                <div className={styles.headerActions}>
                                     <button
-                                        onClick={() => setFilters({
-                                            type: [],
-                                            priority: [],
-                                            status: [],
-                                            dateRange: { start: null, end: null }
-                                        })}
-                                        className={styles.clearFilters}
+                                        onClick={() => setIsSettingsOpen(true)}
+                                        className={styles.settingsButton}
                                     >
-                                        Clear All
+                                        <Settings className={styles.buttonIcon} />
+                                        Settings
+                                    </button>
+                                    <button
+                                        onClick={loadNotifications}
+                                        className={styles.refreshButton}
+                                        disabled={isLoading}
+                                    >
+                                        <RefreshCw className={`${styles.buttonIcon} ${isLoading ? styles.animateSpin : ''}`} />
+                                        Refresh
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Error Banner */}
+                        {error && (
+                            <div className={styles.errorBanner}>
+                                <div className={styles.errorContent}>
+                                    <AlertTriangle className={styles.errorIcon} />
+                                    <span className={styles.errorText}>{error}</span>
+                                </div>
+                                <button onClick={() => setError(null)} className={styles.errorClose}>
+                                    ×
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Stats Grid */}
+                        <div className={styles.statsGrid}>
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <Bell className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={styles.statNumber}>{stats.total}</div>
+                                    <div className={styles.statLabel}>Total</div>
+                                </div>
+                            </div>
+
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <Eye className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={`${styles.statNumber} ${styles.statUnread}`}>{stats.unread}</div>
+                                    <div className={styles.statLabel}>Unread</div>
+                                </div>
+                            </div>
+
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <CheckCircle className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={`${styles.statNumber} ${styles.statRead}`}>{stats.read}</div>
+                                    <div className={styles.statLabel}>Read</div>
+                                </div>
+                            </div>
+
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <Archive className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={`${styles.statNumber} ${styles.statArchived}`}>{stats.archived}</div>
+                                    <div className={styles.statLabel}>Archived</div>
+                                </div>
+                            </div>
+
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <AlertTriangle className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={`${styles.statNumber} ${styles.statCritical}`}>{stats.highPriority}</div>
+                                    <div className={styles.statLabel}>High Priority</div>
+                                </div>
+                            </div>
+
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <Zap className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={styles.statNumber}>{stats.today}</div>
+                                    <div className={styles.statLabel}>Today</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Bulk Actions */}
+                        {selectedNotifications.length > 0 && (
+                            <div className={styles.bulkActions}>
+                                <div className={styles.bulkInfo}>
+                                    <span className={styles.bulkCount}>
+                                        {selectedNotifications.length} selected
+                                    </span>
+                                </div>
+                                <div className={styles.bulkButtons}>
+                                    <button
+                                        onClick={bulkMarkAsRead}
+                                        className={styles.bulkButton}
+                                    >
+                                        <CheckCircle className={styles.buttonIcon} />
+                                        Mark as Read
+                                    </button>
+                                    <button
+                                        onClick={bulkArchive}
+                                        className={styles.bulkButton}
+                                    >
+                                        <Archive className={styles.buttonIcon} />
+                                        Archive
+                                    </button>
+                                    <button
+                                        onClick={() => setSelectedNotifications([])}
+                                        className={styles.bulkCancel}
+                                    >
+                                        Cancel
                                     </button>
                                 </div>
                             </div>
                         )}
-                    </div>
 
-                    {/* Notifications List */}
-                    <div className={styles.notificationsContainer}>
-                        <div className={styles.notificationsHeader}>
-                            <h2 className={styles.notificationsTitle}>
-                                Notifications
-                                <span className={styles.notificationsCount}>({filteredNotifications.length})</span>
-                            </h2>
-                            <div className={styles.notificationsActions}>
-                                {filteredNotifications.length > 0 && (
-                                    <label className={styles.selectAll}>
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedNotifications.length === filteredNotifications.length}
-                                            onChange={handleSelectAll}
-                                        />
-                                        Select All
-                                    </label>
-                                )}
+                        {/* Filters and Search */}
+                        <div className={styles.filtersSection}>
+                            <div className={styles.searchBox}>
+                                <Search className={styles.searchIcon} />
+                                <input
+                                    type="text"
+                                    placeholder="Search notifications..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className={styles.searchInput}
+                                />
                             </div>
-                        </div>
-
-                        <div className={styles.notificationsList}>
-                            {filteredNotifications.map((notification) => (
-                                <div
-                                    key={notification.id}
-                                    className={`${styles.notificationCard} ${notification.read ? styles.read : styles.unread
-                                        } ${isExpired(notification) ? styles.expired : ''} ${selectedNotifications.includes(notification.id) ? styles.selected : ''
-                                        }`}
+                            <div className={styles.filterButtons}>
+                                <button
+                                    onClick={() => setShowFilters(!showFilters)}
+                                    className={`${styles.filterToggle} ${showFilters ? styles.active : ''}`}
                                 >
-                                    <div className={styles.notificationCheckbox}>
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedNotifications.includes(notification.id)}
-                                            onChange={() => handleSelectNotification(notification.id)}
-                                        />
+                                    <Filter className={styles.buttonIcon} />
+                                    Filters
+                                    {(filters.type.length > 0 || filters.priority.length > 0 || filters.status.length > 0) && (
+                                        <span className={styles.filterCount}>
+                                            {filters.type.length + filters.priority.length + filters.status.length}
+                                        </span>
+                                    )}
+                                </button>
+
+                                <div className={styles.quickFilters}>
+                                    <button
+                                        onClick={() => setFilters(prev => ({ ...prev, status: ['unread'] }))}
+                                        className={`${styles.quickFilter} ${filters.status.includes('unread') ? styles.active : ''}`}
+                                    >
+                                        Unread ({stats.unread})
+                                    </button>
+                                    <button
+                                        onClick={() => setFilters(prev => ({ ...prev, priority: ['high', 'critical'] }))}
+                                        className={`${styles.quickFilter} ${styles.critical}`}
+                                    >
+                                        Critical ({stats.highPriority})
+                                    </button>
+                                    <button
+                                        onClick={() => setFilters(prev => ({ ...prev, status: ['archived'] }))}
+                                        className={`${styles.quickFilter} ${filters.status.includes('archived') ? styles.active : ''}`}
+                                    >
+                                        Archived ({stats.archived})
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Advanced Filters */}
+                            {showFilters && (
+                                <div className={styles.advancedFilters}>
+                                    <div className={styles.filterGroup}>
+                                        <label className={styles.filterLabel}>Type</label>
+                                        <div className={styles.filterOptions}>
+                                            {typeOptions.map(option => {
+                                                const IconComponent = option.icon;
+                                                return (
+                                                    <label key={option.value} className={styles.filterOption}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={filters.type.includes(option.value)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setFilters(prev => ({
+                                                                        ...prev,
+                                                                        type: [...prev.type, option.value]
+                                                                    }));
+                                                                } else {
+                                                                    setFilters(prev => ({
+                                                                        ...prev,
+                                                                        type: prev.type.filter(t => t !== option.value)
+                                                                    }));
+                                                                }
+                                                            }}
+                                                        />
+                                                        <IconComponent className={styles.optionIcon} style={{ color: option.color }} />
+                                                        <span>{option.label}</span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
 
-                                    <div className={styles.notificationContent}>
-                                        <div className={styles.notificationHeader}>
-                                            <div className={styles.notificationType}>
-                                                {getTypeIcon(notification.type)}
-                                                <span className={styles.typeText}>{notification.type}</span>
-                                            </div>
-                                            <div className={styles.notificationMeta}>
-                                                {getPriorityBadge(notification.priority)}
-                                                <span className={styles.timeAgo}>
-                                                    {getTimeAgo(notification.createdAt)}
-                                                </span>
-                                            </div>
+                                    <div className={styles.filterGroup}>
+                                        <label className={styles.filterLabel}>Priority</label>
+                                        <div className={styles.filterOptions}>
+                                            {priorityOptions.map(option => (
+                                                <label key={option.value} className={styles.filterOption}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={filters.priority.includes(option.value)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setFilters(prev => ({
+                                                                    ...prev,
+                                                                    priority: [...prev.priority, option.value]
+                                                                }));
+                                                            } else {
+                                                                setFilters(prev => ({
+                                                                    ...prev,
+                                                                    priority: prev.priority.filter(p => p !== option.value)
+                                                                }));
+                                                            }
+                                                        }}
+                                                    />
+                                                    <div
+                                                        className={styles.optionColor}
+                                                        style={{ backgroundColor: option.color }}
+                                                    />
+                                                    <span>{option.label}</span>
+                                                </label>
+                                            ))}
                                         </div>
-
-                                        <div className={styles.notificationBody}>
-                                            <h3 className={styles.notificationTitle}>
-                                                {notification.title}
-                                            </h3>
-                                            <p className={styles.notificationMessage}>
-                                                {notification.message}
-                                            </p>
-
-                                            {notification.source && (
-                                                <div className={styles.notificationSource}>
-                                                    <span className={styles.sourceLabel}>Source:</span>
-                                                    <span className={styles.sourceName}>{notification.source.name}</span>
-                                                </div>
-                                            )}
-
-                                            {isExpired(notification) && (
-                                                <div className={styles.expiredBadge}>
-                                                    <Clock className={styles.expiredIcon} />
-                                                    Expired
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {(notification.action || !notification.read) && (
-                                            <div className={styles.notificationActions}>
-                                                {notification.action && (
-                                                    <button
-                                                        className={styles.actionButton}
-                                                        onClick={notification.action.handler}
-                                                    >
-                                                        {notification.action.label}
-                                                    </button>
-                                                )}
-                                                {!notification.read && (
-                                                    <button
-                                                        onClick={() => markAsRead(notification.id)}
-                                                        className={styles.markReadButton}
-                                                    >
-                                                        <CheckCircle className={styles.actionIcon} />
-                                                        Mark Read
-                                                    </button>
-                                                )}
-                                                {notification.read && (
-                                                    <button
-                                                        onClick={() => markAsUnread(notification.id)}
-                                                        className={styles.markUnreadButton}
-                                                    >
-                                                        <Eye className={styles.actionIcon} />
-                                                        Mark Unread
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )}
                                     </div>
 
-                                    <div className={styles.notificationMenu}>
-                                        <button className={styles.menuButton}>
-                                            <MoreVertical className={styles.menuIcon} />
+                                    <div className={styles.filterGroup}>
+                                        <label className={styles.filterLabel}>Status</label>
+                                        <div className={styles.filterOptions}>
+                                            {statusOptions.map(option => (
+                                                <label key={option.value} className={styles.filterOption}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={filters.status.includes(option.value)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setFilters(prev => ({
+                                                                    ...prev,
+                                                                    status: [...prev.status, option.value]
+                                                                }));
+                                                            } else {
+                                                                setFilters(prev => ({
+                                                                    ...prev,
+                                                                    status: prev.status.filter(s => s !== option.value)
+                                                                }));
+                                                            }
+                                                        }}
+                                                    />
+                                                    <span>{option.label}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className={styles.filterActions}>
+                                        <button
+                                            onClick={() => setFilters({
+                                                type: [],
+                                                priority: [],
+                                                status: [],
+                                                dateRange: { start: null, end: null }
+                                            })}
+                                            className={styles.clearFilters}
+                                        >
+                                            Clear All
                                         </button>
-                                        <div className={styles.dropdownMenu}>
-                                            {!notification.archived ? (
-                                                <button
-                                                    onClick={() => archiveNotification(notification.id)}
-                                                    className={styles.menuItem}
-                                                >
-                                                    <Archive className={styles.menuIcon} />
-                                                    Archive
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    onClick={() => unarchiveNotification(notification.id)}
-                                                    className={styles.menuItem}
-                                                >
-                                                    <Archive className={styles.menuIcon} />
-                                                    Unarchive
-                                                </button>
-                                            )}
-                                            <button
-                                                onClick={() => deleteNotification(notification.id)}
-                                                className={`${styles.menuItem} ${styles.deleteItem}`}
-                                            >
-                                                <Trash2 className={styles.menuIcon} />
-                                                Delete
-                                            </button>
-                                        </div>
                                     </div>
                                 </div>
-                            ))}
+                            )}
                         </div>
 
-                        {filteredNotifications.length === 0 && !isLoading && (
-                            <div className={styles.emptyState}>
-                                <Bell className={styles.emptyIcon} />
-                                <p className={styles.emptyTitle}>No notifications found</p>
-                                <p className={styles.emptyDescription}>
-                                    {searchTerm || filters.type.length > 0 || filters.priority.length > 0
-                                        ? "Try adjusting your search or filters"
-                                        : "You're all caught up! No new notifications"
-                                    }
-                                </p>
+                        {/* Notifications List */}
+                        <div className={styles.notificationsContainer}>
+                            <div className={styles.notificationsHeader}>
+                                <h2 className={styles.notificationsTitle}>
+                                    Notifications
+                                    <span className={styles.notificationsCount}>({filteredNotifications.length})</span>
+                                </h2>
+                                <div className={styles.notificationsActions}>
+                                    {filteredNotifications.length > 0 && (
+                                        <label className={styles.selectAll}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedNotifications.length === filteredNotifications.length}
+                                                onChange={handleSelectAll}
+                                            />
+                                            Select All
+                                        </label>
+                                    )}
+                                </div>
                             </div>
-                        )}
 
-                        {isLoading && filteredNotifications.length === 0 && (
-                            <div className={styles.loadingState}>
-                                <RefreshCw className={`${styles.loadingIcon} ${styles.animateSpin}`} />
-                                <p>Loading notifications...</p>
+                            <div className={styles.notificationsList}>
+                                {filteredNotifications.map((notification) => (
+                                    <div
+                                        key={notification.id}
+                                        className={`${styles.notificationCard} ${notification.read ? styles.read : styles.unread
+                                            } ${isExpired(notification) ? styles.expired : ''} ${selectedNotifications.includes(notification.id) ? styles.selected : ''
+                                            }`}
+                                    >
+                                        <div className={styles.notificationCheckbox}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedNotifications.includes(notification.id)}
+                                                onChange={() => handleSelectNotification(notification.id)}
+                                            />
+                                        </div>
+
+                                        <div className={styles.notificationContent}>
+                                            <div className={styles.notificationHeader}>
+                                                <div className={styles.notificationType}>
+                                                    {getTypeIcon(notification.type)}
+                                                    <span className={styles.typeText}>{notification.type}</span>
+                                                </div>
+                                                <div className={styles.notificationMeta}>
+                                                    {getPriorityBadge(notification.priority)}
+                                                    <span className={styles.timeAgo}>
+                                                        {getTimeAgo(notification.createdAt)}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className={styles.notificationBody}>
+                                                <h3 className={styles.notificationTitle}>
+                                                    {notification.title}
+                                                </h3>
+                                                <p className={styles.notificationMessage}>
+                                                    {notification.message}
+                                                </p>
+
+                                                {notification.source && (
+                                                    <div className={styles.notificationSource}>
+                                                        <span className={styles.sourceLabel}>Source:</span>
+                                                        <span className={styles.sourceName}>{notification.source.name}</span>
+                                                    </div>
+                                                )}
+
+                                                {isExpired(notification) && (
+                                                    <div className={styles.expiredBadge}>
+                                                        <Clock className={styles.expiredIcon} />
+                                                        Expired
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {(notification.action || !notification.read) && (
+                                                <div className={styles.notificationActions}>
+                                                    {notification.action && (
+                                                        <button
+                                                            className={styles.actionButton}
+                                                            onClick={notification.action.handler}
+                                                        >
+                                                            {notification.action.label}
+                                                        </button>
+                                                    )}
+                                                    {!notification.read && (
+                                                        <button
+                                                            onClick={() => markAsRead(notification.id)}
+                                                            className={styles.markReadButton}
+                                                        >
+                                                            <CheckCircle className={styles.actionIcon} />
+                                                            Mark Read
+                                                        </button>
+                                                    )}
+                                                    {notification.read && (
+                                                        <button
+                                                            onClick={() => markAsUnread(notification.id)}
+                                                            className={styles.markUnreadButton}
+                                                        >
+                                                            <Eye className={styles.actionIcon} />
+                                                            Mark Unread
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className={styles.notificationMenu}>
+                                            <button className={styles.menuButton}>
+                                                <MoreVertical className={styles.menuIcon} />
+                                            </button>
+                                            <div className={styles.dropdownMenu}>
+                                                {!notification.archived ? (
+                                                    <button
+                                                        onClick={() => archiveNotification(notification.id)}
+                                                        className={styles.menuItem}
+                                                    >
+                                                        <Archive className={styles.menuIcon} />
+                                                        Archive
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => unarchiveNotification(notification.id)}
+                                                        className={styles.menuItem}
+                                                    >
+                                                        <Archive className={styles.menuIcon} />
+                                                        Unarchive
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => deleteNotification(notification.id)}
+                                                    className={`${styles.menuItem} ${styles.deleteItem}`}
+                                                >
+                                                    <Trash2 className={styles.menuIcon} />
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        )}
+
+                            {filteredNotifications.length === 0 && !isLoading && (
+                                <div className={styles.emptyState}>
+                                    <Bell className={styles.emptyIcon} />
+                                    <p className={styles.emptyTitle}>No notifications found</p>
+                                    <p className={styles.emptyDescription}>
+                                        {searchTerm || filters.type.length > 0 || filters.priority.length > 0
+                                            ? "Try adjusting your search or filters"
+                                            : "You're all caught up! No new notifications"
+                                        }
+                                    </p>
+                                </div>
+                            )}
+
+                            {isLoading && filteredNotifications.length === 0 && (
+                                <div className={styles.loadingState}>
+                                    <RefreshCw className={`${styles.loadingIcon} ${styles.animateSpin}`} />
+                                    <p>Loading notifications...</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
     );
 };

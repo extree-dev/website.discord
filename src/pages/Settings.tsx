@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
     Settings,
     Save,
@@ -27,6 +27,7 @@ import {
 import Sidebars from "@/components/Saidbar.js";
 import { useTheme } from "@/stores/theme.js";
 import styles from "../module_pages/Settings.module.scss";
+import { SidebarContext } from "@/App.js";
 
 interface SettingsState {
     appearance: {
@@ -131,6 +132,9 @@ const SettingsPage: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [activeSection, setActiveSection] = useState('appearance');
+
+    const sidebarContext = useContext(SidebarContext);
+    const isSidebarCollapsed = sidebarContext?.isCollapsed || false;
 
     const languageOptions = [
         { value: 'en', label: 'English' },
@@ -278,397 +282,399 @@ const SettingsPage: React.FC = () => {
     }
 
     return (
-        <div className={styles.container}>
+        <div className={`layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
             <Sidebars />
-            <div className={styles.contentArea}>
-                <div className={styles.fullscreen}>
-                    {/* Header */}
-                    <div className={styles.header}>
-                        <div className={styles.headerTop}>
-                            <div className={styles.headerTitle}>
-                                <div>
-                                    <h1 className={styles.title}>Settings</h1>
-                                    <p className={styles.subtitle}>
-                                        Customize your dashboard experience and preferences
-                                    </p>
+            <main className="main">
+                <div className={styles.contentArea}>
+                    <div className={styles.fullscreen}>
+                        {/* Header */}
+                        <div className={styles.header}>
+                            <div className={styles.headerTop}>
+                                <div className={styles.headerTitle}>
+                                    <div>
+                                        <h1 className={styles.title}>Settings</h1>
+                                        <p className={styles.subtitle}>
+                                            Customize your dashboard experience and preferences
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className={styles.headerActions}>
+                                    <button
+                                        onClick={resetSettings}
+                                        className={styles.resetButton}
+                                    >
+                                        <RefreshCw className={styles.buttonIcon} />
+                                        Reset
+                                    </button>
+                                    <button
+                                        onClick={saveSettings}
+                                        className={styles.saveButton}
+                                        disabled={isSaving}
+                                    >
+                                        {isSaving ? (
+                                            <RefreshCw className={`${styles.buttonIcon} ${styles.animateSpin}`} />
+                                        ) : (
+                                            <Save className={styles.buttonIcon} />
+                                        )}
+                                        {isSaving ? 'Saving...' : 'Save Changes'}
+                                    </button>
                                 </div>
                             </div>
-                            <div className={styles.headerActions}>
-                                <button
-                                    onClick={resetSettings}
-                                    className={styles.resetButton}
-                                >
-                                    <RefreshCw className={styles.buttonIcon} />
-                                    Reset
-                                </button>
-                                <button
-                                    onClick={saveSettings}
-                                    className={styles.saveButton}
-                                    disabled={isSaving}
-                                >
-                                    {isSaving ? (
-                                        <RefreshCw className={`${styles.buttonIcon} ${styles.animateSpin}`} />
-                                    ) : (
-                                        <Save className={styles.buttonIcon} />
-                                    )}
-                                    {isSaving ? 'Saving...' : 'Save Changes'}
-                                </button>
-                            </div>
+
+                            {/* Save Status */}
+                            {saveStatus === 'success' && (
+                                <div className={styles.saveStatus}>
+                                    <CheckCircle className={styles.statusIcon} />
+                                    Settings saved successfully!
+                                </div>
+                            )}
+                            {saveStatus === 'error' && (
+                                <div className={`${styles.saveStatus} ${styles.error}`}>
+                                    <AlertTriangle className={styles.statusIcon} />
+                                    Failed to save settings. Please try again.
+                                </div>
+                            )}
                         </div>
 
-                        {/* Save Status */}
-                        {saveStatus === 'success' && (
-                            <div className={styles.saveStatus}>
-                                <CheckCircle className={styles.statusIcon} />
-                                Settings saved successfully!
-                            </div>
-                        )}
-                        {saveStatus === 'error' && (
-                            <div className={`${styles.saveStatus} ${styles.error}`}>
-                                <AlertTriangle className={styles.statusIcon} />
-                                Failed to save settings. Please try again.
-                            </div>
-                        )}
-                    </div>
+                        <div className={styles.settingsLayout}>
+                            {/* Navigation */}
+                            <nav className={styles.navigation}>
+                                {navigationSections.map(section => {
+                                    const IconComponent = section.icon;
+                                    return (
+                                        <button
+                                            key={section.id}
+                                            onClick={() => setActiveSection(section.id)}
+                                            className={`${styles.navItem} ${activeSection === section.id ? styles.active : ''
+                                                }`}
+                                        >
+                                            <IconComponent className={styles.navIcon} />
+                                            <span>{section.label}</span>
+                                        </button>
+                                    );
+                                })}
 
-                    <div className={styles.settingsLayout}>
-                        {/* Navigation */}
-                        <nav className={styles.navigation}>
-                            {navigationSections.map(section => {
-                                const IconComponent = section.icon;
-                                return (
-                                    <button
-                                        key={section.id}
-                                        onClick={() => setActiveSection(section.id)}
-                                        className={`${styles.navItem} ${activeSection === section.id ? styles.active : ''
-                                            }`}
-                                    >
-                                        <IconComponent className={styles.navIcon} />
-                                        <span>{section.label}</span>
-                                    </button>
-                                );
-                            })}
+                                <div className={styles.navDivider} />
 
-                            <div className={styles.navDivider} />
+                                <button className={styles.navItem} onClick={exportSettings}>
+                                    <Download className={styles.navIcon} />
+                                    <span>Export Settings</span>
+                                </button>
 
-                            <button className={styles.navItem} onClick={exportSettings}>
-                                <Download className={styles.navIcon} />
-                                <span>Export Settings</span>
-                            </button>
+                                <label className={styles.navItem}>
+                                    <Upload className={styles.navIcon} />
+                                    <span>Import Settings</span>
+                                    <input
+                                        type="file"
+                                        accept=".json"
+                                        onChange={importSettings}
+                                        className={styles.fileInput}
+                                    />
+                                </label>
+                            </nav>
 
-                            <label className={styles.navItem}>
-                                <Upload className={styles.navIcon} />
-                                <span>Import Settings</span>
-                                <input
-                                    type="file"
-                                    accept=".json"
-                                    onChange={importSettings}
-                                    className={styles.fileInput}
-                                />
-                            </label>
-                        </nav>
+                            {/* Settings Content */}
+                            <div className={styles.settingsContent}>
+                                {/* Appearance Settings */}
+                                {activeSection === 'appearance' && (
+                                    <div className={styles.section}>
+                                        <h2 className={styles.sectionTitle}>
+                                            <Palette className={styles.sectionIcon} />
+                                            Appearance
+                                        </h2>
 
-                        {/* Settings Content */}
-                        <div className={styles.settingsContent}>
-                            {/* Appearance Settings */}
-                            {activeSection === 'appearance' && (
-                                <div className={styles.section}>
-                                    <h2 className={styles.sectionTitle}>
-                                        <Palette className={styles.sectionIcon} />
-                                        Appearance
-                                    </h2>
+                                        <div className={styles.settingsGrid}>
+                                            <div className={styles.settingGroup}>
+                                                <label className={styles.settingLabel}>Theme</label>
+                                                <div className={styles.themeOptions}>
+                                                    {[
+                                                        { value: 'light', label: 'Light', icon: Sun },
+                                                        { value: 'dark', label: 'Dark', icon: Moon },
+                                                        { value: 'auto', label: 'System', icon: Monitor }
+                                                    ].map(themeOption => {
+                                                        const IconComponent = themeOption.icon;
+                                                        return (
+                                                            <label key={themeOption.value} className={styles.themeOption}>
+                                                                <input
+                                                                    type="radio"
+                                                                    name="theme"
+                                                                    value={themeOption.value}
+                                                                    checked={settings.appearance.theme === themeOption.value}
+                                                                    onChange={(e) => updateSettings('appearance', { theme: e.target.value as any })}
+                                                                />
+                                                                <div className={styles.themeCard}>
+                                                                    <IconComponent className={styles.themeIcon} />
+                                                                    <span>{themeOption.label}</span>
+                                                                </div>
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
 
-                                    <div className={styles.settingsGrid}>
-                                        <div className={styles.settingGroup}>
-                                            <label className={styles.settingLabel}>Theme</label>
-                                            <div className={styles.themeOptions}>
-                                                {[
-                                                    { value: 'light', label: 'Light', icon: Sun },
-                                                    { value: 'dark', label: 'Dark', icon: Moon },
-                                                    { value: 'auto', label: 'System', icon: Monitor }
-                                                ].map(themeOption => {
-                                                    const IconComponent = themeOption.icon;
-                                                    return (
-                                                        <label key={themeOption.value} className={styles.themeOption}>
+                                            <div className={styles.settingGroup}>
+                                                <label className={styles.settingLabel}>Accent Color</label>
+                                                <div className={styles.colorOptions}>
+                                                    {accentColors.map(color => (
+                                                        <label key={color} className={styles.colorOption}>
                                                             <input
                                                                 type="radio"
-                                                                name="theme"
-                                                                value={themeOption.value}
-                                                                checked={settings.appearance.theme === themeOption.value}
-                                                                onChange={(e) => updateSettings('appearance', { theme: e.target.value as any })}
+                                                                name="accentColor"
+                                                                value={color}
+                                                                checked={settings.appearance.accentColor === color}
+                                                                onChange={(e) => updateSettings('appearance', { accentColor: e.target.value })}
                                                             />
-                                                            <div className={styles.themeCard}>
-                                                                <IconComponent className={styles.themeIcon} />
-                                                                <span>{themeOption.label}</span>
-                                                            </div>
+                                                            <div
+                                                                className={styles.colorSwatch}
+                                                                style={{ backgroundColor: color }}
+                                                            />
                                                         </label>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-
-                                        <div className={styles.settingGroup}>
-                                            <label className={styles.settingLabel}>Accent Color</label>
-                                            <div className={styles.colorOptions}>
-                                                {accentColors.map(color => (
-                                                    <label key={color} className={styles.colorOption}>
-                                                        <input
-                                                            type="radio"
-                                                            name="accentColor"
-                                                            value={color}
-                                                            checked={settings.appearance.accentColor === color}
-                                                            onChange={(e) => updateSettings('appearance', { accentColor: e.target.value })}
-                                                        />
-                                                        <div
-                                                            className={styles.colorSwatch}
-                                                            style={{ backgroundColor: color }}
-                                                        />
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div className={styles.settingGroup}>
-                                            <label className={styles.settingLabel}>
-                                                Font Size
-                                                <span className={styles.settingValue}>
-                                                    {settings.appearance.fontSize}px
-                                                </span>
-                                            </label>
-                                            <input
-                                                type="range"
-                                                min="12"
-                                                max="24"
-                                                value={settings.appearance.fontSize}
-                                                onChange={(e) => updateSettings('appearance', { fontSize: parseInt(e.target.value) })}
-                                                className={styles.slider}
-                                            />
-                                        </div>
-
-                                        <div className={styles.settingGroup}>
-                                            <label className={styles.settingLabel}>Accessibility</label>
-                                            <div className={styles.checkboxGroup}>
-                                                <label className={styles.checkboxLabel}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={settings.appearance.reducedMotion}
-                                                        onChange={(e) => updateSettings('appearance', { reducedMotion: e.target.checked })}
-                                                    />
-                                                    <span>Reduce motion</span>
-                                                </label>
-                                                <label className={styles.checkboxLabel}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={settings.appearance.highContrast}
-                                                        onChange={(e) => updateSettings('appearance', { highContrast: e.target.checked })}
-                                                    />
-                                                    <span>High contrast mode</span>
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Notifications Settings */}
-                            {activeSection === 'notifications' && (
-                                <div className={styles.section}>
-                                    <h2 className={styles.sectionTitle}>
-                                        <Bell className={styles.sectionIcon} />
-                                        Notifications
-                                    </h2>
-
-                                    <div className={styles.settingsGrid}>
-                                        <div className={styles.settingGroup}>
-                                            <label className={styles.settingLabel}>Notification Preferences</label>
-                                            <div className={styles.checkboxGroup}>
-                                                <label className={styles.checkboxLabel}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={settings.notifications.enabled}
-                                                        onChange={(e) => updateSettings('notifications', { enabled: e.target.checked })}
-                                                    />
-                                                    <span>Enable notifications</span>
-                                                </label>
-                                                <label className={styles.checkboxLabel}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={settings.notifications.sounds}
-                                                        onChange={(e) => updateSettings('notifications', { sounds: e.target.checked })}
-                                                    />
-                                                    <span>Play sounds</span>
-                                                </label>
-                                                <label className={styles.checkboxLabel}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={settings.notifications.desktop}
-                                                        onChange={(e) => updateSettings('notifications', { desktop: e.target.checked })}
-                                                    />
-                                                    <span>Desktop notifications</span>
-                                                </label>
-                                                <label className={styles.checkboxLabel}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={settings.notifications.email}
-                                                        onChange={(e) => updateSettings('notifications', { email: e.target.checked })}
-                                                    />
-                                                    <span>Email notifications</span>
-                                                </label>
-                                                <label className={styles.checkboxLabel}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={settings.notifications.push}
-                                                        onChange={(e) => updateSettings('notifications', { push: e.target.checked })}
-                                                    />
-                                                    <span>Push notifications</span>
-                                                </label>
-                                            </div>
-                                        </div>
-
-                                        <div className={styles.settingGroup}>
-                                            <label className={styles.settingLabel}>Frequency</label>
-                                            <select
-                                                value={settings.notifications.frequency}
-                                                onChange={(e) => updateSettings('notifications', { frequency: e.target.value as any })}
-                                                className={styles.select}
-                                            >
-                                                <option value="instant">Instant</option>
-                                                <option value="hourly">Hourly digest</option>
-                                                <option value="daily">Daily digest</option>
-                                            </select>
-                                        </div>
-
-                                        <div className={styles.settingGroup}>
-                                            <label className={styles.settingLabel}>Quiet Hours</label>
-                                            <div className={styles.checkboxGroup}>
-                                                <label className={styles.checkboxLabel}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={settings.notifications.quietHours.enabled}
-                                                        onChange={(e) => updateSettings('notifications', {
-                                                            quietHours: { ...settings.notifications.quietHours, enabled: e.target.checked }
-                                                        })}
-                                                    />
-                                                    <span>Enable quiet hours</span>
-                                                </label>
-                                            </div>
-                                            {settings.notifications.quietHours.enabled && (
-                                                <div className={styles.timeRange}>
-                                                    <input
-                                                        type="time"
-                                                        value={settings.notifications.quietHours.start}
-                                                        onChange={(e) => updateSettings('notifications', {
-                                                            quietHours: { ...settings.notifications.quietHours, start: e.target.value }
-                                                        })}
-                                                        className={styles.timeInput}
-                                                    />
-                                                    <span>to</span>
-                                                    <input
-                                                        type="time"
-                                                        value={settings.notifications.quietHours.end}
-                                                        onChange={(e) => updateSettings('notifications', {
-                                                            quietHours: { ...settings.notifications.quietHours, end: e.target.value }
-                                                        })}
-                                                        className={styles.timeInput}
-                                                    />
+                                                    ))}
                                                 </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Privacy Settings */}
-                            {activeSection === 'privacy' && (
-                                <div className={styles.section}>
-                                    <h2 className={styles.sectionTitle}>
-                                        <Shield className={styles.sectionIcon} />
-                                        Privacy & Data
-                                    </h2>
-
-                                    <div className={styles.settingsGrid}>
-                                        <div className={styles.settingGroup}>
-                                            <label className={styles.settingLabel}>Privacy</label>
-                                            <div className={styles.checkboxGroup}>
-                                                <label className={styles.checkboxLabel}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={settings.privacy.hideOnlineStatus}
-                                                        onChange={(e) => updateSettings('privacy', { hideOnlineStatus: e.target.checked })}
-                                                    />
-                                                    <span>Hide online status</span>
-                                                </label>
-                                                <label className={styles.checkboxLabel}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={settings.privacy.dataCollection}
-                                                        onChange={(e) => updateSettings('privacy', { dataCollection: e.target.checked })}
-                                                    />
-                                                    <span>Allow data collection for improvements</span>
-                                                </label>
-                                                <label className={styles.checkboxLabel}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={settings.privacy.analytics}
-                                                        onChange={(e) => updateSettings('privacy', { analytics: e.target.checked })}
-                                                    />
-                                                    <span>Share analytics data</span>
-                                                </label>
-                                                <label className={styles.checkboxLabel}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={settings.privacy.saveHistory}
-                                                        onChange={(e) => updateSettings('privacy', { saveHistory: e.target.checked })}
-                                                    />
-                                                    <span>Save search and activity history</span>
-                                                </label>
                                             </div>
-                                        </div>
 
-                                        <div className={styles.settingGroup}>
-                                            <label className={styles.settingLabel}>
-                                                Auto-delete History
-                                                <span className={styles.settingValue}>
-                                                    {settings.privacy.autoDelete} days
-                                                </span>
-                                            </label>
-                                            <input
-                                                type="range"
-                                                min="1"
-                                                max="365"
-                                                value={settings.privacy.autoDelete}
-                                                onChange={(e) => updateSettings('privacy', { autoDelete: parseInt(e.target.value) })}
-                                                className={styles.slider}
-                                            />
-                                            <div className={styles.sliderLabels}>
-                                                <span>1 day</span>
-                                                <span>1 year</span>
+                                            <div className={styles.settingGroup}>
+                                                <label className={styles.settingLabel}>
+                                                    Font Size
+                                                    <span className={styles.settingValue}>
+                                                        {settings.appearance.fontSize}px
+                                                    </span>
+                                                </label>
+                                                <input
+                                                    type="range"
+                                                    min="12"
+                                                    max="24"
+                                                    value={settings.appearance.fontSize}
+                                                    onChange={(e) => updateSettings('appearance', { fontSize: parseInt(e.target.value) })}
+                                                    className={styles.slider}
+                                                />
                                             </div>
-                                        </div>
 
-                                        <div className={styles.settingGroup}>
-                                            <label className={styles.settingLabel}>Data Management</label>
-                                            <div className={styles.buttonGroup}>
-                                                <button className={styles.secondaryButton}>
-                                                    <Download className={styles.buttonIcon} />
-                                                    Export My Data
-                                                </button>
-                                                <button className={styles.dangerButton}>
-                                                    <Trash2 className={styles.buttonIcon} />
-                                                    Delete All Data
-                                                </button>
+                                            <div className={styles.settingGroup}>
+                                                <label className={styles.settingLabel}>Accessibility</label>
+                                                <div className={styles.checkboxGroup}>
+                                                    <label className={styles.checkboxLabel}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={settings.appearance.reducedMotion}
+                                                            onChange={(e) => updateSettings('appearance', { reducedMotion: e.target.checked })}
+                                                        />
+                                                        <span>Reduce motion</span>
+                                                    </label>
+                                                    <label className={styles.checkboxLabel}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={settings.appearance.highContrast}
+                                                            onChange={(e) => updateSettings('appearance', { highContrast: e.target.checked })}
+                                                        />
+                                                        <span>High contrast mode</span>
+                                                    </label>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
 
-                            {/* Add other sections similarly... */}
+                                {/* Notifications Settings */}
+                                {activeSection === 'notifications' && (
+                                    <div className={styles.section}>
+                                        <h2 className={styles.sectionTitle}>
+                                            <Bell className={styles.sectionIcon} />
+                                            Notifications
+                                        </h2>
 
+                                        <div className={styles.settingsGrid}>
+                                            <div className={styles.settingGroup}>
+                                                <label className={styles.settingLabel}>Notification Preferences</label>
+                                                <div className={styles.checkboxGroup}>
+                                                    <label className={styles.checkboxLabel}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={settings.notifications.enabled}
+                                                            onChange={(e) => updateSettings('notifications', { enabled: e.target.checked })}
+                                                        />
+                                                        <span>Enable notifications</span>
+                                                    </label>
+                                                    <label className={styles.checkboxLabel}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={settings.notifications.sounds}
+                                                            onChange={(e) => updateSettings('notifications', { sounds: e.target.checked })}
+                                                        />
+                                                        <span>Play sounds</span>
+                                                    </label>
+                                                    <label className={styles.checkboxLabel}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={settings.notifications.desktop}
+                                                            onChange={(e) => updateSettings('notifications', { desktop: e.target.checked })}
+                                                        />
+                                                        <span>Desktop notifications</span>
+                                                    </label>
+                                                    <label className={styles.checkboxLabel}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={settings.notifications.email}
+                                                            onChange={(e) => updateSettings('notifications', { email: e.target.checked })}
+                                                        />
+                                                        <span>Email notifications</span>
+                                                    </label>
+                                                    <label className={styles.checkboxLabel}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={settings.notifications.push}
+                                                            onChange={(e) => updateSettings('notifications', { push: e.target.checked })}
+                                                        />
+                                                        <span>Push notifications</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            <div className={styles.settingGroup}>
+                                                <label className={styles.settingLabel}>Frequency</label>
+                                                <select
+                                                    value={settings.notifications.frequency}
+                                                    onChange={(e) => updateSettings('notifications', { frequency: e.target.value as any })}
+                                                    className={styles.select}
+                                                >
+                                                    <option value="instant">Instant</option>
+                                                    <option value="hourly">Hourly digest</option>
+                                                    <option value="daily">Daily digest</option>
+                                                </select>
+                                            </div>
+
+                                            <div className={styles.settingGroup}>
+                                                <label className={styles.settingLabel}>Quiet Hours</label>
+                                                <div className={styles.checkboxGroup}>
+                                                    <label className={styles.checkboxLabel}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={settings.notifications.quietHours.enabled}
+                                                            onChange={(e) => updateSettings('notifications', {
+                                                                quietHours: { ...settings.notifications.quietHours, enabled: e.target.checked }
+                                                            })}
+                                                        />
+                                                        <span>Enable quiet hours</span>
+                                                    </label>
+                                                </div>
+                                                {settings.notifications.quietHours.enabled && (
+                                                    <div className={styles.timeRange}>
+                                                        <input
+                                                            type="time"
+                                                            value={settings.notifications.quietHours.start}
+                                                            onChange={(e) => updateSettings('notifications', {
+                                                                quietHours: { ...settings.notifications.quietHours, start: e.target.value }
+                                                            })}
+                                                            className={styles.timeInput}
+                                                        />
+                                                        <span>to</span>
+                                                        <input
+                                                            type="time"
+                                                            value={settings.notifications.quietHours.end}
+                                                            onChange={(e) => updateSettings('notifications', {
+                                                                quietHours: { ...settings.notifications.quietHours, end: e.target.value }
+                                                            })}
+                                                            className={styles.timeInput}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Privacy Settings */}
+                                {activeSection === 'privacy' && (
+                                    <div className={styles.section}>
+                                        <h2 className={styles.sectionTitle}>
+                                            <Shield className={styles.sectionIcon} />
+                                            Privacy & Data
+                                        </h2>
+
+                                        <div className={styles.settingsGrid}>
+                                            <div className={styles.settingGroup}>
+                                                <label className={styles.settingLabel}>Privacy</label>
+                                                <div className={styles.checkboxGroup}>
+                                                    <label className={styles.checkboxLabel}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={settings.privacy.hideOnlineStatus}
+                                                            onChange={(e) => updateSettings('privacy', { hideOnlineStatus: e.target.checked })}
+                                                        />
+                                                        <span>Hide online status</span>
+                                                    </label>
+                                                    <label className={styles.checkboxLabel}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={settings.privacy.dataCollection}
+                                                            onChange={(e) => updateSettings('privacy', { dataCollection: e.target.checked })}
+                                                        />
+                                                        <span>Allow data collection for improvements</span>
+                                                    </label>
+                                                    <label className={styles.checkboxLabel}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={settings.privacy.analytics}
+                                                            onChange={(e) => updateSettings('privacy', { analytics: e.target.checked })}
+                                                        />
+                                                        <span>Share analytics data</span>
+                                                    </label>
+                                                    <label className={styles.checkboxLabel}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={settings.privacy.saveHistory}
+                                                            onChange={(e) => updateSettings('privacy', { saveHistory: e.target.checked })}
+                                                        />
+                                                        <span>Save search and activity history</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            <div className={styles.settingGroup}>
+                                                <label className={styles.settingLabel}>
+                                                    Auto-delete History
+                                                    <span className={styles.settingValue}>
+                                                        {settings.privacy.autoDelete} days
+                                                    </span>
+                                                </label>
+                                                <input
+                                                    type="range"
+                                                    min="1"
+                                                    max="365"
+                                                    value={settings.privacy.autoDelete}
+                                                    onChange={(e) => updateSettings('privacy', { autoDelete: parseInt(e.target.value) })}
+                                                    className={styles.slider}
+                                                />
+                                                <div className={styles.sliderLabels}>
+                                                    <span>1 day</span>
+                                                    <span>1 year</span>
+                                                </div>
+                                            </div>
+
+                                            <div className={styles.settingGroup}>
+                                                <label className={styles.settingLabel}>Data Management</label>
+                                                <div className={styles.buttonGroup}>
+                                                    <button className={styles.secondaryButton}>
+                                                        <Download className={styles.buttonIcon} />
+                                                        Export My Data
+                                                    </button>
+                                                    <button className={styles.dangerButton}>
+                                                        <Trash2 className={styles.buttonIcon} />
+                                                        Delete All Data
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Add other sections similarly... */}
+
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
     );
 };

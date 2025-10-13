@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import Sidebars from "@/components/Saidbar.js";
 import {
     RefreshCw,
@@ -41,6 +41,7 @@ import {
     PieLabelRenderProps // Добавляем импорт типа
 } from "recharts";
 import styles from "../module_pages/BotDashboard.module.scss";
+import { SidebarContext } from "@/App.js";
 
 type Status = "online" | "idle" | "dnd" | "offline";
 
@@ -67,6 +68,9 @@ export default function BotDashboard() {
     const [status, setStatus] = useState<Status>("online");
     const [isRestarting, setIsRestarting] = useState(false);
     const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
+
+    const sidebarContext = useContext(SidebarContext);
+    const isSidebarCollapsed = sidebarContext?.isCollapsed || false;
 
     const statuses = [
         { value: "online", label: "Online", description: "Bot is fully operational", color: "#10b981" },
@@ -172,10 +176,9 @@ export default function BotDashboard() {
     ];
 
     return (
-        <div className={styles.layout}>
+        <div className={`layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
             <Sidebars />
-
-            <main className={styles.botDashboard}>
+            <main className="main">
                 {/* Header */}
                 <header className={styles.header}>
                     <div className={styles.headerContent}>

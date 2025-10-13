@@ -1,17 +1,29 @@
 @use '../styles/abstracts/mixins' as *;
 
-.layout {
-  display: flex;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%);
-  color: #ffffff;
-}
+// Удаляем дублирующие стили layout, т.к. они теперь глобальные
+// .layout {
+//   display: flex;
+//   min-height: 100vh;
+//   background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%);
+//   color: #ffffff;
+// }
 
 .main {
   flex: 1;
   padding: 2rem;
-  margin-left: 280px;
+  margin-left: var(--sidebar-width, 280px);
   overflow-x: hidden;
+  transition: var(--sidebar-transition, all 0.3s ease);
+
+  // Добавляем поддержку глобального класса
+  .sidebar-collapsed & {
+    margin-left: var(--sidebar-width-collapsed, 80px);
+  }
+
+  @include tablet {
+    margin-left: 0 !important;
+    padding: 1rem;
+  }
 }
 
 // Header
@@ -673,7 +685,7 @@
 // Responsive Design
 @include tablet {
   .main {
-    margin-left: 0;
+    margin-left: 0 !important;
     padding: 1rem;
   }
 

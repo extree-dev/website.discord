@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
     Home, Users, MessageCircle, Zap, Settings, LogOut, Bell,
@@ -17,6 +17,7 @@ import {
     ROLE_MAPPING,
     convertRoleIdsToNames,
 } from "@/utils/discordRoles.js";
+import { SidebarContext } from "../App.js"; // Импортируем контекст
 
 export type SidebarId =
     | "dashboard"
@@ -208,8 +209,21 @@ const Sidebar: React.FC<SidebarProps> = ({
 
     const navigate = useNavigate();
     const location = useLocation();
+
+    // Используем контекст для глобального управления сайдбаром
+    const sidebarContext = useContext(SidebarContext);
+    const isGloballyCollapsed = sidebarContext?.isCollapsed || false;
+    const toggleGlobalSidebar = sidebarContext?.toggleSidebar;
+
     const [internalCollapsed, setInternalCollapsed] = useState<boolean>(initialCollapsed);
-    const collapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed;
+
+    // Приоритет: внешний проп > глобальный контекст > внутреннее состояние
+    const collapsed = externalCollapsed !== undefined
+        ? externalCollapsed
+        : isGloballyCollapsed !== undefined
+            ? isGloballyCollapsed
+            : internalCollapsed;
+
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [hoverTip, setHoverTip] = useState<{ text: string; position: number } | null>(null);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
@@ -219,8 +233,16 @@ const Sidebar: React.FC<SidebarProps> = ({
 
     const handleCollapse = (newCollapsed: boolean) => {
         if (externalCollapsed === undefined) {
-            // Если управление внутреннее
-            setInternalCollapsed(newCollapsed);
+            // Если есть глобальный контекст - используем его
+            if (toggleGlobalSidebar) {
+                // Переключаем глобальное состояние
+                if (newCollapsed !== isGloballyCollapsed) {
+                    toggleGlobalSidebar();
+                }
+            } else {
+                // Если управление внутреннее
+                setInternalCollapsed(newCollapsed);
+            }
         } else {
             // Если управление внешнее - вызываем callback
             onCollapseChange?.(newCollapsed);

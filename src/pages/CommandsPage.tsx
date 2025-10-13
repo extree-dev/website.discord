@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import Sidebars from "@/components/Saidbar.js";
 import {
     Search,
@@ -24,6 +24,7 @@ import {
     AlertTriangle
 } from "lucide-react";
 import styles from "../module_pages/CommandsPage.module.scss";
+import { SidebarContext } from "@/App.js";
 
 export type CommandParam = {
     id: string;
@@ -133,6 +134,9 @@ export default function CommandsPage() {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [selectedCommands, setSelectedCommands] = useState<string[]>([]);
 
+    const sidebarContext = useContext(SidebarContext);
+    const isSidebarCollapsed = sidebarContext?.isCollapsed || false;
+
     // Filter commands
     const filteredCommands = commands.filter(command => {
         const matchesSearch = command.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -219,10 +223,10 @@ export default function CommandsPage() {
     };
 
     return (
-        <div className={styles.layout}>
+        <div className={`layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
             <Sidebars />
 
-            <main className={`${styles.commandsPage} ${isRefreshing ? styles.updating : ''}`}>
+            <main className="main">
                 {/* Header */}
                 <header className={styles.header}>
                     <div className={styles.headerContent}>

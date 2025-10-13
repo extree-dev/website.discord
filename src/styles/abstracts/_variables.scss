@@ -35,3 +35,29 @@ $breakpoints: (
   desktop: 1024px,
   wide: 1200px
 );
+
+// CSS Custom Properties
+:root {
+  // Colors
+  --primary: #5865F2;
+  --primary-hover: #4752c4;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --white: #ffffff;
+  --black: #000000;
+
+  // Sidebar
+  --sidebar-width: 280px;
+  --sidebar-width-collapsed: 80px;
+  --sidebar-transition: all 0.3s ease;
+
+  // Theme (если есть)
+  --bg-primary: #0f0f0f;
+  --text-primary: #ffffff;
+  --accent-color: #5865F2;
+  --button-bg: #1a1a1a;
+  --button-text: #ffffff;
+  --button-hover: #4752c4;
+  --text-secondary: #888888;
+}

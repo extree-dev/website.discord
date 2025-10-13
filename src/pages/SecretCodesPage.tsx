@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react";
 import {
     Key,
     Copy,
@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import Sidebars from "@/components/Saidbar.js";
 import styles from "../module_pages/SecretCodesPage.module.scss";
+import { SidebarContext } from "@/App.js";
 
 interface SecretCode {
     id: string;
@@ -78,6 +79,9 @@ export const SecretCodesPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [showAdvanced, setShowAdvanced] = useState(false);
+
+    const sidebarContext = useContext(SidebarContext);
+    const isSidebarCollapsed = sidebarContext?.isCollapsed || false;
 
     // Получение токена
     const getAuthToken = useCallback((): string => {
@@ -404,355 +408,357 @@ export const SecretCodesPage: React.FC = () => {
     };
 
     return (
-        <div className={styles.container}>
+        <div className={`layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
             <Sidebars />
-            <div className={styles.contentArea}>
-                <div className={styles.fullscreen}>
-                    {/* Header Section */}
-                    <div className={styles.header}>
-                        <div className={styles.headerTop}>
-                            <div className={styles.headerTitle}>
-                                <div className={styles.titleIcon}>
-                                    <Key className={styles.icon} />
+            <main className="main">
+                <div className={styles.contentArea}>
+                    <div className={styles.fullscreen}>
+                        {/* Header Section */}
+                        <div className={styles.header}>
+                            <div className={styles.headerTop}>
+                                <div className={styles.headerTitle}>
+                                    <div className={styles.titleIcon}>
+                                        <Key className={styles.icon} />
+                                    </div>
+                                    <div>
+                                        <h1 className={styles.title}>Secret Codes</h1>
+                                        <p className={styles.subtitle}>
+                                            Generate and manage moderator registration codes
+                                        </p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h1 className={styles.title}>Secret Codes</h1>
-                                    <p className={styles.subtitle}>
-                                        Generate and manage moderator registration codes
-                                    </p>
+                                <div className={styles.headerActions}>
+                                    <button
+                                        onClick={handleExportCodes}
+                                        className={styles.exportButton}
+                                        disabled={codes.length === 0}
+                                    >
+                                        <Download className={styles.buttonIcon} />
+                                        Export
+                                    </button>
+                                    <button
+                                        onClick={loadCodesFromDatabase}
+                                        className={styles.refreshButton}
+                                        disabled={isLoading}
+                                    >
+                                        <RefreshCw className={`${styles.buttonIcon} ${isLoading ? styles.animateSpin : ''}`} />
+                                        Refresh
+                                    </button>
                                 </div>
                             </div>
-                            <div className={styles.headerActions}>
-                                <button
-                                    onClick={handleExportCodes}
-                                    className={styles.exportButton}
-                                    disabled={codes.length === 0}
-                                >
-                                    <Download className={styles.buttonIcon} />
-                                    Export
+                        </div>
+
+                        {/* Stats Grid */}
+                        <div className={styles.statsGrid}>
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <BarChart3 className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={styles.statNumber}>{stats.total}</div>
+                                    <div className={styles.statLabel}>Total Codes</div>
+                                </div>
+                            </div>
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <Zap className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={`${styles.statNumber} ${styles.statActive}`}>{stats.active}</div>
+                                    <div className={styles.statLabel}>Active</div>
+                                </div>
+                            </div>
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <CheckCircle className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={`${styles.statNumber} ${styles.statUsed}`}>{stats.used}</div>
+                                    <div className={styles.statLabel}>Used</div>
+                                </div>
+                            </div>
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <Shield className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={`${styles.statNumber} ${styles.statExpired}`}>{stats.expired}</div>
+                                    <div className={styles.statLabel}>Expired</div>
+                                </div>
+                            </div>
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <BarChart3 className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={styles.statNumber}>
+                                        {stats.usageRate.toFixed(1)}%
+                                    </div>
+                                    <div className={styles.statLabel}>Usage Rate</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Error Banner */}
+                        {error && (
+                            <div className={styles.errorBanner}>
+                                <div className={styles.errorContent}>
+                                    <AlertCircle className={styles.errorIcon} />
+                                    <span className={styles.errorText}>{error}</span>
+                                </div>
+                                <button onClick={() => setError(null)} className={styles.errorClose}>
+                                    ×
                                 </button>
+                            </div>
+                        )}
+
+                        {/* Code Generator */}
+                        <div className={styles.codeGenerator}>
+                            <div className={styles.generatorHeader}>
+                                <h2 className={styles.generatorTitle}>Generate New Code</h2>
                                 <button
-                                    onClick={loadCodesFromDatabase}
-                                    className={styles.refreshButton}
-                                    disabled={isLoading}
+                                    onClick={() => setShowAdvanced(!showAdvanced)}
+                                    className={styles.advancedToggle}
                                 >
-                                    <RefreshCw className={`${styles.buttonIcon} ${isLoading ? styles.animateSpin : ''}`} />
-                                    Refresh
+                                    <Edit3 className={styles.buttonIcon} />
+                                    {showAdvanced ? 'Simple' : 'Advanced'}
                                 </button>
                             </div>
-                        </div>
-                    </div>
 
-                    {/* Stats Grid */}
-                    <div className={styles.statsGrid}>
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <BarChart3 className={styles.icon} />
-                            </div>
-                            <div className={styles.statContent}>
-                                <div className={styles.statNumber}>{stats.total}</div>
-                                <div className={styles.statLabel}>Total Codes</div>
-                            </div>
-                        </div>
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <Zap className={styles.icon} />
-                            </div>
-                            <div className={styles.statContent}>
-                                <div className={`${styles.statNumber} ${styles.statActive}`}>{stats.active}</div>
-                                <div className={styles.statLabel}>Active</div>
-                            </div>
-                        </div>
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <CheckCircle className={styles.icon} />
-                            </div>
-                            <div className={styles.statContent}>
-                                <div className={`${styles.statNumber} ${styles.statUsed}`}>{stats.used}</div>
-                                <div className={styles.statLabel}>Used</div>
-                            </div>
-                        </div>
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <Shield className={styles.icon} />
-                            </div>
-                            <div className={styles.statContent}>
-                                <div className={`${styles.statNumber} ${styles.statExpired}`}>{stats.expired}</div>
-                                <div className={styles.statLabel}>Expired</div>
-                            </div>
-                        </div>
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <BarChart3 className={styles.icon} />
-                            </div>
-                            <div className={styles.statContent}>
-                                <div className={styles.statNumber}>
-                                    {stats.usageRate.toFixed(1)}%
+                            <div className={styles.generatorGrid}>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.formLabel}>
+                                        Code
+                                        <span className={styles.optional}>(optional)</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={newCode}
+                                        onChange={(e) => setNewCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))}
+                                        placeholder="Auto-generate secure code"
+                                        className={styles.formInput}
+                                        disabled={isLoading}
+                                    />
                                 </div>
-                                <div className={styles.statLabel}>Usage Rate</div>
+
+                                {showAdvanced && (
+                                    <>
+                                        <div className={styles.formGroup}>
+                                            <label className={styles.formLabel}>
+                                                Expiry Days
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={expiryDays}
+                                                onChange={(e) => setExpiryDays(parseInt(e.target.value) || 0)}
+                                                min="0"
+                                                max="365"
+                                                className={styles.formInput}
+                                                disabled={isLoading}
+                                            />
+                                        </div>
+                                        <div className={styles.formGroup}>
+                                            <label className={styles.formLabel}>
+                                                Max Uses
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={maxUses}
+                                                onChange={(e) => setMaxUses(parseInt(e.target.value) || 1)}
+                                                min="1"
+                                                max="100"
+                                                className={styles.formInput}
+                                                disabled={isLoading}
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
+                                <div className={styles.formGroup}>
+                                    <button
+                                        onClick={handleCreateCode}
+                                        className={styles.generateButton}
+                                        disabled={isLoading}
+                                    >
+                                        {isLoading ? (
+                                            <Clock className={`${styles.buttonIcon} ${styles.animateSpin}`} />
+                                        ) : (
+                                            <Plus className={styles.buttonIcon} />
+                                        )}
+                                        {isLoading ? "Creating..." : "Generate Code"}
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Error Banner */}
-                    {error && (
-                        <div className={styles.errorBanner}>
-                            <div className={styles.errorContent}>
-                                <AlertCircle className={styles.errorIcon} />
-                                <span className={styles.errorText}>{error}</span>
-                            </div>
-                            <button onClick={() => setError(null)} className={styles.errorClose}>
-                                ×
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Code Generator */}
-                    <div className={styles.codeGenerator}>
-                        <div className={styles.generatorHeader}>
-                            <h2 className={styles.generatorTitle}>Generate New Code</h2>
-                            <button
-                                onClick={() => setShowAdvanced(!showAdvanced)}
-                                className={styles.advancedToggle}
-                            >
-                                <Edit3 className={styles.buttonIcon} />
-                                {showAdvanced ? 'Simple' : 'Advanced'}
-                            </button>
-                        </div>
-
-                        <div className={styles.generatorGrid}>
-                            <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>
-                                    Code
-                                    <span className={styles.optional}>(optional)</span>
-                                </label>
+                        {/* Filters and Search */}
+                        <div className={styles.filtersSection}>
+                            <div className={styles.searchBox}>
+                                <Search className={styles.searchIcon} />
                                 <input
                                     type="text"
-                                    value={newCode}
-                                    onChange={(e) => setNewCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))}
-                                    placeholder="Auto-generate secure code"
-                                    className={styles.formInput}
-                                    disabled={isLoading}
+                                    placeholder="Search codes, users, emails..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className={styles.searchInput}
                                 />
                             </div>
-
-                            {showAdvanced && (
-                                <>
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.formLabel}>
-                                            Expiry Days
-                                        </label>
-                                        <input
-                                            type="number"
-                                            value={expiryDays}
-                                            onChange={(e) => setExpiryDays(parseInt(e.target.value) || 0)}
-                                            min="0"
-                                            max="365"
-                                            className={styles.formInput}
-                                            disabled={isLoading}
-                                        />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.formLabel}>
-                                            Max Uses
-                                        </label>
-                                        <input
-                                            type="number"
-                                            value={maxUses}
-                                            onChange={(e) => setMaxUses(parseInt(e.target.value) || 1)}
-                                            min="1"
-                                            max="100"
-                                            className={styles.formInput}
-                                            disabled={isLoading}
-                                        />
-                                    </div>
-                                </>
-                            )}
-
-                            <div className={styles.formGroup}>
+                            <div className={styles.filterButtons}>
                                 <button
-                                    onClick={handleCreateCode}
-                                    className={styles.generateButton}
-                                    disabled={isLoading}
+                                    onClick={() => setStatusFilter("all")}
+                                    className={`${styles.filterButton} ${statusFilter === "all" ? styles.active : ''}`}
                                 >
-                                    {isLoading ? (
-                                        <Clock className={`${styles.buttonIcon} ${styles.animateSpin}`} />
-                                    ) : (
-                                        <Plus className={styles.buttonIcon} />
-                                    )}
-                                    {isLoading ? "Creating..." : "Generate Code"}
+                                    All ({codes.length})
+                                </button>
+                                <button
+                                    onClick={() => setStatusFilter("active")}
+                                    className={`${styles.filterButton} ${statusFilter === "active" ? styles.active : ''}`}
+                                >
+                                    Active ({getStatusCount("active")})
+                                </button>
+                                <button
+                                    onClick={() => setStatusFilter("used")}
+                                    className={`${styles.filterButton} ${statusFilter === "used" ? styles.active : ''}`}
+                                >
+                                    Used ({getStatusCount("used")})
+                                </button>
+                                <button
+                                    onClick={() => setStatusFilter("expired")}
+                                    className={`${styles.filterButton} ${statusFilter === "expired" ? styles.active : ''}`}
+                                >
+                                    Expired ({getStatusCount("expired")})
                                 </button>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Filters and Search */}
-                    <div className={styles.filtersSection}>
-                        <div className={styles.searchBox}>
-                            <Search className={styles.searchIcon} />
-                            <input
-                                type="text"
-                                placeholder="Search codes, users, emails..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className={styles.searchInput}
-                            />
-                        </div>
-                        <div className={styles.filterButtons}>
-                            <button
-                                onClick={() => setStatusFilter("all")}
-                                className={`${styles.filterButton} ${statusFilter === "all" ? styles.active : ''}`}
-                            >
-                                All ({codes.length})
-                            </button>
-                            <button
-                                onClick={() => setStatusFilter("active")}
-                                className={`${styles.filterButton} ${statusFilter === "active" ? styles.active : ''}`}
-                            >
-                                Active ({getStatusCount("active")})
-                            </button>
-                            <button
-                                onClick={() => setStatusFilter("used")}
-                                className={`${styles.filterButton} ${statusFilter === "used" ? styles.active : ''}`}
-                            >
-                                Used ({getStatusCount("used")})
-                            </button>
-                            <button
-                                onClick={() => setStatusFilter("expired")}
-                                className={`${styles.filterButton} ${statusFilter === "expired" ? styles.active : ''}`}
-                            >
-                                Expired ({getStatusCount("expired")})
-                            </button>
-                        </div>
-                    </div>
+                        {/* Codes Table */}
+                        <div className={styles.tableContainer}>
+                            <div className={styles.tableHeader}>
+                                <h2 className={styles.tableTitle}>
+                                    Secret Codes
+                                    <span className={styles.tableCount}>({filteredCodes.length})</span>
+                                </h2>
+                            </div>
 
-                    {/* Codes Table */}
-                    <div className={styles.tableContainer}>
-                        <div className={styles.tableHeader}>
-                            <h2 className={styles.tableTitle}>
-                                Secret Codes
-                                <span className={styles.tableCount}>({filteredCodes.length})</span>
-                            </h2>
-                        </div>
-
-                        <div className={styles.tableWrapper}>
-                            <table className={styles.table}>
-                                <thead>
-                                    <tr>
-                                        <th>Code</th>
-                                        <th>Status</th>
-                                        <th>Usage</th>
-                                        <th>Created</th>
-                                        <th>Expires</th>
-                                        <th>Used By</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredCodes.map((code) => {
-                                        const status = getCodeStatus(code);
-                                        return (
-                                            <tr key={code.id} className={styles.tableRow}>
-                                                <td>
-                                                    <div className={styles.codeCell}>
-                                                        <code className={styles.codeDisplay}>
-                                                            {code.code}
-                                                        </code>
-                                                        <button
-                                                            onClick={() => handleCopyCode(code.code)}
-                                                            className={styles.copyButton}
-                                                        >
-                                                            {copiedCode === code.code ? (
-                                                                <CheckCircle className={styles.copyIcon} />
-                                                            ) : (
-                                                                <Copy className={styles.copyIcon} />
-                                                            )}
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <span className={`${styles.statusBadge} ${styles[`status${status.charAt(0).toUpperCase() + status.slice(1)}`]}`}>
-                                                        {status === "active" && <CheckCircle className={styles.statusIcon} />}
-                                                        {status === "used" && <CheckCircle className={styles.statusIcon} />}
-                                                        {status === "expired" && <XCircle className={styles.statusIcon} />}
-                                                        {status}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <span className={styles.usageBadge}>
-                                                        {formatUsage(code)}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <div className={styles.dateCell}>
-                                                        {code.createdAt.toLocaleDateString()}
-                                                        <span className={styles.timeText}>
-                                                            {code.createdAt.toLocaleTimeString()}
+                            <div className={styles.tableWrapper}>
+                                <table className={styles.table}>
+                                    <thead>
+                                        <tr>
+                                            <th>Code</th>
+                                            <th>Status</th>
+                                            <th>Usage</th>
+                                            <th>Created</th>
+                                            <th>Expires</th>
+                                            <th>Used By</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredCodes.map((code) => {
+                                            const status = getCodeStatus(code);
+                                            return (
+                                                <tr key={code.id} className={styles.tableRow}>
+                                                    <td>
+                                                        <div className={styles.codeCell}>
+                                                            <code className={styles.codeDisplay}>
+                                                                {code.code}
+                                                            </code>
+                                                            <button
+                                                                onClick={() => handleCopyCode(code.code)}
+                                                                className={styles.copyButton}
+                                                            >
+                                                                {copiedCode === code.code ? (
+                                                                    <CheckCircle className={styles.copyIcon} />
+                                                                ) : (
+                                                                    <Copy className={styles.copyIcon} />
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <span className={`${styles.statusBadge} ${styles[`status${status.charAt(0).toUpperCase() + status.slice(1)}`]}`}>
+                                                            {status === "active" && <CheckCircle className={styles.statusIcon} />}
+                                                            {status === "used" && <CheckCircle className={styles.statusIcon} />}
+                                                            {status === "expired" && <XCircle className={styles.statusIcon} />}
+                                                            {status}
                                                         </span>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    {code.expiresAt ? (
+                                                    </td>
+                                                    <td>
+                                                        <span className={styles.usageBadge}>
+                                                            {formatUsage(code)}
+                                                        </span>
+                                                    </td>
+                                                    <td>
                                                         <div className={styles.dateCell}>
-                                                            {code.expiresAt.toLocaleDateString()}
+                                                            {code.createdAt.toLocaleDateString()}
                                                             <span className={styles.timeText}>
-                                                                {code.expiresAt.toLocaleTimeString()}
+                                                                {code.createdAt.toLocaleTimeString()}
                                                             </span>
                                                         </div>
-                                                    ) : (
-                                                        <span className={styles.emptyValue}>Never</span>
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    {renderUserInfo(code)}
-                                                </td>
-                                                <td>
-                                                    <div className={styles.actionButtons}>
-                                                        <button
-                                                            onClick={() => handleCopyCode(code.code)}
-                                                            className={styles.actionButton}
-                                                            title="Copy code"
-                                                        >
-                                                            <Copy className={styles.actionIcon} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteCode(code.id)}
-                                                            className={`${styles.actionButton} ${styles.deleteButton}`}
-                                                            title="Delete code"
-                                                        >
-                                                            <Trash2 className={styles.actionIcon} />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                                                    </td>
+                                                    <td>
+                                                        {code.expiresAt ? (
+                                                            <div className={styles.dateCell}>
+                                                                {code.expiresAt.toLocaleDateString()}
+                                                                <span className={styles.timeText}>
+                                                                    {code.expiresAt.toLocaleTimeString()}
+                                                                </span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className={styles.emptyValue}>Never</span>
+                                                        )}
+                                                    </td>
+                                                    <td>
+                                                        {renderUserInfo(code)}
+                                                    </td>
+                                                    <td>
+                                                        <div className={styles.actionButtons}>
+                                                            <button
+                                                                onClick={() => handleCopyCode(code.code)}
+                                                                className={styles.actionButton}
+                                                                title="Copy code"
+                                                            >
+                                                                <Copy className={styles.actionIcon} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteCode(code.id)}
+                                                                className={`${styles.actionButton} ${styles.deleteButton}`}
+                                                                title="Delete code"
+                                                            >
+                                                                <Trash2 className={styles.actionIcon} />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {filteredCodes.length === 0 && !isLoading && (
+                                <div className={styles.emptyState}>
+                                    <Key className={styles.emptyIcon} />
+                                    <p className={styles.emptyTitle}>No codes found</p>
+                                    <p className={styles.emptyDescription}>
+                                        {searchTerm || statusFilter !== "all"
+                                            ? "Try adjusting your search or filters"
+                                            : "Generate your first code to get started"
+                                        }
+                                    </p>
+                                </div>
+                            )}
+
+                            {isLoading && filteredCodes.length === 0 && (
+                                <div className={styles.loadingState}>
+                                    <RefreshCw className={`${styles.loadingIcon} ${styles.animateSpin}`} />
+                                    <p>Loading codes...</p>
+                                </div>
+                            )}
                         </div>
-
-                        {filteredCodes.length === 0 && !isLoading && (
-                            <div className={styles.emptyState}>
-                                <Key className={styles.emptyIcon} />
-                                <p className={styles.emptyTitle}>No codes found</p>
-                                <p className={styles.emptyDescription}>
-                                    {searchTerm || statusFilter !== "all"
-                                        ? "Try adjusting your search or filters"
-                                        : "Generate your first code to get started"
-                                    }
-                                </p>
-                            </div>
-                        )}
-
-                        {isLoading && filteredCodes.length === 0 && (
-                            <div className={styles.loadingState}>
-                                <RefreshCw className={`${styles.loadingIcon} ${styles.animateSpin}`} />
-                                <p>Loading codes...</p>
-                            </div>
-                        )}
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
     );
 };

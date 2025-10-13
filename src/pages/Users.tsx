@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react"; // Добавлен useContext
 import Sidebars from "@/components/Saidbar.js";
 import {
     Search,
@@ -27,6 +27,7 @@ import {
     Users as UsersIcon
 } from "lucide-react";
 import styles from "../module_pages/Users.module.scss";
+import { SidebarContext } from "@/App.js"; // Добавлен импорт контекста
 
 interface User {
     id: string;
@@ -52,6 +53,10 @@ export default function Users() {
     const [isLoading, setIsLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const usersPerPage = 10;
+
+    // Получаем состояние сайдбара из контекста
+    const sidebarContext = useContext(SidebarContext);
+    const isSidebarCollapsed = sidebarContext?.isCollapsed || false;
 
     // Mock data
     useEffect(() => {
@@ -230,7 +235,7 @@ export default function Users() {
 
     if (isLoading) {
         return (
-            <div className={styles.layout}>
+            <div className={`layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
                 <Sidebars />
                 <div className={styles.loadingContainer}>
                     <RefreshCw size={32} className={styles.loadingSpinner} />
@@ -241,10 +246,10 @@ export default function Users() {
     }
 
     return (
-        <div className={styles.layout}>
+        <div className={`layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
             <Sidebars />
 
-            <main className={styles.usersPage}>
+            <main className="main">
                 {/* Header */}
                 <header className={styles.header}>
                     <div className={styles.headerContent}>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import Saidbar from "../components/Saidbar.js";
 import styles from "../module_pages/Dashboard.module.scss";
 import {
@@ -19,10 +19,14 @@ import {
   Bell,
   Calendar
 } from "lucide-react";
+import { SidebarContext } from "@/App.js";
 
 const Dashboard: React.FC = () => {
   const [activeTimeRange, setActiveTimeRange] = useState<'24h' | '7d' | '30d'>('24h');
   const [notifications, setNotifications] = useState(3);
+
+  const sidebarContext = useContext(SidebarContext);
+  const isSidebarCollapsed = sidebarContext?.isCollapsed || false;
 
   // Mock data for charts and stats
   const statsData = {
@@ -49,7 +53,7 @@ const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className={styles.layout}>
+    <div className={`layout ${styles.layout} ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <Saidbar />
 
       <main className={styles.main}>

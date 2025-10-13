@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
     MessageCircle,
     Search,
@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import Sidebars from "@/components/Saidbar.js";
 import styles from "../module_pages/SupportPage.module.scss";
+import { SidebarContext } from "@/App.js";
 
 interface SupportTicket {
     id: string;
@@ -135,6 +136,9 @@ export const SupportPage: React.FC = () => {
         { value: 'bug', label: 'Bug Report', icon: Bug },
         { value: 'other', label: 'Other', icon: HelpCircle }
     ];
+
+    const sidebarContext = useContext(SidebarContext);
+    const isSidebarCollapsed = sidebarContext?.isCollapsed || false;
 
     useEffect(() => {
         loadTickets();
@@ -501,443 +505,445 @@ export const SupportPage: React.FC = () => {
     }
 
     return (
-        <div className={styles.container}>
+        <div className={`layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
             <Sidebars />
-            <div className={styles.contentArea}>
-                <div className={styles.fullscreen}>
-                    {/* Header */}
-                    <div className={styles.header}>
-                        <div className={styles.headerTop}>
-                            <div className={styles.headerTitle}>
-                                <div>
-                                    <h1 className={styles.title}>Support Center</h1>
-                                    <p className={styles.subtitle}>
-                                        Get help with your issues and manage support tickets
-                                    </p>
-                                </div>
-                            </div>
-                            <div className={styles.headerActions}>
-                                <button
-                                    onClick={exportTickets}
-                                    className={styles.exportButton}
-                                    disabled={tickets.length === 0}
-                                >
-                                    <Download className={styles.buttonIcon} />
-                                    Export
-                                </button>
-                                <button
-                                    onClick={() => setIsCreatingTicket(true)}
-                                    className={styles.newTicketButton}
-                                >
-                                    <Plus className={styles.buttonIcon} />
-                                    New Ticket
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Stats Grid */}
-                    <div className={styles.statsGrid}>
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <MessageCircle className={styles.icon} />
-                            </div>
-                            <div className={styles.statContent}>
-                                <div className={styles.statNumber}>{stats.total}</div>
-                                <div className={styles.statLabel}>Total Tickets</div>
-                            </div>
-                        </div>
-
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <Clock className={styles.icon} />
-                            </div>
-                            <div className={styles.statContent}>
-                                <div className={`${styles.statNumber} ${styles.statOpen}`}>{stats.open}</div>
-                                <div className={styles.statLabel}>Open</div>
-                            </div>
-                        </div>
-
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <AlertCircle className={styles.icon} />
-                            </div>
-                            <div className={styles.statContent}>
-                                <div className={`${styles.statNumber} ${styles.statPending}`}>{stats.pending}</div>
-                                <div className={styles.statLabel}>Pending</div>
-                            </div>
-                        </div>
-
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <CheckCircle className={styles.icon} />
-                            </div>
-                            <div className={styles.statContent}>
-                                <div className={`${styles.statNumber} ${styles.statResolved}`}>{stats.resolved}</div>
-                                <div className={styles.statLabel}>Resolved</div>
-                            </div>
-                        </div>
-
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <ArrowUp className={styles.icon} />
-                            </div>
-                            <div className={styles.statContent}>
-                                <div className={`${styles.statNumber} ${styles.statCritical}`}>{stats.highPriority}</div>
-                                <div className={styles.statLabel}>High Priority</div>
-                            </div>
-                        </div>
-
-                        <div className={styles.statCard}>
-                            <div className={styles.statIcon}>
-                                <Clock className={styles.icon} />
-                            </div>
-                            <div className={styles.statContent}>
-                                <div className={styles.statNumber}>{stats.avgResponseTime}h</div>
-                                <div className={styles.statLabel}>Avg. Response</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Main Content */}
-                    <div className={styles.mainLayout}>
-                        {/* Tickets List */}
-                        <div className={styles.ticketsPanel}>
-                            <div className={styles.panelHeader}>
-                                <div className={styles.searchBox}>
-                                    <Search className={styles.searchIcon} />
-                                    <input
-                                        type="text"
-                                        placeholder="Search tickets..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className={styles.searchInput}
-                                    />
-                                </div>
-                                <div className={styles.filterButtons}>
-                                    {statusOptions.map(option => (
-                                        <button
-                                            key={option.value}
-                                            onClick={() => setActiveFilter(option.value)}
-                                            className={`${styles.filterButton} ${activeFilter === option.value ? styles.active : ''
-                                                }`}
-                                        >
-                                            {option.label}
-                                            <span className={styles.filterCount}>({option.count})</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className={styles.ticketsList}>
-                                {filteredTickets.map(ticket => (
-                                    <div
-                                        key={ticket.id}
-                                        className={`${styles.ticketItem} ${selectedTicket?.id === ticket.id ? styles.selected : ''
-                                            }`}
-                                        onClick={() => setSelectedTicket(ticket)}
-                                    >
-                                        <div className={styles.ticketHeader}>
-                                            <div className={styles.ticketId}>{ticket.id}</div>
-                                            <div className={styles.ticketMeta}>
-                                                {getPriorityBadge(ticket.priority)}
-                                                <span className={styles.timeAgo}>
-                                                    {getTimeAgo(ticket.updatedAt)}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className={styles.ticketContent}>
-                                            <h3 className={styles.ticketSubject}>
-                                                {ticket.subject}
-                                            </h3>
-                                            <p className={styles.ticketDescription}>
-                                                {ticket.description}
-                                            </p>
-                                        </div>
-
-                                        <div className={styles.ticketFooter}>
-                                            <div className={styles.ticketCategory}>
-                                                {getCategoryIcon(ticket.category)}
-                                                <span>{ticket.category}</span>
-                                            </div>
-                                            <div className={styles.ticketStatus}>
-                                                {getStatusIcon(ticket.status)}
-                                                <span>{ticket.status}</span>
-                                            </div>
-                                            <div className={styles.ticketStats}>
-                                                <MessageCircle className={styles.statIcon} />
-                                                <span>{ticket.messageCount}</span>
-                                                {ticket.attachments > 0 && (
-                                                    <>
-                                                        <Paperclip className={styles.statIcon} />
-                                                        <span>{ticket.attachments}</span>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
+            <main className="main">
+                <div className={styles.contentArea}>
+                    <div className={styles.fullscreen}>
+                        {/* Header */}
+                        <div className={styles.header}>
+                            <div className={styles.headerTop}>
+                                <div className={styles.headerTitle}>
+                                    <div>
+                                        <h1 className={styles.title}>Support Center</h1>
+                                        <p className={styles.subtitle}>
+                                            Get help with your issues and manage support tickets
+                                        </p>
                                     </div>
-                                ))}
-                            </div>
-
-                            {filteredTickets.length === 0 && (
-                                <div className={styles.emptyState}>
-                                    <MessageCircle className={styles.emptyIcon} />
-                                    <p className={styles.emptyTitle}>No tickets found</p>
-                                    <p className={styles.emptyDescription}>
-                                        {searchTerm
-                                            ? "Try adjusting your search terms"
-                                            : "Create your first support ticket to get started"
-                                        }
-                                    </p>
                                 </div>
-                            )}
-                        </div>
-
-                        {/* Ticket Details */}
-                        <div className={styles.detailsPanel}>
-                            {selectedTicket ? (
-                                <>
-                                    <div className={styles.ticketHeader}>
-                                        <div className={styles.headerTop}>
-                                            <div>
-                                                <h2 className={styles.ticketTitle}>
-                                                    {selectedTicket.subject}
-                                                </h2>
-                                                <div className={styles.ticketMeta}>
-                                                    <span className={styles.ticketId}>
-                                                        {selectedTicket.id}
-                                                    </span>
-                                                    <span className={styles.dot}>•</span>
-                                                    <span className={styles.ticketDate}>
-                                                        Created {getTimeAgo(selectedTicket.createdAt)}
-                                                    </span>
-                                                    <span className={styles.dot}>•</span>
-                                                    {getPriorityBadge(selectedTicket.priority)}
-                                                </div>
-                                            </div>
-                                            <div className={styles.ticketActions}>
-                                                <select
-                                                    value={selectedTicket.status}
-                                                    onChange={(e) => updateTicketStatus(selectedTicket.id, e.target.value as SupportTicket['status'])}
-                                                    className={styles.statusSelect}
-                                                >
-                                                    <option value="open">Open</option>
-                                                    <option value="pending">Pending</option>
-                                                    <option value="resolved">Resolved</option>
-                                                    <option value="closed">Closed</option>
-                                                </select>
-                                                <button className={styles.moreButton}>
-                                                    <MoreVertical className={styles.buttonIcon} />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className={styles.ticketInfo}>
-                                            <div className={styles.infoItem}>
-                                                <User className={styles.infoIcon} />
-                                                <span>{selectedTicket.user.name}</span>
-                                            </div>
-                                            <div className={styles.infoItem}>
-                                                <Mail className={styles.infoIcon} />
-                                                <span>{selectedTicket.user.email}</span>
-                                            </div>
-                                            <div className={styles.infoItem}>
-                                                <Tag className={styles.infoIcon} />
-                                                <span>{selectedTicket.category}</span>
-                                            </div>
-                                            <div className={styles.infoItem}>
-                                                <Calendar className={styles.infoIcon} />
-                                                <span>Updated {getTimeAgo(selectedTicket.updatedAt)}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className={styles.messagesContainer}>
-                                        <div className={styles.messagesList}>
-                                            {messages.map(message => (
-                                                <div
-                                                    key={message.id}
-                                                    className={`${styles.message} ${message.sender.type === 'user' ? styles.userMessage : styles.supportMessage
-                                                        }`}
-                                                >
-                                                    <div className={styles.messageAvatar}>
-                                                        {message.sender.name.charAt(0)}
-                                                    </div>
-                                                    <div className={styles.messageContent}>
-                                                        <div className={styles.messageHeader}>
-                                                            <span className={styles.senderName}>
-                                                                {message.sender.name}
-                                                            </span>
-                                                            <span className={styles.messageTime}>
-                                                                {getTimeAgo(message.createdAt)}
-                                                            </span>
-                                                        </div>
-                                                        <div className={styles.messageText}>
-                                                            {message.content}
-                                                        </div>
-                                                        {message.attachments.length > 0 && (
-                                                            <div className={styles.messageAttachments}>
-                                                                {message.attachments.map(attachment => (
-                                                                    <a
-                                                                        key={attachment.name}
-                                                                        href={attachment.url}
-                                                                        className={styles.attachment}
-                                                                    >
-                                                                        <FileText className={styles.attachmentIcon} />
-                                                                        <span>{attachment.name}</span>
-                                                                    </a>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        <div className={styles.messageInput}>
-                                            <div className={styles.inputToolbar}>
-                                                <button className={styles.toolbarButton} title="Attach file">
-                                                    <Paperclip className={styles.buttonIcon} />
-                                                </button>
-                                                <button className={styles.toolbarButton} title="Add emoji">
-                                                    <Smile className={styles.buttonIcon} />
-                                                </button>
-                                            </div>
-                                            <textarea
-                                                value={newMessage}
-                                                onChange={(e) => setNewMessage(e.target.value)}
-                                                placeholder="Type your message..."
-                                                className={styles.textInput}
-                                                rows={2}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                                        e.preventDefault();
-                                                        handleSendMessage();
-                                                    }
-                                                }}
-                                            />
-                                            <div className={styles.inputActions}>
-                                                <div className={styles.quickActions}>
-                                                    <button className={styles.quickButton} title="Quick response: Thanks">
-                                                        <ThumbsUp className={styles.buttonIcon} />
-                                                    </button>
-                                                    <button className={styles.quickButton} title="Quick response: Not helpful">
-                                                        <ThumbsDown className={styles.buttonIcon} />
-                                                    </button>
-                                                </div>
-                                                <button
-                                                    onClick={handleSendMessage}
-                                                    className={styles.sendButton}
-                                                    disabled={!newMessage.trim()}
-                                                >
-                                                    <Send className={styles.buttonIcon} />
-                                                    Send
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className={styles.noSelection}>
-                                    <MessageCircle className={styles.noSelectionIcon} />
-                                    <h3>Select a ticket</h3>
-                                    <p>Choose a support ticket from the list to view details and messages</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* New Ticket Modal */}
-                    {isCreatingTicket && (
-                        <div className={styles.modalOverlay}>
-                            <div className={styles.modal}>
-                                <div className={styles.modalHeader}>
-                                    <h2>Create New Support Ticket</h2>
+                                <div className={styles.headerActions}>
                                     <button
-                                        onClick={() => setIsCreatingTicket(false)}
-                                        className={styles.closeButton}
+                                        onClick={exportTickets}
+                                        className={styles.exportButton}
+                                        disabled={tickets.length === 0}
                                     >
-                                        ×
+                                        <Download className={styles.buttonIcon} />
+                                        Export
+                                    </button>
+                                    <button
+                                        onClick={() => setIsCreatingTicket(true)}
+                                        className={styles.newTicketButton}
+                                    >
+                                        <Plus className={styles.buttonIcon} />
+                                        New Ticket
                                     </button>
                                 </div>
+                            </div>
+                        </div>
 
-                                <div className={styles.modalContent}>
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.formLabel}>Subject *</label>
+                        {/* Stats Grid */}
+                        <div className={styles.statsGrid}>
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <MessageCircle className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={styles.statNumber}>{stats.total}</div>
+                                    <div className={styles.statLabel}>Total Tickets</div>
+                                </div>
+                            </div>
+
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <Clock className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={`${styles.statNumber} ${styles.statOpen}`}>{stats.open}</div>
+                                    <div className={styles.statLabel}>Open</div>
+                                </div>
+                            </div>
+
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <AlertCircle className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={`${styles.statNumber} ${styles.statPending}`}>{stats.pending}</div>
+                                    <div className={styles.statLabel}>Pending</div>
+                                </div>
+                            </div>
+
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <CheckCircle className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={`${styles.statNumber} ${styles.statResolved}`}>{stats.resolved}</div>
+                                    <div className={styles.statLabel}>Resolved</div>
+                                </div>
+                            </div>
+
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <ArrowUp className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={`${styles.statNumber} ${styles.statCritical}`}>{stats.highPriority}</div>
+                                    <div className={styles.statLabel}>High Priority</div>
+                                </div>
+                            </div>
+
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon}>
+                                    <Clock className={styles.icon} />
+                                </div>
+                                <div className={styles.statContent}>
+                                    <div className={styles.statNumber}>{stats.avgResponseTime}h</div>
+                                    <div className={styles.statLabel}>Avg. Response</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Main Content */}
+                        <div className={styles.mainLayout}>
+                            {/* Tickets List */}
+                            <div className={styles.ticketsPanel}>
+                                <div className={styles.panelHeader}>
+                                    <div className={styles.searchBox}>
+                                        <Search className={styles.searchIcon} />
                                         <input
                                             type="text"
-                                            value={newTicket.subject}
-                                            onChange={(e) => setNewTicket(prev => ({ ...prev, subject: e.target.value }))}
-                                            placeholder="Brief description of your issue"
-                                            className={styles.formInput}
+                                            placeholder="Search tickets..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className={styles.searchInput}
                                         />
                                     </div>
-
-                                    <div className={styles.formRow}>
-                                        <div className={styles.formGroup}>
-                                            <label className={styles.formLabel}>Category</label>
-                                            <select
-                                                value={newTicket.category}
-                                                onChange={(e) => setNewTicket(prev => ({ ...prev, category: e.target.value as any }))}
-                                                className={styles.formSelect}
+                                    <div className={styles.filterButtons}>
+                                        {statusOptions.map(option => (
+                                            <button
+                                                key={option.value}
+                                                onClick={() => setActiveFilter(option.value)}
+                                                className={`${styles.filterButton} ${activeFilter === option.value ? styles.active : ''
+                                                    }`}
                                             >
-                                                {categoryOptions.map(option => (
-                                                    <option key={option.value} value={option.value}>
-                                                        {option.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-
-                                        <div className={styles.formGroup}>
-                                            <label className={styles.formLabel}>Priority</label>
-                                            <select
-                                                value={newTicket.priority}
-                                                onChange={(e) => setNewTicket(prev => ({ ...prev, priority: e.target.value as any }))}
-                                                className={styles.formSelect}
-                                            >
-                                                {priorityOptions.map(option => (
-                                                    <option key={option.value} value={option.value}>
-                                                        {option.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.formLabel}>Description *</label>
-                                        <textarea
-                                            value={newTicket.description}
-                                            onChange={(e) => setNewTicket(prev => ({ ...prev, description: e.target.value }))}
-                                            placeholder="Please provide detailed information about your issue..."
-                                            className={styles.formTextarea}
-                                            rows={6}
-                                        />
+                                                {option.label}
+                                                <span className={styles.filterCount}>({option.count})</span>
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
 
-                                <div className={styles.modalActions}>
-                                    <button
-                                        onClick={() => setIsCreatingTicket(false)}
-                                        className={styles.cancelButton}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleCreateTicket}
-                                        className={styles.submitButton}
-                                        disabled={!newTicket.subject || !newTicket.description}
-                                    >
-                                        Create Ticket
-                                    </button>
+                                <div className={styles.ticketsList}>
+                                    {filteredTickets.map(ticket => (
+                                        <div
+                                            key={ticket.id}
+                                            className={`${styles.ticketItem} ${selectedTicket?.id === ticket.id ? styles.selected : ''
+                                                }`}
+                                            onClick={() => setSelectedTicket(ticket)}
+                                        >
+                                            <div className={styles.ticketHeader}>
+                                                <div className={styles.ticketId}>{ticket.id}</div>
+                                                <div className={styles.ticketMeta}>
+                                                    {getPriorityBadge(ticket.priority)}
+                                                    <span className={styles.timeAgo}>
+                                                        {getTimeAgo(ticket.updatedAt)}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className={styles.ticketContent}>
+                                                <h3 className={styles.ticketSubject}>
+                                                    {ticket.subject}
+                                                </h3>
+                                                <p className={styles.ticketDescription}>
+                                                    {ticket.description}
+                                                </p>
+                                            </div>
+
+                                            <div className={styles.ticketFooter}>
+                                                <div className={styles.ticketCategory}>
+                                                    {getCategoryIcon(ticket.category)}
+                                                    <span>{ticket.category}</span>
+                                                </div>
+                                                <div className={styles.ticketStatus}>
+                                                    {getStatusIcon(ticket.status)}
+                                                    <span>{ticket.status}</span>
+                                                </div>
+                                                <div className={styles.ticketStats}>
+                                                    <MessageCircle className={styles.statIcon} />
+                                                    <span>{ticket.messageCount}</span>
+                                                    {ticket.attachments > 0 && (
+                                                        <>
+                                                            <Paperclip className={styles.statIcon} />
+                                                            <span>{ticket.attachments}</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
+
+                                {filteredTickets.length === 0 && (
+                                    <div className={styles.emptyState}>
+                                        <MessageCircle className={styles.emptyIcon} />
+                                        <p className={styles.emptyTitle}>No tickets found</p>
+                                        <p className={styles.emptyDescription}>
+                                            {searchTerm
+                                                ? "Try adjusting your search terms"
+                                                : "Create your first support ticket to get started"
+                                            }
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Ticket Details */}
+                            <div className={styles.detailsPanel}>
+                                {selectedTicket ? (
+                                    <>
+                                        <div className={styles.ticketHeader}>
+                                            <div className={styles.headerTop}>
+                                                <div>
+                                                    <h2 className={styles.ticketTitle}>
+                                                        {selectedTicket.subject}
+                                                    </h2>
+                                                    <div className={styles.ticketMeta}>
+                                                        <span className={styles.ticketId}>
+                                                            {selectedTicket.id}
+                                                        </span>
+                                                        <span className={styles.dot}>•</span>
+                                                        <span className={styles.ticketDate}>
+                                                            Created {getTimeAgo(selectedTicket.createdAt)}
+                                                        </span>
+                                                        <span className={styles.dot}>•</span>
+                                                        {getPriorityBadge(selectedTicket.priority)}
+                                                    </div>
+                                                </div>
+                                                <div className={styles.ticketActions}>
+                                                    <select
+                                                        value={selectedTicket.status}
+                                                        onChange={(e) => updateTicketStatus(selectedTicket.id, e.target.value as SupportTicket['status'])}
+                                                        className={styles.statusSelect}
+                                                    >
+                                                        <option value="open">Open</option>
+                                                        <option value="pending">Pending</option>
+                                                        <option value="resolved">Resolved</option>
+                                                        <option value="closed">Closed</option>
+                                                    </select>
+                                                    <button className={styles.moreButton}>
+                                                        <MoreVertical className={styles.buttonIcon} />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div className={styles.ticketInfo}>
+                                                <div className={styles.infoItem}>
+                                                    <User className={styles.infoIcon} />
+                                                    <span>{selectedTicket.user.name}</span>
+                                                </div>
+                                                <div className={styles.infoItem}>
+                                                    <Mail className={styles.infoIcon} />
+                                                    <span>{selectedTicket.user.email}</span>
+                                                </div>
+                                                <div className={styles.infoItem}>
+                                                    <Tag className={styles.infoIcon} />
+                                                    <span>{selectedTicket.category}</span>
+                                                </div>
+                                                <div className={styles.infoItem}>
+                                                    <Calendar className={styles.infoIcon} />
+                                                    <span>Updated {getTimeAgo(selectedTicket.updatedAt)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className={styles.messagesContainer}>
+                                            <div className={styles.messagesList}>
+                                                {messages.map(message => (
+                                                    <div
+                                                        key={message.id}
+                                                        className={`${styles.message} ${message.sender.type === 'user' ? styles.userMessage : styles.supportMessage
+                                                            }`}
+                                                    >
+                                                        <div className={styles.messageAvatar}>
+                                                            {message.sender.name.charAt(0)}
+                                                        </div>
+                                                        <div className={styles.messageContent}>
+                                                            <div className={styles.messageHeader}>
+                                                                <span className={styles.senderName}>
+                                                                    {message.sender.name}
+                                                                </span>
+                                                                <span className={styles.messageTime}>
+                                                                    {getTimeAgo(message.createdAt)}
+                                                                </span>
+                                                            </div>
+                                                            <div className={styles.messageText}>
+                                                                {message.content}
+                                                            </div>
+                                                            {message.attachments.length > 0 && (
+                                                                <div className={styles.messageAttachments}>
+                                                                    {message.attachments.map(attachment => (
+                                                                        <a
+                                                                            key={attachment.name}
+                                                                            href={attachment.url}
+                                                                            className={styles.attachment}
+                                                                        >
+                                                                            <FileText className={styles.attachmentIcon} />
+                                                                            <span>{attachment.name}</span>
+                                                                        </a>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <div className={styles.messageInput}>
+                                                <div className={styles.inputToolbar}>
+                                                    <button className={styles.toolbarButton} title="Attach file">
+                                                        <Paperclip className={styles.buttonIcon} />
+                                                    </button>
+                                                    <button className={styles.toolbarButton} title="Add emoji">
+                                                        <Smile className={styles.buttonIcon} />
+                                                    </button>
+                                                </div>
+                                                <textarea
+                                                    value={newMessage}
+                                                    onChange={(e) => setNewMessage(e.target.value)}
+                                                    placeholder="Type your message..."
+                                                    className={styles.textInput}
+                                                    rows={2}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                                            e.preventDefault();
+                                                            handleSendMessage();
+                                                        }
+                                                    }}
+                                                />
+                                                <div className={styles.inputActions}>
+                                                    <div className={styles.quickActions}>
+                                                        <button className={styles.quickButton} title="Quick response: Thanks">
+                                                            <ThumbsUp className={styles.buttonIcon} />
+                                                        </button>
+                                                        <button className={styles.quickButton} title="Quick response: Not helpful">
+                                                            <ThumbsDown className={styles.buttonIcon} />
+                                                        </button>
+                                                    </div>
+                                                    <button
+                                                        onClick={handleSendMessage}
+                                                        className={styles.sendButton}
+                                                        disabled={!newMessage.trim()}
+                                                    >
+                                                        <Send className={styles.buttonIcon} />
+                                                        Send
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className={styles.noSelection}>
+                                        <MessageCircle className={styles.noSelectionIcon} />
+                                        <h3>Select a ticket</h3>
+                                        <p>Choose a support ticket from the list to view details and messages</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                    )}
+
+                        {/* New Ticket Modal */}
+                        {isCreatingTicket && (
+                            <div className={styles.modalOverlay}>
+                                <div className={styles.modal}>
+                                    <div className={styles.modalHeader}>
+                                        <h2>Create New Support Ticket</h2>
+                                        <button
+                                            onClick={() => setIsCreatingTicket(false)}
+                                            className={styles.closeButton}
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+
+                                    <div className={styles.modalContent}>
+                                        <div className={styles.formGroup}>
+                                            <label className={styles.formLabel}>Subject *</label>
+                                            <input
+                                                type="text"
+                                                value={newTicket.subject}
+                                                onChange={(e) => setNewTicket(prev => ({ ...prev, subject: e.target.value }))}
+                                                placeholder="Brief description of your issue"
+                                                className={styles.formInput}
+                                            />
+                                        </div>
+
+                                        <div className={styles.formRow}>
+                                            <div className={styles.formGroup}>
+                                                <label className={styles.formLabel}>Category</label>
+                                                <select
+                                                    value={newTicket.category}
+                                                    onChange={(e) => setNewTicket(prev => ({ ...prev, category: e.target.value as any }))}
+                                                    className={styles.formSelect}
+                                                >
+                                                    {categoryOptions.map(option => (
+                                                        <option key={option.value} value={option.value}>
+                                                            {option.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div className={styles.formGroup}>
+                                                <label className={styles.formLabel}>Priority</label>
+                                                <select
+                                                    value={newTicket.priority}
+                                                    onChange={(e) => setNewTicket(prev => ({ ...prev, priority: e.target.value as any }))}
+                                                    className={styles.formSelect}
+                                                >
+                                                    {priorityOptions.map(option => (
+                                                        <option key={option.value} value={option.value}>
+                                                            {option.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div className={styles.formGroup}>
+                                            <label className={styles.formLabel}>Description *</label>
+                                            <textarea
+                                                value={newTicket.description}
+                                                onChange={(e) => setNewTicket(prev => ({ ...prev, description: e.target.value }))}
+                                                placeholder="Please provide detailed information about your issue..."
+                                                className={styles.formTextarea}
+                                                rows={6}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className={styles.modalActions}>
+                                        <button
+                                            onClick={() => setIsCreatingTicket(false)}
+                                            className={styles.cancelButton}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleCreateTicket}
+                                            className={styles.submitButton}
+                                            disabled={!newTicket.subject || !newTicket.description}
+                                        >
+                                            Create Ticket
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
+            </main>
         </div>
     );
 };

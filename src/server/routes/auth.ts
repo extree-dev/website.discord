@@ -17,26 +17,85 @@ if (!process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_REDIRECT_URI) {
 
 const router = express.Router();
 const prisma = new PrismaClient();
+const failedAttempts = new Map();
+
+
+const bruteForceProtection = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const ip = getClientIP(req);
+  const now = Date.now();
+  const windowMs = 15 * 60 * 1000; // 15 минут
+
+  if (!failedAttempts.has(ip)) {
+    failedAttempts.set(ip, { count: 0, lastAttempt: now });
+  }
+
+  const attempts = failedAttempts.get(ip)!;
+
+  // Сбрасываем счетчик если окно истекло
+  if (now - attempts.lastAttempt > windowMs) {
+    attempts.count = 0;
+  }
+
+  attempts.count++;
+  attempts.lastAttempt = now;
+
+  if (attempts.count > 10) {
+    securityLogger.logSuspiciousActivity('brute_force_detected', {
+      ip,
+      attempts: attempts.count,
+      userAgent: req.get('User-Agent'),
+      path: req.path
+    });
+
+    // Блокируем IP на 1 час
+    failedAttempts.set(ip, {
+      count: attempts.count,
+      lastAttempt: now,
+      blockedUntil: now + (60 * 60 * 1000)
+    });
+
+    return res.status(429).json({
+      error: "Too many failed attempts. IP blocked for 1 hour."
+    });
+  }
+
+  // Проверяем блокировку
+  if (attempts.blockedUntil && now < attempts.blockedUntil) {
+    return res.status(429).json({
+      error: "IP temporarily blocked. Try again later."
+    });
+  }
+
+  next();
+};
+
+router.use("/login", bruteForceProtection);
+router.use("/register", bruteForceProtection);
+router.use("/oauth/discord", bruteForceProtection);
 
 // ==================== ЗАЩИТА ОТ SQL-ИНЪЕКЦИЙ ====================
 
-const sqlInjectionPatterns = [
-  /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|EXEC|ALTER|CREATE|TRUNCATE)\b)/i,
-  /('|"|`|--|#|\/\*|\*\/|;|\|)/,
-  /(\b(OR|AND)\s+['"]?[0-9]+\s*=\s*[0-9]+\b)/i,
-  /(WAITFOR\s+DELAY|SLEEP\s*\(\s*[0-9]+\s*\))/i,
-  /(xp_cmdshell|sp_configure|@@version)/i
+const advancedSQLInjectionPatterns = [
+  /(\b(UNION\s+ALL\s+SELECT|UNION\s+SELECT)\b)/i,
+  /(EXEC\s*\(|EXECUTE\s*\(|sp_executesql)/i,
+  /(WAITFOR\s+DELAY\s+'[0-9]+:[0-9]+:[0-9]+')/i,
+  /(\b(SLEEP|BENCHMARK)\s*\(\s*[0-9]+\s*\))/i,
+  /(\/\*![0-9]+\s*)/, // MySQL conditional comments
+  /(CHAR\s*\(\s*[0-9\s,]+\))/i, // CHAR injection
+  /(LOAD_FILE\s*\(|INTO\s+OUTFILE|INTO\s+DUMPFILE)/i,
+  /(\b(IF|CASE|WHEN)\b.*\bTHEN\b)/i
 ];
 
-const detectSQLInjection = (input: string): boolean => {
-  return sqlInjectionPatterns.some(pattern => pattern.test(input));
+const detectAdvancedSQLInjection = (input: string): boolean => {
+  return [...advancedSQLInjectionPatterns, ...advancedSQLInjectionPatterns]
+    .some(pattern => pattern.test(input));
 };
 
 const secureSanitizeInput = (input: string, fieldName: string, ip: string): string => {
   const trimmed = validator.trim(input);
   const escaped = validator.escape(trimmed);
 
-  if (detectSQLInjection(input) || detectSQLInjection(trimmed)) {
+  if (detectAdvancedSQLInjection(input) || detectAdvancedSQLInjection(trimmed)) {
     securityLogger.logSuspiciousActivity('sql_injection_attempt', {
       field: fieldName,
       originalInput: input.substring(0, 100),
@@ -54,7 +113,7 @@ const sqlInjectionProtection = (req: express.Request, res: express.Response, nex
 
   if (req.query) {
     for (const [key, value] of Object.entries(req.query)) {
-      if (typeof value === 'string' && detectSQLInjection(value)) {
+      if (typeof value === 'string' && detectAdvancedSQLInjection(value)) {
         securityLogger.logSuspiciousActivity('sql_injection_query', {
           parameter: key,
           value: value.substring(0, 50),
@@ -98,7 +157,7 @@ const checkObjectForSQLInjection = (obj: any, ip: string, path: string = ''): st
     }
 
     if (typeof value === 'string') {
-      if (detectSQLInjection(value)) {
+      if (detectAdvancedSQLInjection(value)) {
         suspiciousFields.push(currentPath);
       }
     } else if (typeof value === 'object' && value !== null) {
@@ -110,6 +169,61 @@ const checkObjectForSQLInjection = (obj: any, ip: string, path: string = ''): st
 };
 
 router.use(sqlInjectionProtection);
+
+const deepSanitize = (obj: any): any => {
+  if (typeof obj === 'string') {
+    // Удаляем потенциально опасные символы
+    return validator.escape(
+      validator.trim(
+        obj.replace(/[<>]/g, '') // Удаляем < и >
+      )
+    );
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(deepSanitize);
+  }
+  if (typeof obj === 'object' && obj !== null) {
+    return Object.keys(obj).reduce((acc, key) => {
+      acc[key] = deepSanitize(obj[key]);
+      return acc;
+    }, {} as any);
+  }
+  return obj;
+};
+
+const sanitizeRequestData = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  try {
+    // Санитизация body
+    if (req.body && typeof req.body === 'object') {
+      req.body = deepSanitize(req.body);
+    }
+
+    // Санитизация query параметров (без перезаписи req.query)
+    if (req.query && typeof req.query === 'object') {
+      const originalQuery = { ...req.query };
+      const sanitizedQuery: any = {};
+
+      for (const [key, value] of Object.entries(originalQuery)) {
+        sanitizedQuery[key] = deepSanitize(value);
+      }
+
+      // Создаем прокси для безопасного доступа
+      req.query = new Proxy(sanitizedQuery, {
+        get(target, prop) {
+          return target[prop as string];
+        },
+        set() {
+          return false; // Запрещаем изменение
+        }
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Sanitization error:', error);
+    next();
+  }
+};
 
 // ==================== ИНТЕРФЕЙСЫ ДЛЯ ТИПИЗАЦИИ ====================
 
@@ -769,7 +883,6 @@ const getUserDiscordRolesWithColors = async (accessToken: string, discordId: str
         position: role.position
       }));
 
-    console.log(`User ${discordId} roles with colors:`, userRoles);
     return userRoles;
 
   } catch (error) {
@@ -931,13 +1044,6 @@ router.get("/oauth/discord/callback", async (req, res) => {
         highestRole = roleData.name;
         roleColor = roleData.color;
         roleHexColor = discordColorToHex(roleColor);
-
-        console.log('User Discord roles with colors:', {
-          allRoles: userRoles.map(r => ({ name: r.name, color: r.color })),
-          highestRole: highestRole,
-          roleColor: roleColor,
-          roleHexColor: roleHexColor
-        });
       } else {
         console.log('User has no special roles, using @everyone');
       }
@@ -955,18 +1061,6 @@ router.get("/oauth/discord/callback", async (req, res) => {
     // Создаем URL аватара
     const avatarUrl = discordUser.avatar ?
       `https://cdn.discordapp.com/avatars/${discordId}/${discordUser.avatar}.png` : null;
-
-    console.log('Discord user data:', {
-      discordId,
-      username,
-      email,
-      avatar: discordUser.avatar,
-      avatarUrl,
-      userRoles: userRoles.map(r => r.name),
-      highestRole,
-      roleColor,
-      roleHexColor
-    });
 
     // 5) transaction: ищем/создаём пользователя
     const txResult = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -1134,8 +1228,6 @@ router.get("/oauth/discord/callback", async (req, res) => {
       };
     });
 
-    console.log('OAuth transaction result:', txResult);
-
     const savedProfile = await prisma.profile.findFirst({
       where: { userId: txResult.id },
       select: { discordRole: true }
@@ -1151,14 +1243,6 @@ router.get("/oauth/discord/callback", async (req, res) => {
       roleColor: txResult.roleColor,
       roleHexColor: txResult.roleHexColor,
       allRoles: txResult.allRoles,
-      avatar: txResult.avatar
-    });
-
-    console.log('🎫 Generated JWT token with roles:', {
-      userId: txResult.id,
-      role: txResult.highestRole,
-      allRoles: txResult.allRoles,
-      roleColor: txResult.roleColor,
       avatar: txResult.avatar
     });
 
@@ -1962,16 +2046,19 @@ router.get("/secret-codes/stats", async (req, res) => {
 // Проверка наличия бота на сервере
 router.get("/discord/bot-status", async (req, res) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
-  
+
   if (!token) {
     return res.status(401).json({ error: "Authentication required" });
   }
 
   try {
     const decoded = verifyToken(token);
-    
+
+    // ✅ ИСПРАВЛЕНО: используем GUILD_ID вместо SERVER_ID
+    const GUILD_ID = process.env.DISCORD_GUILD_ID;
+
     // Проверяем подключение к Discord API
-    const response = await fetch(`https://discord.com/api/v10/guilds/${process.env.DISCORD_SERVER_ID}`, {
+    const response = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}`, {
       headers: {
         'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
         'Content-Type': 'application/json'
@@ -1981,16 +2068,17 @@ router.get("/discord/bot-status", async (req, res) => {
     const botStatus = {
       isOnServer: response.ok,
       serverName: null as string | null,
-      serverId: process.env.DISCORD_CLIENT_ID,
+      serverId: GUILD_ID, // ✅ Используем GUILD_ID
       lastChecked: new Date().toISOString()
     };
 
     if (response.ok) {
       const guildData = await response.json();
       botStatus.serverName = guildData.name;
+    } else {
+      console.log(`❌ Bot is NOT on server. Status: ${response.status}`);
     }
 
-    console.log('Bot status check:', botStatus);
     res.json(botStatus);
 
   } catch (error) {
@@ -1998,26 +2086,27 @@ router.get("/discord/bot-status", async (req, res) => {
     res.json({
       isOnServer: false,
       serverName: null,
-      serverId: process.env.DISCORD_CLIENT_ID,
+      serverId: process.env.DISCORD_GUILD_ID, // ✅ Используем GUILD_ID
       lastChecked: new Date().toISOString(),
       error: "Failed to check bot status"
     });
   }
 });
 
-// Получение статистики сервера
+// Получение статистики сервера - ОБНОВЛЕННАЯ ВЕРСИЯ
 router.get("/discord/server-stats", async (req, res) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
-  
+
   if (!token) {
     return res.status(401).json({ error: "Authentication required" });
   }
 
   try {
     const decoded = verifyToken(token);
+    const GUILD_ID = process.env.DISCORD_GUILD_ID;
 
-    // Получаем данные сервера
-    const guildResponse = await fetch(`https://discord.com/api/v10/guilds/${process.env.DISCORD_CLIENT_ID}`, {
+    // ✅ ИСПРАВЛЕНО: используем GUILD_ID и with_counts=true
+    const guildResponse = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}?with_counts=true`, {
       headers: {
         'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
         'Content-Type': 'application/json'
@@ -2025,26 +2114,31 @@ router.get("/discord/server-stats", async (req, res) => {
     });
 
     if (!guildResponse.ok) {
+      console.log(`❌ Discord API error: ${guildResponse.status}`);
       return res.status(404).json({ error: "Bot is not on the server or server not found" });
     }
 
     const guildData = await guildResponse.json();
 
-    // Получаем список участников
-    const membersResponse = await fetch(`https://discord.com/api/v10/guilds/${process.env.DISCORD_CLIENT_ID}/members?limit=1000`, {
+    // Получаем список участников для точного подсчета онлайн
+    const membersResponse = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`, {
       headers: {
         'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
         'Content-Type': 'application/json'
       }
     });
 
-    let members = [];
+    let onlineMembers = 0;
     if (membersResponse.ok) {
-      members = await membersResponse.json();
+      const members = await membersResponse.json();
+      // Считаем реальных онлайн участников
+      onlineMembers = members.filter((member: any) =>
+        member.status === 'online' || member.status === 'idle' || member.status === 'dnd'
+      ).length;
     }
 
     // Получаем список каналов
-    const channelsResponse = await fetch(`https://discord.com/api/v10/guilds/${process.env.DISCORD_CLIENT_ID}/channels`, {
+    const channelsResponse = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/channels`, {
       headers: {
         'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
         'Content-Type': 'application/json'
@@ -2056,11 +2150,6 @@ router.get("/discord/server-stats", async (req, res) => {
       channels = await channelsResponse.json();
     }
 
-    // Фильтруем онлайн участников
-    const onlineMembers = members.filter((member: any) => 
-      member.status === 'online' || member.status === 'idle' || member.status === 'dnd'
-    ).length;
-
     // Считаем текстовые и голосовые каналы
     const textChannels = channels.filter((channel: any) => channel.type === 0).length;
     const voiceChannels = channels.filter((channel: any) => channel.type === 2).length;
@@ -2071,12 +2160,12 @@ router.get("/discord/server-stats", async (req, res) => {
         id: guildData.id,
         icon: guildData.icon ? `https://cdn.discordapp.com/icons/${guildData.id}/${guildData.icon}.png` : null,
         owner: guildData.owner_id,
-        created: new Date(guildData.created_timestamp).toISOString()
+        created: guildData.created_at ? new Date(guildData.created_at).toISOString() : new Date().toISOString()
       },
       members: {
-        total: guildData.approximate_member_count || members.length,
-        online: onlineMembers,
-        offline: (guildData.approximate_member_count || members.length) - onlineMembers
+        total: guildData.approximate_member_count || 0,
+        online: guildData.approximate_presence_count || onlineMembers, // Используем approximate_presence_count если есть
+        offline: (guildData.approximate_member_count || 0) - (guildData.approximate_presence_count || onlineMembers)
       },
       channels: {
         total: channels.length,
@@ -2084,21 +2173,31 @@ router.get("/discord/server-stats", async (req, res) => {
         voice: voiceChannels
       },
       boosts: guildData.premium_subscription_count || 0,
-      tier: guildData.premium_tier || 0
+      tier: guildData.premium_tier || 0,
+      lastUpdated: new Date().toISOString()
     };
 
     res.json(stats);
 
   } catch (error) {
-    console.error('Server stats fetch error:', error);
-    res.status(500).json({ error: "Failed to fetch server statistics" });
+    console.error('❌ Server stats fetch error:', error);
+
+    let errorMessage = "Failed to fetch server statistics";
+    if (error instanceof Error) {
+      errorMessage += `: ${error.message}`;
+    }
+
+    res.status(500).json({
+      error: errorMessage,
+      details: "Check bot permissions and server connectivity"
+    });
   }
 });
 
 // Получение активности модерации (заглушка - в реальности нужно брать из БД)
 router.get("/discord/moderation-activity", async (req, res) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
-  
+
   if (!token) {
     return res.status(401).json({ error: "Authentication required" });
   }
@@ -2140,7 +2239,7 @@ router.get("/discord/moderation-activity", async (req, res) => {
 // Получение ролей сервера для статистики
 router.get("/discord/server-roles", async (req, res) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
-  
+
   if (!token) {
     return res.status(401).json({ error: "Authentication required" });
   }
@@ -2183,5 +2282,213 @@ router.get("/discord/server-roles", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch server roles" });
   }
 });
+
+// Получение количества модераторов по ролям
+router.get("/discord/moderator-stats", async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: "Authentication required" });
+
+  try {
+    const decoded = verifyToken(token);
+    const GUILD_ID = process.env.DISCORD_GUILD_ID;
+
+    // ID ролей модераторов (замени на реальные ID ролей твоего сервера)
+    const moderatorRoleIds = [
+      '1399388382492360908', // Chief Administrator
+      '1375122633930178621', // Bot Developer (если это модераторская роль)
+      // Добавь другие ID ролей модераторов
+    ];
+
+    let activeModerators = 0;
+
+    // Получаем список участников с ролями
+    const membersResponse = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`, {
+      headers: {
+        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (membersResponse.ok) {
+      const members = await membersResponse.json();
+
+      // Считаем участников с модераторскими ролями
+      activeModerators = members.filter((member: any) => {
+        return member.roles.some((roleId: string) => moderatorRoleIds.includes(roleId));
+      }).length;
+
+    }
+
+    res.json({
+      activeModerators,
+      moderatorRoles: moderatorRoleIds,
+      lastUpdated: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Moderator stats error:', error);
+    res.status(500).json({
+      error: "Failed to fetch moderator statistics",
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Эндпоинт для получения audit log
+router.get("/discord/audit-logs", async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: "Authentication required" });
+
+  try {
+    const decoded = verifyToken(token);
+    const GUILD_ID = process.env.DISCORD_GUILD_ID;
+
+    // Проверяем что GUILD_ID существует
+    if (!GUILD_ID) {
+      console.error('❌ DISCORD_GUILD_ID is not set in environment variables');
+      return res.status(500).json({ error: "Server configuration error" });
+    }
+
+    console.log(`📋 Fetching audit logs for guild: ${GUILD_ID}`);
+
+    // Получаем audit log с лимитом 10 записей
+    const auditResponse = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/audit-logs?limit=10`, {
+      headers: {
+        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!auditResponse.ok) {
+      console.log(`❌ Audit log API error: ${auditResponse.status}`);
+      return res.status(auditResponse.status).json({
+        error: "Failed to fetch audit logs",
+        details: `Discord API returned ${auditResponse.status}`
+      });
+    }
+
+    const auditData = await auditResponse.json();
+
+    // Преобразуем audit log entries в наш формат
+    const moderationActions = await transformAuditLogToActivities(auditData.audit_log_entries, GUILD_ID);
+
+    res.json({
+      recentActivities: moderationActions,
+      total: moderationActions.length,
+      generatedAt: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Audit log fetch error:', error);
+    res.status(500).json({
+      error: "Failed to fetch audit logs",
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Функция для преобразования audit log в наш формат
+async function transformAuditLogToActivities(auditLogEntries: any[], guildId: string) {
+  const actions = [];
+
+  for (const entry of auditLogEntries) {
+    // Фильтруем только действия модерации
+    const moderationActions = [22, 23, 20, 24, 28, 29, 72];
+    if (!moderationActions.includes(entry.action_type)) continue;
+
+    try {
+      // Получаем информацию о пользователе
+      let userName = 'Unknown';
+      if (entry.user_id) {
+        const userResponse = await fetch(`https://discord.com/api/v10/users/${entry.user_id}`, {
+          headers: {
+            'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          userName = userData.username || `User${entry.user_id}`;
+        }
+      }
+
+      // Получаем информацию о цели
+      let targetName = 'Unknown';
+      if (entry.target_id) {
+        // Для пользователей
+        if (entry.action_type === 22 || entry.action_type === 23 || entry.action_type === 20) {
+          const targetResponse = await fetch(`https://discord.com/api/v10/users/${entry.target_id}`, {
+            headers: {
+              'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          if (targetResponse.ok) {
+            const targetData = await targetResponse.json();
+            targetName = targetData.username || `User${entry.target_id}`;
+          }
+        }
+        // Для каналов
+        else if (entry.action_type === 28 || entry.action_type === 29) {
+          targetName = `Channel${entry.target_id}`;
+        }
+      }
+
+      const actionType = getActionType(entry.action_type);
+      const timestamp = new Date(entry.id / 4194304 + 1420070400000);
+
+      actions.push({
+        id: entry.id,
+        user: entry.user_id,
+        userName: userName,
+        action: actionType.action,
+        target: entry.target_id,
+        targetName: targetName,
+        reason: entry.reason || 'No reason provided',
+        time: formatTimeAgo(timestamp),
+        timestamp: timestamp.toISOString(),
+        status: 'success'
+      });
+
+      if (actions.length >= 5) break; // Ограничиваем 5 действиями
+
+    } catch (error) {
+      console.error('Error processing audit log entry:', error);
+    }
+  }
+
+  return actions;
+}
+
+// Функция для преобразования action_type в читаемый формат
+function getActionType(actionType: number) {
+  const actions: { [key: number]: { action: string; icon: string } } = {
+    22: { action: 'banned', icon: 'ban' },
+    23: { action: 'unbanned', icon: 'unban' },
+    20: { action: 'kicked', icon: 'kick' },
+    24: { action: 'updated roles for', icon: 'role' },
+    25: { action: 'moved', icon: 'move' },
+    26: { action: 'disconnected', icon: 'disconnect' },
+    72: { action: 'updated', icon: 'update' },
+    28: { action: 'deleted message from', icon: 'delete' },
+    29: { action: 'bulk deleted messages in', icon: 'bulk_delete' },
+  };
+
+  return actions[actionType] || { action: 'performed action on', icon: 'default' };
+}
+
+// Функция для форматирования времени (как "2 min ago")
+function formatTimeAgo(timestamp: Date) {
+  const now = new Date();
+  const diffMs = now.getTime() - timestamp.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} min ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+}
 
 export default router;

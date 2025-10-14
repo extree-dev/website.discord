@@ -783,3 +783,26 @@
 .spinning {
   animation: spin 1s linear infinite;
 }
+
+// В Dashboard.module.scss
+.activityReason {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+  
+  p {
+    margin: 0.5rem 0 0.25rem;
+    font-weight: 500;
+  }
+  
+  small {
+    font-size: 0.875rem;
+  }
+}

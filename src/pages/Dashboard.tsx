@@ -19,7 +19,9 @@ import {
   MoreHorizontal,
   Bell,
   Calendar,
-  RefreshCw
+  RefreshCw,
+  Zap,
+  Hash
 } from "lucide-react";
 import { SidebarContext } from "@/App.js";
 
@@ -52,6 +54,19 @@ interface ServerStats {
   tier: number;
 }
 
+interface Activity {
+  id?: string;
+  user: string;
+  userName?: string;
+  action: string;
+  target: string;
+  targetName?: string;
+  time: string;
+  status: 'success' | 'warning';
+  reason?: string;
+  timestamp?: string;
+}
+
 const Dashboard: React.FC = () => {
   const [activeTimeRange, setActiveTimeRange] = useState<'24h' | '7d' | '30d'>('24h');
   const [notifications, setNotifications] = useState(3);
@@ -59,6 +74,77 @@ const Dashboard: React.FC = () => {
   const [serverStats, setServerStats] = useState<ServerStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const [commandStats, setCommandStats] = useState<{
+    commandsToday: number;
+    changeVsAverage: number;
+  } | null>(null);
+
+  const [messageStats, setMessageStats] = useState<{
+    totalMessages: number;
+    messagesToday: number;
+    changeVsAverage: number;
+  } | null>(null);
+
+  const [activeModerators, setActiveModerators] = useState<number>(0);
+
+  const mockActivities: Activity[] = [
+    {
+      id: "mock1",
+      user: "user1",
+      userName: "Alex",
+      action: "banned",
+      target: "user2",
+      targetName: "spammer123",
+      time: "2 min ago",
+      status: "success",
+      reason: "Spam"
+    },
+    {
+      id: "mock2",
+      user: "user3",
+      userName: "Maria",
+      action: "muted",
+      target: "user4",
+      targetName: "toxic_user",
+      time: "5 min ago",
+      status: "success",
+      reason: "Toxic behavior"
+    },
+    {
+      id: "mock3",
+      user: "user5",
+      userName: "John",
+      action: "warned",
+      target: "user6",
+      targetName: "rule_breaker",
+      time: "12 min ago",
+      status: "warning"
+    },
+    {
+      id: "mock4",
+      user: "user7",
+      userName: "Sarah",
+      action: "kicked",
+      target: "user8",
+      targetName: "advertiser",
+      time: "25 min ago",
+      status: "success",
+      reason: "Unauthorized advertising"
+    },
+    {
+      id: "mock5",
+      user: "user9",
+      userName: "Mike",
+      action: "cleared",
+      target: "channel1",
+      targetName: "#general (50 messages)",
+      time: "1 hour ago",
+      status: "success"
+    }
+  ];
+
+  const [recentActivities, setRecentActivities] = useState<Activity[]>(mockActivities);
 
   const sidebarContext = useContext(SidebarContext);
   const isSidebarCollapsed = sidebarContext?.isCollapsed || false;
@@ -74,35 +160,37 @@ const Dashboard: React.FC = () => {
         return;
       }
 
-      console.log('🔑 Token from localStorage:', token.substring(0, 50) + '...');
+      const API_BASE = 'http://localhost:4000/api';
 
-      // Test with simple endpoint first
-      const testResponse = await fetch('/api/discord/bot-status', {
+      // Загружаем статус бота
+      const botResponse = await fetch(`${API_BASE}/discord/bot-status`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
 
-      console.log('📊 Response status:', testResponse.status);
-      console.log('📊 Response headers:', Object.fromEntries(testResponse.headers.entries()));
-
-      const responseText = await testResponse.text();
-      console.log('📄 Response text:', responseText);
-
-      if (!testResponse.ok) {
-        console.error('❌ API returned error:', responseText);
-        return;
-      }
-
-      try {
-        const botData = JSON.parse(responseText);
-        console.log('✅ Bot status data:', botData);
+      if (botResponse.ok) {
+        const botData = await botResponse.json();
         setBotStatus(botData);
 
-        // Continue with other endpoints...
-      } catch (e) {
-        console.error('❌ JSON parse failed:', e);
+        // Если бот на сервере, загружаем статистику
+        if (botData.isOnServer) {
+          // Загружаем статистику сервера
+          const statsResponse = await fetch(`${API_BASE}/discord/server-stats`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (statsResponse.ok) {
+            const statsData = await statsResponse.json();
+            setServerStats(statsData);
+          }
+
+          // Загружаем статистику модераторов
+          loadModeratorStats(token);
+
+          // Загружаем audit log
+          loadAuditLog(token);
+        }
       }
 
     } catch (error) {
@@ -113,35 +201,112 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const loadAuditLog = async (token: string) => {
+    try {
+      const API_BASE = 'http://localhost:4000/api';
+      const response = await fetch(`${API_BASE}/discord/audit-logs`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const auditData = await response.json();
+        setRecentActivities(auditData.recentActivities);
+        console.log('✅ Audit log loaded:', auditData);
+      } else {
+        // Fallback на моковые данные
+        console.log('❌ Audit log failed, using mock data');
+        setRecentActivities(mockActivities);
+      }
+    } catch (error) {
+      console.error('Error loading audit log:', error);
+      // Fallback на моковые данные
+      setRecentActivities(mockActivities);
+    }
+  };
+
+  const loadModeratorStats = async (token: string) => {
+    try {
+      const API_BASE = 'http://localhost:4000/api';
+      const response = await fetch(`${API_BASE}/discord/moderator-stats`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const statsData = await response.json();
+        setActiveModerators(statsData.activeModerators);
+        console.log('✅ Moderator stats loaded:', statsData);
+      } else {
+        // Fallback на моковые данные
+        setActiveModerators(8);
+      }
+    } catch (error) {
+      console.error('Error loading moderator stats:', error);
+      setActiveModerators(8); // Fallback
+    }
+  };
+
+  const calculateMemberChange = (currentTotal: number): number => {
+    const baseValue = 1200;
+    const change = ((currentTotal - baseValue) / baseValue) * 100;
+    return Math.round(change * 10) / 10;
+  };
+
+  const calculateOnlineChange = (currentOnline: number): number => {
+    const baseValue = 300;
+    const change = ((currentOnline - baseValue) / baseValue) * 100;
+    return Math.round(change * 10) / 10;
+  };
+
+  const calculateCommandChange = (currentCommands: number): number => {
+    const baseValue = 50;
+    const change = ((currentCommands - baseValue) / baseValue) * 100;
+    return Math.round(change * 10) / 10;
+  };
+
+  const metricsData = {
+    totalMembers: {
+      value: serverStats?.members.total || 1250,
+      change: serverStats ? calculateMemberChange(serverStats.members.total) : +12
+    },
+    onlineNow: {
+      value: serverStats?.members.online || 312,
+      change: serverStats ? calculateOnlineChange(serverStats.members.online) : +5
+    },
+    messagesToday: {
+      value: messageStats?.messagesToday || 245,
+      change: messageStats?.changeVsAverage || +8
+    },
+    activeModerators: {
+      value: activeModerators || 8,
+      change: 0
+    }
+  };
+
   useEffect(() => {
     loadDashboardData();
 
-    // ✅ Автоматическая проверка статуса каждые 3 секунды, если бот не на сервере
     const interval = setInterval(() => {
       if (!botStatus?.isOnServer) {
         console.log('🔄 Auto-checking bot status...');
         loadDashboardData();
       }
-    }, 3000); // Проверяем каждые 3 секунды
+    }, 60000);
 
     return () => clearInterval(interval);
-  }, [botStatus?.isOnServer]); // ✅ Зависимость от статуса бота
+  }, []);
 
-  // Mock data для случая, когда нет реальных данных
   const mockStatsData = {
     totalMembers: { value: serverStats?.members.total || 1250, change: +12 },
     onlineNow: { value: serverStats?.members.online || 312, change: +5 },
     commandsToday: { value: 45, change: -2 },
     activeModerators: { value: 8, change: 0 }
   };
-
-  const recentActivities = [
-    { user: "Alex", action: "banned", target: "@spammer123", time: "2 min ago", status: "success" },
-    { user: "Maria", action: "muted", target: "@toxic_user", time: "5 min ago", status: "success" },
-    { user: "John", action: "warned", target: "@rule_breaker", time: "12 min ago", status: "warning" },
-    { user: "Sarah", action: "kicked", target: "@advertiser", time: "25 min ago", status: "success" },
-    { user: "Mike", action: "cleared", target: "#general (50 messages)", time: "1 hour ago", status: "success" }
-  ];
 
   const topCommands = [
     { name: "/ban", usage: 45, success: 98 },
@@ -151,20 +316,17 @@ const Dashboard: React.FC = () => {
     { name: "/kick", usage: 18, success: 96 }
   ];
 
-  // Если бот не на сервере, показываем компонент приглашения
   if (!loading && botStatus && !botStatus.isOnServer) {
     return (
       <div className={`layout ${styles.layout} ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <Saidbar />
         <main className={styles.main}>
-          {/* ✅ Просто передаем serverId, onBotAdded не нужен */}
           <BotInvite serverId={botStatus.serverId} />
         </main>
       </div>
     );
   }
 
-  // Показываем загрузку
   if (loading) {
     return (
       <div className={`layout ${styles.layout} ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -184,11 +346,10 @@ const Dashboard: React.FC = () => {
       <Saidbar />
 
       <main className={styles.main}>
-        {/* Header with controls */}
         <header className={styles.header}>
           <div className={styles.header__left}>
             <h1 className={styles.header__title}>
-              {serverStats ? `${serverStats.server.name} Dashboard` : 'Dashboard Overview'}
+              Dashboard Overview
             </h1>
             <span className={styles.header__subtitle}>
               Real-time insights and moderation analytics
@@ -221,7 +382,6 @@ const Dashboard: React.FC = () => {
           </div>
         </header>
 
-        {/* Key Metrics Grid */}
         <section className={styles.metricsGrid}>
           <div className={styles.metricCard}>
             <div className={styles.metricHeader}>
@@ -230,10 +390,14 @@ const Dashboard: React.FC = () => {
               </div>
               <TrendingUp size={16} className={styles.trendingUp} />
             </div>
-            <h3 className={styles.metricValue}>{mockStatsData.totalMembers.value.toLocaleString()}</h3>
+            <h3 className={styles.metricValue}>
+              {serverStats ? serverStats.members.total.toLocaleString() : 'Loading...'}
+            </h3>
             <p className={styles.metricLabel}>Total Members</p>
             <div className={styles.metricChange}>
-              <span className={styles.changePositive}>+{mockStatsData.totalMembers.change}%</span>
+              <span className={styles.changePositive}>
+                +{metricsData.totalMembers.change}%
+              </span>
               <span className={styles.changeText}>from yesterday</span>
             </div>
           </div>
@@ -245,10 +409,14 @@ const Dashboard: React.FC = () => {
               </div>
               <TrendingUp size={16} className={styles.trendingUp} />
             </div>
-            <h3 className={styles.metricValue}>{mockStatsData.onlineNow.value}</h3>
+            <h3 className={styles.metricValue}>
+              {serverStats?.members.online ?? '0'}
+            </h3>
             <p className={styles.metricLabel}>Online Now</p>
             <div className={styles.metricChange}>
-              <span className={styles.changePositive}>+{mockStatsData.onlineNow.change}%</span>
+              <span className={styles.changePositive}>
+                +{metricsData.onlineNow.change}%
+              </span>
               <span className={styles.changeText}>peak today</span>
             </div>
           </div>
@@ -256,17 +424,17 @@ const Dashboard: React.FC = () => {
           <div className={styles.metricCard}>
             <div className={styles.metricHeader}>
               <div className={styles.metricIcon}>
-                <Command size={24} />
+                <Hash size={24} />
               </div>
-              <TrendingUp size={16} className={mockStatsData.commandsToday.change >= 0 ? styles.trendingUp : styles.trendingDown} />
             </div>
-            <h3 className={styles.metricValue}>{mockStatsData.commandsToday.value}</h3>
-            <p className={styles.metricLabel}>Commands Today</p>
+            <h3 className={styles.metricValue}>
+              {serverStats?.channels.total || 0}
+            </h3>
+            <p className={styles.metricLabel}>Total Channels</p>
             <div className={styles.metricChange}>
-              <span className={mockStatsData.commandsToday.change >= 0 ? styles.changePositive : styles.changeNegative}>
-                {mockStatsData.commandsToday.change >= 0 ? '+' : ''}{mockStatsData.commandsToday.change}%
+              <span className={styles.changeText}>
+                {serverStats?.channels.text || 0} text • {serverStats?.channels.voice || 0} voice
               </span>
-              <span className={styles.changeText}>vs average</span>
             </div>
           </div>
 
@@ -276,7 +444,9 @@ const Dashboard: React.FC = () => {
                 <Shield size={24} />
               </div>
             </div>
-            <h3 className={styles.metricValue}>{mockStatsData.activeModerators.value}</h3>
+            <h3 className={styles.metricValue}>
+              {activeModerators || '0'}
+            </h3>
             <p className={styles.metricLabel}>Active Moderators</p>
             <div className={styles.metricChange}>
               <span className={styles.changeNeutral}>On duty</span>
@@ -284,41 +454,56 @@ const Dashboard: React.FC = () => {
           </div>
         </section>
 
-        {/* Charts and Main Content Grid */}
         <div className={styles.contentGrid}>
-          {/* Recent Activity */}
           <div className={styles.activityCard}>
             <div className={styles.cardHeader}>
               <h3 className={styles.cardTitle}>Recent Moderation Actions</h3>
-              <button className={styles.viewAllBtn}>View All</button>
+              <button
+                className={styles.viewAllBtn}
+                onClick={() => loadAuditLog(localStorage.getItem('auth_token') || '')}
+              >
+                Refresh
+              </button>
             </div>
             <div className={styles.activityList}>
-              {recentActivities.map((activity, index) => (
-                <div key={index} className={styles.activityItem}>
-                  <div className={styles.activityIcon}>
-                    {activity.status === 'success' ? (
-                      <CheckCircle size={16} className={styles.success} />
-                    ) : (
-                      <AlertTriangle size={16} className={styles.warning} />
-                    )}
-                  </div>
-                  <div className={styles.activityContent}>
-                    <div className={styles.activityText}>
-                      <span className={styles.user}>{activity.user}</span>
-                      <span className={styles.action}>{activity.action}</span>
-                      <span className={styles.target}>{activity.target}</span>
+              {recentActivities.length > 0 ? (
+                recentActivities.map((activity, index) => (
+                  <div key={activity.id || `activity-${index}`} className={styles.activityItem}>
+                    <div className={styles.activityIcon}>
+                      {activity.status === 'success' ? (
+                        <CheckCircle size={16} className={styles.success} />
+                      ) : (
+                        <AlertTriangle size={16} className={styles.warning} />
+                      )}
                     </div>
-                    <div className={styles.activityTime}>
-                      <Clock size={12} />
-                      {activity.time}
+                    <div className={styles.activityContent}>
+                      <div className={styles.activityText}>
+                        <span className={styles.user}>@{activity.userName || `User${activity.user}`}</span>
+                        <span className={styles.action}>{activity.action}</span>
+                        <span className={styles.target}>@{activity.targetName || `User${activity.target}`}</span>
+                      </div>
+                      <div className={styles.activityTime}>
+                        <Clock size={12} />
+                        {activity.time}
+                      </div>
+                      {activity.reason && (
+                        <div className={styles.activityReason}>
+                          Reason: {activity.reason}
+                        </div>
+                      )}
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className={styles.emptyState}>
+                  <AlertTriangle size={24} />
+                  <p>No moderation actions found</p>
+                  <small>Moderation actions will appear here</small>
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
-          {/* Command Analytics */}
           <div className={styles.analyticsCard}>
             <div className={styles.cardHeader}>
               <h3 className={styles.cardTitle}>Command Performance</h3>
@@ -348,7 +533,6 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Quick Stats */}
           <div className={styles.statsCard}>
             <div className={styles.cardHeader}>
               <h3 className={styles.cardTitle}>Server Health</h3>
@@ -382,7 +566,6 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Recent Alerts */}
           <div className={styles.alertsCard}>
             <div className={styles.cardHeader}>
               <h3 className={styles.cardTitle}>Active Alerts</h3>

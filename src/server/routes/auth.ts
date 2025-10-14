@@ -1011,8 +1011,14 @@ router.get("/oauth/discord/callback", async (req, res) => {
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
+      securityLogger.logSuspiciousActivity('discord_token_api_error', {
+        status: tokenResponse.status,
+        error: errorText,
+        ip: clientIP
+      });
       throw new Error(`Discord token API error: ${tokenResponse.status} - ${errorText}`);
     }
+
     const tokenData = await tokenResponse.json();
     if (!tokenData.access_token) throw new Error('No access token received from Discord');
 
@@ -1023,12 +1029,29 @@ router.get("/oauth/discord/callback", async (req, res) => {
         'User-Agent': 'YourApp/1.0 (+https://yourapp.com)'
       },
     });
-    if (!userResponse.ok) throw new Error(`Discord user API error: ${userResponse.status}`);
+
+    if (!userResponse.ok) {
+      const errorText = await userResponse.text();
+      securityLogger.logSuspiciousActivity('discord_user_api_error', {
+        status: userResponse.status,
+        error: errorText,
+        ip: clientIP
+      });
+      throw new Error(`Discord user API error: ${userResponse.status} - ${errorText}`);
+    }
+
     const discordUser: DiscordUser = await userResponse.json();
 
     const discordCreatedAt = getDiscordCreationDate(discordUser.id);
 
-    if (!discordUser.id || !discordUser.email) throw new Error('Invalid user data from Discord');
+    if (!discordUser.id || !discordUser.email) {
+      securityLogger.logSuspiciousActivity('discord_invalid_user_data', {
+        ip: clientIP,
+        hasId: !!discordUser.id,
+        hasEmail: !!discordUser.email
+      });
+      throw new Error('Invalid user data from Discord - missing id or email');
+    }
 
     // 3) Получаем роли пользователя с цветами
     let userRoles: DiscordRole[] = [];

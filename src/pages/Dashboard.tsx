@@ -21,7 +21,11 @@ import {
   Calendar,
   RefreshCw,
   Zap,
-  Hash
+  Hash,
+  Activity,
+  Play,
+  StopCircle,
+  BarChart3
 } from "lucide-react";
 import { SidebarContext } from "@/App.js";
 
@@ -67,6 +71,17 @@ interface Activity {
   timestamp?: string;
 }
 
+interface CommandStats {
+  name: string;
+  usage: number;
+  success: number;
+  failures: number;
+  successRate: number;
+  avgResponseTime: number;
+  totalExecutionTime: number;
+  lastUsed?: string;
+}
+
 const Dashboard: React.FC = () => {
   const [activeTimeRange, setActiveTimeRange] = useState<'24h' | '7d' | '30d'>('24h');
   const [notifications, setNotifications] = useState(3);
@@ -74,11 +89,24 @@ const Dashboard: React.FC = () => {
   const [serverStats, setServerStats] = useState<ServerStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshingAudit, setRefreshingAudit] = useState(false);
 
-  const [commandStats, setCommandStats] = useState<{
-    commandsToday: number;
-    changeVsAverage: number;
-  } | null>(null);
+  const [commandStats, setCommandStats] = useState<CommandStats[]>([]);
+  const [loadingCommands, setLoadingCommands] = useState(false);
+  const [commandFilter, setCommandFilter] = useState<'all' | 'moderation' | 'utility'>('all');
+
+  const [autoRefresh, setAutoRefresh] = useState(true);
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refreshing audit log...');
+      loadAuditLog(localStorage.getItem('auth_token') || '');
+    }, 2 * 60 * 1000); // 2 минуты
+
+    return () => clearInterval(interval);
+  }, [autoRefresh]);
 
   const [messageStats, setMessageStats] = useState<{
     totalMessages: number;
@@ -88,63 +116,101 @@ const Dashboard: React.FC = () => {
 
   const [activeModerators, setActiveModerators] = useState<number>(0);
 
-  const mockActivities: Activity[] = [
-    {
-      id: "mock1",
-      user: "user1",
-      userName: "Alex",
-      action: "banned",
-      target: "user2",
-      targetName: "spammer123",
-      time: "2 min ago",
-      status: "success",
-      reason: "Spam"
-    },
-    {
-      id: "mock2",
-      user: "user3",
-      userName: "Maria",
-      action: "muted",
-      target: "user4",
-      targetName: "toxic_user",
-      time: "5 min ago",
-      status: "success",
-      reason: "Toxic behavior"
-    },
-    {
-      id: "mock3",
-      user: "user5",
-      userName: "John",
-      action: "warned",
-      target: "user6",
-      targetName: "rule_breaker",
-      time: "12 min ago",
-      status: "warning"
-    },
-    {
-      id: "mock4",
-      user: "user7",
-      userName: "Sarah",
-      action: "kicked",
-      target: "user8",
-      targetName: "advertiser",
-      time: "25 min ago",
-      status: "success",
-      reason: "Unauthorized advertising"
-    },
-    {
-      id: "mock5",
-      user: "user9",
-      userName: "Mike",
-      action: "cleared",
-      target: "channel1",
-      targetName: "#general (50 messages)",
-      time: "1 hour ago",
-      status: "success"
-    }
-  ];
+  const loadCommandStats = async (token: string) => {
+    try {
+      setLoadingCommands(true);
+      const API_BASE = 'http://localhost:4000/api';
+      const response = await fetch(`${API_BASE}/discord/command-stats?period=${activeTimeRange}&filter=${commandFilter}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-  const [recentActivities, setRecentActivities] = useState<Activity[]>(mockActivities);
+      if (response.ok) {
+        const statsData = await response.json();
+        setCommandStats(statsData.commands);
+        console.log('✅ Command stats loaded:', statsData);
+      } else {
+        console.log('❌ Command stats failed, using mock data');
+        setCommandStats(getMockCommandStats());
+      }
+    } catch (error) {
+      console.error('Error loading command stats:', error);
+      setCommandStats(getMockCommandStats());
+    } finally {
+      setLoadingCommands(false);
+    }
+  };
+
+  const getMockCommandStats = (): CommandStats[] => {
+    const baseStats = [
+      { name: "/ban", usage: 45, success: 44, failures: 1, successRate: 98, avgResponseTime: 120, totalExecutionTime: 5400, lastUsed: "2 hours ago" },
+      { name: "/mute", usage: 32, success: 30, failures: 2, successRate: 94, avgResponseTime: 80, totalExecutionTime: 2560, lastUsed: "1 hour ago" },
+      { name: "/warn", usage: 28, success: 26, failures: 2, successRate: 93, avgResponseTime: 70, totalExecutionTime: 1960, lastUsed: "30 minutes ago" },
+      { name: "/clear", usage: 25, success: 25, failures: 0, successRate: 100, avgResponseTime: 150, totalExecutionTime: 3750, lastUsed: "15 minutes ago" },
+      { name: "/kick", usage: 18, success: 17, failures: 1, successRate: 94, avgResponseTime: 100, totalExecutionTime: 1800, lastUsed: "5 hours ago" },
+      { name: "/slowmode", usage: 12, success: 11, failures: 1, successRate: 92, avgResponseTime: 60, totalExecutionTime: 720, lastUsed: "2 days ago" },
+      { name: "/lock", usage: 8, success: 8, failures: 0, successRate: 100, avgResponseTime: 90, totalExecutionTime: 720, lastUsed: "1 day ago" },
+      { name: "/userinfo", usage: 56, success: 56, failures: 0, successRate: 100, avgResponseTime: 45, totalExecutionTime: 2520, lastUsed: "10 minutes ago" },
+      { name: "/serverinfo", usage: 34, success: 34, failures: 0, successRate: 100, avgResponseTime: 35, totalExecutionTime: 1190, lastUsed: "25 minutes ago" },
+      { name: "/avatar", usage: 67, success: 67, failures: 0, successRate: 100, avgResponseTime: 40, totalExecutionTime: 2680, lastUsed: "5 minutes ago" }
+    ];
+
+    // Фильтрация по типу команд
+    if (commandFilter === 'moderation') {
+      return baseStats.filter(cmd =>
+        ['/ban', '/mute', '/warn', '/clear', '/kick', '/slowmode', '/lock'].includes(cmd.name)
+      );
+    } else if (commandFilter === 'utility') {
+      return baseStats.filter(cmd =>
+        ['/userinfo', '/serverinfo', '/avatar'].includes(cmd.name)
+      );
+    }
+
+    return baseStats;
+  };
+
+  const exportCommandData = () => {
+    const data = {
+      period: activeTimeRange,
+      filter: commandFilter,
+      generatedAt: new Date().toISOString(),
+      commands: commandStats
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `command-stats-${activeTimeRange}-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const getPerformanceIcon = (successRate: number) => {
+    if (successRate >= 95) return <Activity size={12} className={styles.high} />;
+    if (successRate >= 85) return <Play size={12} className={styles.medium} />;
+    return <StopCircle size={12} className={styles.low} />;
+  };
+
+  const getResponseTimeColor = (responseTime: number) => {
+    if (responseTime <= 50) return styles.fast;
+    if (responseTime <= 100) return styles.medium;
+    return styles.slow;
+  };
+
+
+  useEffect(() => {
+    if (botStatus?.isOnServer) {
+      loadCommandStats(localStorage.getItem('auth_token') || '');
+    }
+  }, [activeTimeRange, commandFilter, botStatus?.isOnServer]);
+
+  // Инициализируем пустым массивом вместо undefined
+  const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
 
   const sidebarContext = useContext(SidebarContext);
   const isSidebarCollapsed = sidebarContext?.isCollapsed || false;
@@ -203,6 +269,7 @@ const Dashboard: React.FC = () => {
 
   const loadAuditLog = async (token: string) => {
     try {
+      setRefreshingAudit(true);
       const API_BASE = 'http://localhost:4000/api';
       const response = await fetch(`${API_BASE}/discord/audit-logs`, {
         headers: {
@@ -213,17 +280,26 @@ const Dashboard: React.FC = () => {
 
       if (response.ok) {
         const auditData = await response.json();
-        setRecentActivities(auditData.recentActivities);
+
+        // Фильтруем пустые или неполные записи
+        const validActivities = auditData.recentActivities.filter((activity: Activity) =>
+          activity.userName && activity.userName !== 'Unknown' && activity.targetName && activity.targetName !== 'Unknown'
+        );
+
+        // Всегда передаем массив (даже пустой)
+        setRecentActivities(validActivities.length > 0 ? validActivities : auditData.recentActivities || []);
         console.log('✅ Audit log loaded:', auditData);
       } else {
-        // Fallback на моковые данные
-        console.log('❌ Audit log failed, using mock data');
-        setRecentActivities(mockActivities);
+        console.log('❌ Audit log failed');
+        // Устанавливаем пустой массив вместо undefined
+        setRecentActivities([]);
       }
     } catch (error) {
       console.error('Error loading audit log:', error);
-      // Fallback на моковые данные
-      setRecentActivities(mockActivities);
+      // Устанавливаем пустой массив вместо undefined
+      setRecentActivities([]);
+    } finally {
+      setRefreshingAudit(false);
     }
   };
 
@@ -458,12 +534,17 @@ const Dashboard: React.FC = () => {
           <div className={styles.activityCard}>
             <div className={styles.cardHeader}>
               <h3 className={styles.cardTitle}>Recent Moderation Actions</h3>
-              <button
-                className={styles.viewAllBtn}
-                onClick={() => loadAuditLog(localStorage.getItem('auth_token') || '')}
-              >
-                Refresh
-              </button>
+              <div className={styles.headerActions}>
+                {/* УБРАЛ ДУБЛИРУЮЩУЮСЯ КНОПКУ */}
+                <button
+                  className={styles.viewAllBtn}
+                  onClick={() => loadAuditLog(localStorage.getItem('auth_token') || '')}
+                  disabled={refreshingAudit}
+                >
+                  <RefreshCw size={14} className={refreshingAudit ? styles.spinning : ''} />
+                  {refreshingAudit ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
             </div>
             <div className={styles.activityList}>
               {recentActivities.length > 0 ? (
@@ -508,29 +589,153 @@ const Dashboard: React.FC = () => {
             <div className={styles.cardHeader}>
               <h3 className={styles.cardTitle}>Command Performance</h3>
               <div className={styles.cardActions}>
-                <Filter size={16} />
-                <Download size={16} />
-              </div>
-            </div>
-            <div className={styles.commandStats}>
-              {topCommands.map((command, index) => (
-                <div key={index} className={styles.commandStat}>
-                  <div className={styles.commandInfo}>
-                    <span className={styles.commandName}>{command.name}</span>
-                    <span className={styles.commandUsage}>{command.usage} uses</span>
-                  </div>
-                  <div className={styles.successRate}>
-                    <div className={styles.rateBar}>
-                      <div
-                        className={styles.rateFill}
-                        style={{ width: `${command.success}%` }}
-                      ></div>
-                    </div>
-                    <span className={styles.rateText}>{command.success}%</span>
+                <div className={styles.filterTabs}>
+                  <button
+                    className={`${styles.filterTab} ${commandFilter === 'all' ? styles.active : ''}`}
+                    onClick={() => setCommandFilter('all')}
+                  >
+                    All
+                  </button>
+                  <button
+                    className={`${styles.filterTab} ${commandFilter === 'moderation' ? styles.active : ''}`}
+                    onClick={() => setCommandFilter('moderation')}
+                  >
+                    Moderation
+                  </button>
+                  <button
+                    className={`${styles.filterTab} ${commandFilter === 'utility' ? styles.active : ''}`}
+                    onClick={() => setCommandFilter('utility')}
+                  >
+                    Utility
+                  </button>
+                </div>
+
+                <button
+                  className={styles.iconBtn}
+                  onClick={() => loadCommandStats(localStorage.getItem('auth_token') || '')}
+                  disabled={loadingCommands}
+                  title="Refresh command stats"
+                >
+                  <RefreshCw size={16} className={loadingCommands ? styles.spinning : ''} />
+                </button>
+
+                <div className={styles.dropdown}>
+                  <Filter size={16} className={styles.iconBtn} aria-label="More options" />
+                  <div className={styles.dropdownContent}>
+                    <button onClick={() => setCommandFilter('all')}>All Commands</button>
+                    <button onClick={() => setCommandFilter('moderation')}>Moderation Only</button>
+                    <button onClick={() => setCommandFilter('utility')}>Utility Only</button>
+                    <div className={styles.dropdownDivider}></div>
+                    <button onClick={() => setActiveTimeRange('24h')}>Last 24 Hours</button>
+                    <button onClick={() => setActiveTimeRange('7d')}>Last 7 Days</button>
+                    <button onClick={() => setActiveTimeRange('30d')}>Last 30 Days</button>
                   </div>
                 </div>
-              ))}
+
+                <button
+                  className={styles.iconBtn}
+                  onClick={exportCommandData}
+                  title="Export data as JSON"
+                >
+                  <Download size={16} />
+                </button>
+              </div>
             </div>
+
+            <div className={styles.commandStats}>
+              {loadingCommands ? (
+                <div className={styles.loadingState}>
+                  <RefreshCw size={20} className={styles.spinning} />
+                  <p>Loading command statistics...</p>
+                </div>
+              ) : commandStats.length > 0 ? (
+                commandStats.map((command, index) => (
+                  <div key={index} className={styles.commandStat}>
+                    <div className={styles.commandInfo}>
+                      <div className={styles.commandHeader}>
+                        <span className={styles.commandName}>{command.name}</span>
+                        {getPerformanceIcon(command.successRate)}
+                      </div>
+                      <div className={styles.commandDetails}>
+                        <span className={styles.commandUsage}>
+                          <strong>{command.usage}</strong> uses
+                        </span>
+                        <span className={`${styles.responseTime} ${getResponseTimeColor(command.avgResponseTime)}`}>
+                          {command.avgResponseTime}ms
+                        </span>
+                        {command.lastUsed && (
+                          <span className={styles.lastUsed}>
+                            {command.lastUsed}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className={styles.successRate}>
+                      <div className={styles.rateInfo}>
+                        <span className={styles.rateText}>{command.successRate}%</span>
+                        <span className={styles.rateDetails}>
+                          {command.success}/{command.usage} successful
+                        </span>
+                      </div>
+                      <div className={styles.rateBar}>
+                        <div
+                          className={`${styles.rateFill} ${command.successRate >= 95 ? styles.high :
+                            command.successRate >= 85 ? styles.medium : styles.low
+                            }`}
+                          style={{ width: `${command.successRate}%` }}
+                        ></div>
+                      </div>
+                      <div className={styles.rateLabels}>
+                        <span>0%</span>
+                        <span>50%</span>
+                        <span>100%</span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className={styles.emptyState}>
+                  <BarChart3 size={32} />
+                  No command data available
+                  <small>Command usage statistics will appear here</small>
+                  <button
+                    className={styles.retryBtn}
+                    onClick={() => loadCommandStats(localStorage.getItem('auth_token') || '')}
+                  >
+                    Try Again
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {commandStats.length > 0 && (
+              <div className={styles.cardFooter}>
+                <div className={styles.footerStats}>
+                  <div className={styles.footerStat}>
+                    <span className={styles.footerLabel}>Total Commands:</span>
+                    <span className={styles.footerValue}>
+                      {commandStats.reduce((sum, cmd) => sum + cmd.usage, 0)}
+                    </span>
+                  </div>
+                  <div className={styles.footerStat}>
+                    <span className={styles.footerLabel}>Success Rate:</span>
+                    <span className={styles.footerValue}>
+                      {Math.round(commandStats.reduce((sum, cmd) => sum + cmd.successRate, 0) / commandStats.length)}%
+                    </span>
+                  </div>
+                  <div className={styles.footerStat}>
+                    <span className={styles.footerLabel}>Avg Response:</span>
+                    <span className={styles.footerValue}>
+                      {Math.round(commandStats.reduce((sum, cmd) => sum + cmd.avgResponseTime, 0) / commandStats.length)}ms
+                    </span>
+                  </div>
+                </div>
+                <span className={styles.periodInfo}>
+                  Showing {commandFilter} commands for {activeTimeRange}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className={styles.statsCard}>

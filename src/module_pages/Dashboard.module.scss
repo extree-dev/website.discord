@@ -796,13 +796,663 @@
   text-align: center;
   padding: 2rem;
   color: var(--text-secondary);
-  
+
   p {
     margin: 0.5rem 0 0.25rem;
     font-weight: 500;
   }
-  
+
   small {
     font-size: 0.875rem;
+  }
+}
+
+.headerActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.autoRefreshBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px solid #e1e5e9;
+  border-radius: 6px;
+  background: white;
+  color: #6c757d;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.autoRefreshBtn:hover {
+  background: #f8f9fa;
+  border-color: #007bff;
+}
+
+.autoRefreshBtn.active {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.viewAllBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cardActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.iconBtn {
+  padding: 6px;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #6c757d;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #f8f9fa;
+    color: #495057;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// Command Stats
+.commandStats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.commandStat {
+  display: flex;
+  justify-content: between;
+  align-items: center;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.commandInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.commandName {
+  font-weight: 600;
+  color: #495057;
+  font-size: 14px;
+}
+
+.commandDetails {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.commandUsage {
+  font-weight: 500;
+}
+
+.responseTime {
+  font-size: 11px;
+  background: #e9ecef;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Consolas', monospace;
+}
+
+// Success Rate
+.successRate {
+  flex: 0 0 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rateInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rateText {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.rateDetails {
+  font-size: 11px;
+  color: #6c757d;
+}
+
+.rateBar {
+  height: 6px;
+  background: #e9ecef;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.rateFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+
+  &.high {
+    background: linear-gradient(90deg, #28a745, #20c997);
+  }
+
+  &.medium {
+    background: linear-gradient(90deg, #ffc107, #fd7e14);
+  }
+
+  &.low {
+    background: linear-gradient(90deg, #dc3545, #e83e8c);
+  }
+}
+
+// Loading State
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: #6c757d;
+
+  p {
+    margin-top: 12px;
+    font-size: 14px;
+  }
+}
+
+// Card Footer
+.cardFooter {
+  padding: 12px 0 0;
+  border-top: 1px solid #e9ecef;
+  margin-top: 16px;
+}
+
+.periodInfo {
+  font-size: 12px;
+  color: #6c757d;
+}
+
+// Spinning animation
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+// Filter Tabs
+.filterTabs {
+  display: flex;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border-radius: 24px;
+  padding: 4px;
+  margin-right: 8px;
+}
+
+.filterTab {
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  border-radius: 24px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6c757d;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    color: #6769c7;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  }
+
+  &.active {
+    background: linear-gradient(135deg, rgba(146, 146, 146, 0.05) 0%, rgb(66, 66, 66) 100%);
+    color: #e7e7e7;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// Icon Buttons
+.iconBtn {
+  padding: 8px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #6c757d;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover:not(:disabled) {
+    background: #f8f9fa;
+    color: #495057;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// Dropdown
+.dropdown {
+  position: relative;
+  display: inline-block;
+
+  &:hover .dropdownContent {
+    display: block;
+  }
+}
+
+.dropdownContent {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: white;
+  min-width: 160px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  border: 1px solid #e1e5e9;
+  z-index: 1000;
+  padding: 8px 0;
+
+  button {
+    width: 100%;
+    padding: 8px 16px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+    color: #495057;
+    transition: background 0.2s;
+
+    &:hover {
+      background: #f8f9fa;
+    }
+  }
+}
+
+.dropdownDivider {
+  height: 1px;
+  background: #e9ecef;
+  margin: 4px 0;
+}
+
+// Command Stats Container
+.commandStats {
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+// Individual Command Stat
+.commandStat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #fafbfc;
+  border-radius: 8px;
+  border: 1px solid #e1e5e9;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #007bff;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+  }
+}
+
+.commandInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.commandHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.commandName {
+  font-weight: 600;
+  color: #1a1d21;
+  font-size: 14px;
+  font-family: 'Monaco', 'Consolas', monospace;
+}
+
+.commandDetails {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.commandUsage {
+  font-weight: 500;
+}
+
+.responseTime {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 11px;
+
+  &.fast {
+    background: #d4edda;
+    color: #155724;
+  }
+
+  &.medium {
+    background: #fff3cd;
+    color: #856404;
+  }
+
+  &.slow {
+    background: #f8d7da;
+    color: #721c24;
+  }
+}
+
+.lastUsed {
+  font-size: 11px;
+  color: #868e96;
+}
+
+// Success Rate Section
+.successRate {
+  flex: 0 0 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rateInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rateText {
+  font-weight: 700;
+  font-size: 14px;
+
+  .high & {
+    color: #28a745;
+  }
+
+  .medium & {
+    color: #ffc107;
+  }
+
+  .low & {
+    color: #dc3545;
+  }
+}
+
+.rateDetails {
+  font-size: 11px;
+  color: #6c757d;
+}
+
+.rateBar {
+  height: 6px;
+  background: #e9ecef;
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.rateFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+
+  &.high {
+    background: linear-gradient(90deg, #28a745, #20c997);
+  }
+
+  &.medium {
+    background: linear-gradient(90deg, #ffc107, #fd7e14);
+  }
+
+  &.low {
+    background: linear-gradient(90deg, #dc3545, #e83e8c);
+  }
+}
+
+.rateLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #868e96;
+  margin-top: 2px;
+}
+
+// Performance Icons
+.high {
+  color: #28a745;
+}
+
+.medium {
+  color: #ffc107;
+}
+
+.low {
+  color: #dc3545;
+}
+
+// Loading State
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #6c757d;
+
+  p {
+    margin-top: 12px;
+    font-size: 14px;
+  }
+}
+
+// Empty State
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #ffffff;
+  text-align: center;
+
+  p {
+    margin: 12px 0 4px;
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  small {
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+}
+
+.retryBtn {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  color: white;
+  border: none;
+  border-radius: 24px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #484ab4;
+  }
+}
+
+// Card Footer
+.cardFooter {
+  padding: 16px 24px;
+  border-top: 1px solid #f1f3f4;
+  background: #fafbfc;
+}
+
+.footerStats {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.footerStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.footerLabel {
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.footerValue {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1d21;
+}
+
+.periodInfo {
+  font-size: 12px;
+  color: #868e96;
+  text-align: center;
+  display: block;
+}
+
+// Scrollbar Styling
+.commandStats::-webkit-scrollbar {
+  width: 6px;
+}
+
+.commandStats::-webkit-scrollbar-track {
+  background: #eb0606;
+  border-radius: 3px;
+}
+
+.commandStats::-webkit-scrollbar-thumb {
+  background: #eb0606;
+  border-radius: 3px;
+}
+
+.commandStats::-webkit-scrollbar-thumb:hover {
+  background: #eb0606;
+}
+
+// Spinning animation
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .cardHeader {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .cardActions {
+    justify-content: space-between;
+  }
+
+  .filterTabs {
+    margin-right: 0;
+  }
+
+  .commandStat {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .successRate {
+    flex: none;
+    width: 100%;
+  }
+
+  .footerStats {
+    flex-direction: column;
+    gap: 12px;
   }
 }

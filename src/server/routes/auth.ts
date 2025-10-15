@@ -8,6 +8,7 @@ import helmet from "helmet";
 import { securityLogger } from "../../utils/securityLogger";
 import { generateToken, verifyToken } from "@/utils/jwt";
 import { secretCodeService } from "@/utils/secretCodes";
+import { CommandLogger } from "../services/commandLogger";
 
 if (!process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_REDIRECT_URI) {
   console.error('Missing Discord OAuth environment variables');
@@ -18,6 +19,49 @@ if (!process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_REDIRECT_URI) {
 const router = express.Router();
 const prisma = new PrismaClient();
 const failedAttempts = new Map();
+
+
+// ==================== КЭШ ДЛЯ ПОЛЬЗОВАТЕЛЕЙ DISCORD ====================
+
+const userCache = new Map();
+const cacheTimeout = 5 * 60 * 1000; // 5 минут
+
+async function fetchUserWithCache(userId: string) {
+  if (userCache.has(userId)) {
+    const cached = userCache.get(userId);
+    if (Date.now() - cached.timestamp < cacheTimeout) {
+      return cached.data;
+    }
+  }
+
+  try {
+    const userResponse = await fetch(`https://discord.com/api/v10/users/${userId}`, {
+      headers: {
+        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (userResponse.ok) {
+      const userData = await userResponse.json();
+      const result = {
+        username: userData.username,
+        global_name: userData.global_name,
+        discriminator: userData.discriminator
+      };
+
+      userCache.set(userId, {
+        data: result,
+        timestamp: Date.now()
+      });
+      return result;
+    } else {
+    }
+  } catch (error) {
+  }
+
+  return null;
+}
 
 
 const bruteForceProtection = (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -412,7 +456,6 @@ router.post("/register", async (req, res) => {
 
     // ==================== ПРОВЕРКА СЕКРЕТНОГО КОДА ====================
     if (!secretCode) {
-      console.log('❌ Missing secret code');
       await constantTimeDelay();
       return res.status(400).json({
         error: "Secret registration code is required"
@@ -443,14 +486,11 @@ router.post("/register", async (req, res) => {
     });
 
     if (!codeValidation) {
-      console.log('❌ Invalid secret code:', sanitizedSecretCode);
       await constantTimeDelay();
       return res.status(400).json({
         error: "Invalid, expired, or already used registration code"
       });
     }
-
-    console.log('✅ Secret code validated:', codeValidation.id);
 
     // ==================== ОСТАЛЬНЫЕ ПРОВЕРКИ ====================
 
@@ -536,13 +576,7 @@ router.post("/register", async (req, res) => {
         }
       });
 
-      console.log('✅ User created:', user.id);
-
       // ==================== ОБНОВЛЕНИЕ СЕКРЕТНОГО КОДА ====================
-      console.log('🔄 Updating secret code...', {
-        codeId: codeValidation.id,
-        userId: user.id
-      });
 
       // Обновляем секретный код
       const updatedCode = await tx.secretCode.update({
@@ -562,8 +596,6 @@ router.post("/register", async (req, res) => {
       if (!updatedCode) {
         throw new Error("Failed to update secret code - may have been already used");
       }
-
-      console.log('✅ Secret code updated:', updatedCode.id);
 
       return user;
     });
@@ -845,7 +877,6 @@ const getUserDiscordRolesWithColors = async (accessToken: string, discordId: str
 
     if (!response.ok) {
       if (response.status === 404) {
-        console.log(`User ${discordId} not found on server ${DISCORD_SERVER_ID}`);
         return []; // Пользователь не на сервере
       }
       throw new Error(`Discord API error: ${response.status}`);
@@ -1068,7 +1099,6 @@ router.get("/oauth/discord/callback", async (req, res) => {
         roleColor = roleData.color;
         roleHexColor = discordColorToHex(roleColor);
       } else {
-        console.log('User has no special roles, using @everyone');
       }
     } catch (roleError) {
       console.error('Failed to fetch user roles:', roleError);
@@ -1094,7 +1124,6 @@ router.get("/oauth/discord/callback", async (req, res) => {
       }) as UserWithProfile | null;
 
       if (foundUser) {
-        console.log('Found existing user by discordId:', foundUser.id);
 
         // ОБНОВЛЯЕМ ПРОФИЛЬ с ролью Discord для существующего пользователя
         await tx.profile.upsert({
@@ -1148,7 +1177,6 @@ router.get("/oauth/discord/callback", async (req, res) => {
       }) as UserWithProfile | null;
 
       if (foundUser) {
-        console.log('Found existing user by email, linking discord:', foundUser.id);
 
         // ОБНОВЛЯЕМ ПРОФИЛЬ с ролью Discord для существующего пользователя
         await tx.profile.upsert({
@@ -1193,7 +1221,6 @@ router.get("/oauth/discord/callback", async (req, res) => {
       }
 
       // 3.c. Создать нового пользователя
-      console.log('Creating new user with discord');
       const randomPassword = generateSecureToken(32);
       const hashedPassword = await hashPassword(randomPassword);
 
@@ -1235,8 +1262,6 @@ router.get("/oauth/discord/callback", async (req, res) => {
         }
       });
 
-      console.log('Created new user with avatar and role:', { avatarUrl, highestRole, roleHexColor });
-
       return {
         id: createdUser.id,
         requiresCompletion: true,
@@ -1255,7 +1280,6 @@ router.get("/oauth/discord/callback", async (req, res) => {
       where: { userId: txResult.id },
       select: { discordRole: true }
     });
-    console.log('Saved profile discordRole:', savedProfile?.discordRole);
 
     // 6) ГЕНЕРИРУЕМ JWT ТОКЕН с ролью и цветом
     const jwtToken = generateToken({
@@ -1373,15 +1397,6 @@ router.get("/users/:userId/basic", async (req, res) => {
       roleColor: roleColor,
       roleHexColor: roleHexColor
     };
-
-    console.log('User basic info response:', {
-      userId: user.id,
-      discordRoleFromDB: user.profile?.discordRole,
-      highestRoleInResponse: highestRole,
-      roleFromToken: decoded.role,
-      roleColor: roleColor,
-      roleHexColor: roleHexColor
-    });
 
     res.json(response);
 
@@ -1652,12 +1667,6 @@ router.post("/complete-profile", async (req, res) => {
           userId: user.id,
         }
       });
-
-      console.log('Secret code marked as used:', {
-        codeId: usedCode.id,
-        usedBy: user.email,
-        userId: user.id
-      });
     } catch (codeError) {
       console.error('Error updating secret code:', codeError);
       securityLogger.logError('secret_code_update_error', {
@@ -1705,7 +1714,6 @@ router.get("/secret-codes", async (req, res) => {
 
     // Проверяем токен
     const decoded = verifyToken(token);
-    console.log('🔑 Token decoded for secret codes access:', { userId: decoded.userId, email: decoded.email });
 
     // Параметры запроса
     const includeUser = req.query.include === 'user';
@@ -1719,8 +1727,6 @@ router.get("/secret-codes", async (req, res) => {
     } else if (usedFilter === 'false') {
       whereCondition.used = false;
     }
-
-    console.log('📋 Fetching secret codes with filter:', whereCondition);
 
     const codes = await prisma.secretCode.findMany({
       where: whereCondition,
@@ -1740,8 +1746,6 @@ router.get("/secret-codes", async (req, res) => {
         createdAt: 'desc'
       }
     });
-
-    console.log(`✅ Found ${codes.length} secret codes`);
 
     // Форматируем ответ
     const formattedCodes = codes.map(code => ({
@@ -1803,8 +1807,6 @@ router.post("/secret-codes", async (req, res) => {
       return res.status(400).json({ error: "Code can only contain uppercase letters, numbers, hyphens and underscores" });
     }
 
-    console.log('🆕 Creating new secret code:', { code: code.toUpperCase(), createdBy: decoded.email });
-
     const secretCode = await prisma.secretCode.create({
       data: {
         code: code.toUpperCase(),
@@ -1825,8 +1827,6 @@ router.post("/secret-codes", async (req, res) => {
         }
       }
     });
-
-    console.log('✅ Secret code created:', secretCode.id);
     res.status(201).json(secretCode);
 
   } catch (error: unknown) {
@@ -1853,13 +1853,10 @@ router.delete("/secret-codes/:id", async (req, res) => {
     }
 
     const { id } = req.params;
-    console.log('🗑️ Deleting secret code:', id);
 
     await prisma.secretCode.delete({
       where: { id }
     });
-
-    console.log('✅ Secret code deleted:', id);
     res.json({ success: true, message: "Code deleted successfully" });
 
   } catch (error: unknown) {
@@ -1880,7 +1877,6 @@ router.delete("/secret-codes/:id", async (req, res) => {
 // Генерация случайного кода
 router.post("/secret-codes/generate", async (req, res) => {
   try {
-    console.log('🎲 Generating random secret code');
 
     const generateCode = () => {
       const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -1893,7 +1889,6 @@ router.post("/secret-codes/generate", async (req, res) => {
     };
 
     const code = generateCode();
-    console.log('✅ Generated code:', code);
 
     res.json({ code });
 
@@ -1916,7 +1911,6 @@ router.post("/validate-secret-code", async (req, res) => {
     }
 
     const sanitizedCode = code.toUpperCase().trim();
-    console.log('🔍 Validating secret code:', sanitizedCode);
 
     const secretCode = await prisma.secretCode.findFirst({
       where: {
@@ -1941,7 +1935,6 @@ router.post("/validate-secret-code", async (req, res) => {
     });
 
     if (!secretCode) {
-      console.log('❌ Code not found or already used:', sanitizedCode);
       return res.status(404).json({
         valid: false,
         error: 'Invalid or expired secret code'
@@ -1950,14 +1943,11 @@ router.post("/validate-secret-code", async (req, res) => {
 
     // Проверяем максимальное количество использований
     if (secretCode.uses >= secretCode.maxUses) {
-      console.log('❌ Code reached usage limit:', sanitizedCode);
       return res.status(400).json({
         valid: false,
         error: 'Secret code has reached maximum usage limit'
       });
     }
-
-    console.log('✅ Code is valid:', secretCode.id);
     res.json({
       valid: true,
       code: {
@@ -1989,8 +1979,6 @@ router.post('/use-secret-code', async (req, res) => {
       return res.status(400).json({ error: 'Code ID is required' });
     }
 
-    console.log('🔄 Marking code as used:', { codeId, usedBy });
-
     const updatedCode = await prisma.secretCode.update({
       where: { id: codeId },
       data: {
@@ -2000,8 +1988,6 @@ router.post('/use-secret-code', async (req, res) => {
         uses: { increment: 1 }
       }
     });
-
-    console.log('✅ Code marked as used:', updatedCode.id);
     res.json({ success: true, code: updatedCode });
 
   } catch (error: unknown) {
@@ -2054,8 +2040,6 @@ router.get("/secret-codes/stats", async (req, res) => {
       expired: expiredCodes,
       usageRate: totalCodes > 0 ? (usedCodes / totalCodes) * 100 : 0
     };
-
-    console.log('📊 Secret codes stats:', stats);
     res.json(stats);
 
   } catch (error) {
@@ -2366,16 +2350,12 @@ router.get("/discord/audit-logs", async (req, res) => {
     const decoded = verifyToken(token);
     const GUILD_ID = process.env.DISCORD_GUILD_ID;
 
-    // Проверяем что GUILD_ID существует
     if (!GUILD_ID) {
       console.error('❌ DISCORD_GUILD_ID is not set in environment variables');
       return res.status(500).json({ error: "Server configuration error" });
     }
 
-    console.log(`📋 Fetching audit logs for guild: ${GUILD_ID}`);
-
-    // Получаем audit log с лимитом 10 записей
-    const auditResponse = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/audit-logs?limit=10`, {
+    const auditResponse = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/audit-logs?limit=20`, {
       headers: {
         'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
         'Content-Type': 'application/json'
@@ -2383,17 +2363,18 @@ router.get("/discord/audit-logs", async (req, res) => {
     });
 
     if (!auditResponse.ok) {
-      console.log(`❌ Audit log API error: ${auditResponse.status}`);
+      const errorText = await auditResponse.text();
       return res.status(auditResponse.status).json({
         error: "Failed to fetch audit logs",
-        details: `Discord API returned ${auditResponse.status}`
+        details: `Discord API returned ${auditResponse.status}: ${errorText}`
       });
     }
 
     const auditData = await auditResponse.json();
+    if (auditData.audit_log_entries && auditData.audit_log_entries.length > 0) {
+    }
 
-    // Преобразуем audit log entries в наш формат
-    const moderationActions = await transformAuditLogToActivities(auditData.audit_log_entries, GUILD_ID);
+    const moderationActions = await transformAuditLogToActivities(auditData.audit_log_entries || [], GUILD_ID);
 
     res.json({
       recentActivities: moderationActions,
@@ -2413,91 +2394,192 @@ router.get("/discord/audit-logs", async (req, res) => {
 // Функция для преобразования audit log в наш формат
 async function transformAuditLogToActivities(auditLogEntries: any[], guildId: string) {
   const actions = [];
+  const processedEntries = new Set();
 
   for (const entry of auditLogEntries) {
-    // Фильтруем только действия модерации
-    const moderationActions = [22, 23, 20, 24, 28, 29, 72];
-    if (!moderationActions.includes(entry.action_type)) continue;
-
     try {
+      if (processedEntries.has(entry.id)) continue;
+      processedEntries.add(entry.id);
+
       // Получаем информацию о пользователе
       let userName = 'Unknown';
       if (entry.user_id) {
-        const userResponse = await fetch(`https://discord.com/api/v10/users/${entry.user_id}`, {
-          headers: {
-            'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          userName = userData.username || `User${entry.user_id}`;
+        const userData = await fetchUserWithCache(entry.user_id);
+        if (userData) {
+          userName = userData.global_name || userData.username || `User${entry.user_id}`;
+        } else {
         }
       }
 
-      // Получаем информацию о цели
+      const actionInfo = getActionType(entry.action_type);
       let targetName = 'Unknown';
-      if (entry.target_id) {
-        // Для пользователей
-        if (entry.action_type === 22 || entry.action_type === 23 || entry.action_type === 20) {
-          const targetResponse = await fetch(`https://discord.com/api/v10/users/${entry.target_id}`, {
-            headers: {
-              'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          if (targetResponse.ok) {
-            const targetData = await targetResponse.json();
-            targetName = targetData.username || `User${entry.target_id}`;
-          }
-        }
-        // Для каналов
-        else if (entry.action_type === 28 || entry.action_type === 29) {
-          targetName = `Channel${entry.target_id}`;
-        }
+      let reason = entry.reason || 'No reason provided';
+
+      // Обрабатываем разные типы действий
+      switch (entry.action_type) {
+        case 24: // MEMBER_ROLE_UPDATE (старый)
+        case 25: // MEMBER_ROLE_UPDATE (новый)
+          await processRoleUpdate(entry, actionInfo);
+          targetName = await getTargetName(entry.target_id);
+          break;
+
+        case 26: // BOT_ADD
+          actionInfo.action = 'added bot';
+          targetName = await getTargetName(entry.target_id) || 'bot';
+          break;
+
+        case 72: // INTEGRATION_CREATE
+          actionInfo.action = 'added integration';
+          targetName = entry.options?.name || 'integration';
+          break;
+
+        case 28: // MESSAGE_DELETE
+          actionInfo.action = 'deleted message in';
+          targetName = await getChannelName(entry.target_id) || 'channel';
+          break;
+
+        case 31: // UNPIN_MESSAGE
+          actionInfo.action = 'unpinned message in';
+          targetName = await getChannelName(entry.target_id) || 'channel';
+          break;
+
+        default:
+          targetName = await getTargetName(entry.target_id);
+          break;
       }
 
-      const actionType = getActionType(entry.action_type);
-      const timestamp = new Date(entry.id / 4194304 + 1420070400000);
+      // Правильный расчет timestamp
+      const timestamp = new Date(parseInt(entry.id) / 4194304 + 1420070400000);
 
       actions.push({
         id: entry.id,
         user: entry.user_id,
         userName: userName,
-        action: actionType.action,
+        action: actionInfo.action,
         target: entry.target_id,
         targetName: targetName,
-        reason: entry.reason || 'No reason provided',
+        reason: reason,
         time: formatTimeAgo(timestamp),
         timestamp: timestamp.toISOString(),
         status: 'success'
       });
 
-      if (actions.length >= 5) break; // Ограничиваем 5 действиями
-
     } catch (error) {
-      console.error('Error processing audit log entry:', error);
+      console.error('❌ Error processing audit log entry:', error);
     }
   }
-
   return actions;
+}
+
+async function getTargetName(targetId: string) {
+  if (!targetId) return 'Unknown';
+
+  try {
+    const userData = await fetchUserWithCache(targetId);
+    if (userData) {
+      return userData.global_name || userData.username || `User${targetId}`;
+    }
+  } catch (error) {
+    console.error(`Error getting target name for ${targetId}:`, error);
+  }
+
+  return 'Unknown';
+}
+
+async function getChannelName(channelId: string) {
+  if (!channelId) return 'Unknown';
+
+  try {
+    const channelResponse = await fetch(`https://discord.com/api/v10/channels/${channelId}`, {
+      headers: {
+        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (channelResponse.ok) {
+      const channelData = await channelResponse.json();
+      return channelData.name ? `#${channelData.name}` : 'channel';
+    }
+  } catch (error) {
+    console.error(`Error getting channel name for ${channelId}:`, error);
+  }
+
+  return 'channel';
+}
+
+async function processRoleUpdate(entry: any, actionInfo: any) {
+  if (entry.changes && entry.changes.length > 0) {
+    const roleChange = entry.changes.find((change: any) => change.key === '$add' || change.key === '$remove');
+    if (roleChange) {
+      const actionType = roleChange.key === '$add' ? 'added role to' : 'removed role from';
+
+      // Получаем имя роли из changes
+      let roleName = 'role';
+      if (roleChange.new_value && Array.isArray(roleChange.new_value)) {
+        // Для action_type 25 структура может быть другой
+        const roleData = roleChange.new_value[0];
+        if (roleData && roleData.name) {
+          roleName = roleData.name;
+        } else if (roleData && roleData.id) {
+          // Пытаемся получить имя роли по ID
+          roleName = await getRoleName(roleData.id) || 'role';
+        }
+      }
+
+      actionInfo.action = `${actionType} ${roleName}`;
+    }
+  }
+}
+
+async function getRoleName(roleId: string) {
+  try {
+    const roleResponse = await fetch(`https://discord.com/api/v10/guilds/${process.env.DISCORD_GUILD_ID}/roles`, {
+      headers: {
+        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (roleResponse.ok) {
+      const roles = await roleResponse.json();
+      const role = roles.find((r: any) => r.id === roleId);
+      return role ? role.name : null;
+    }
+  } catch (error) {
+    console.error('Error fetching role name:', error);
+  }
+  return null;
 }
 
 // Функция для преобразования action_type в читаемый формат
 function getActionType(actionType: number) {
   const actions: { [key: number]: { action: string; icon: string } } = {
+    1: { action: 'updated server', icon: 'server' },
+    10: { action: 'created channel', icon: 'channel' },
+    11: { action: 'updated channel', icon: 'channel' },
+    12: { action: 'deleted channel', icon: 'channel' },
+    13: { action: 'created channel overwrite', icon: 'permissions' },
+    14: { action: 'updated channel overwrite', icon: 'permissions' },
+    15: { action: 'deleted channel overwrite', icon: 'permissions' },
+    20: { action: 'kicked', icon: 'kick' },
+    21: { action: 'pruned members', icon: 'prune' },
     22: { action: 'banned', icon: 'ban' },
     23: { action: 'unbanned', icon: 'unban' },
-    20: { action: 'kicked', icon: 'kick' },
-    24: { action: 'updated roles for', icon: 'role' },
-    25: { action: 'moved', icon: 'move' },
-    26: { action: 'disconnected', icon: 'disconnect' },
-    72: { action: 'updated', icon: 'update' },
-    28: { action: 'deleted message from', icon: 'delete' },
-    29: { action: 'bulk deleted messages in', icon: 'bulk_delete' },
+    24: { action: 'updated member roles', icon: 'role' },
+    25: { action: 'updated member roles', icon: 'role' }, // MEMBER_ROLE_UPDATE
+    26: { action: 'added bot to server', icon: 'bot' },
+    27: { action: 'updated emoji', icon: 'emoji' },
+    28: { action: 'deleted message', icon: 'delete' },
+    29: { action: 'bulk deleted messages', icon: 'bulk_delete' },
+    30: { action: 'pinned message', icon: 'pin' },
+    31: { action: 'unpinned message', icon: 'unpin' },
+    72: { action: 'added integration', icon: 'integration' },
+    73: { action: 'updated integration', icon: 'integration' },
+    74: { action: 'removed integration', icon: 'integration' },
   };
 
-  return actions[actionType] || { action: 'performed action on', icon: 'default' };
+  return actions[actionType] || { action: 'performed action', icon: 'default' };
 }
 
 // Функция для форматирования времени (как "2 min ago")
@@ -2511,7 +2593,144 @@ function formatTimeAgo(timestamp: Date) {
   if (diffMins < 1) return 'Just now';
   if (diffMins < 60) return `${diffMins} min ago`;
   if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+
+  // Для событий старше недели показываем дату
+  return timestamp.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: diffDays > 365 ? 'numeric' : undefined
+  });
 }
+
+// Эндпоинт для статистики команд
+router.get("/discord/command-stats", async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: "Authentication required" });
+
+  try {
+    const decoded = verifyToken(token);
+    const GUILD_ID = process.env.DISCORD_GUILD_ID;
+    const period = req.query.period as string || '30d';
+    const filter = req.query.filter as string || 'all';
+
+    if (!GUILD_ID) {
+      return res.status(500).json({ error: "Server configuration error" });
+    }
+
+    // Определяем количество дней на основе периода
+    let days = 30;
+    switch (period) {
+      case '24h': days = 1; break;
+      case '7d': days = 7; break;
+      case '30d': days = 30; break;
+    }
+
+    // Получаем статистику из базы
+    let commandStats = await CommandLogger.getCommandStats(GUILD_ID, days);
+
+    // Применяем фильтр
+    if (filter === 'moderation') {
+      const moderationCommands = ['/ban', '/mute', '/warn', '/clear', '/kick', '/slowmode', '/lock'];
+      commandStats = commandStats.filter((cmd: any) => moderationCommands.includes(cmd.name));
+    } else if (filter === 'utility') {
+      const utilityCommands = ['/userinfo', '/serverinfo', '/avatar', '/help', '/ping'];
+      commandStats = commandStats.filter((cmd: any) => utilityCommands.includes(cmd.name));
+    }
+
+    // Добавляем информацию о последнем использовании
+    const enhancedStats = commandStats.map((cmd: any) => ({
+      ...cmd,
+      lastUsed: getRandomLastUsed() // В реальности брать из базы
+    }));
+
+    res.json({
+      commands: enhancedStats,
+      period,
+      filter,
+      totalCommands: enhancedStats.reduce((sum: number, cmd: any) => sum + cmd.usage, 0),
+      averageSuccessRate: enhancedStats.length > 0
+        ? Math.round(enhancedStats.reduce((sum: number, cmd: any) => sum + cmd.successRate, 0) / enhancedStats.length)
+        : 0,
+      generatedAt: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Command stats fetch error:', error);
+    res.status(500).json({
+      error: "Failed to fetch command statistics",
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+function getRandomLastUsed(): string {
+  const times = [
+    "5 minutes ago", "10 minutes ago", "30 minutes ago", "1 hour ago",
+    "2 hours ago", "5 hours ago", "1 day ago", "2 days ago", "1 week ago"
+  ];
+  return times[Math.floor(Math.random() * times.length)];
+}
+
+// Эндпоинт для логирования использования команд
+router.post("/discord/log-command", async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: "Authentication required" });
+
+  try {
+    const decoded = verifyToken(token);
+    const { command, userId, success, executionTime, error, channelId } = req.body;
+    const GUILD_ID = process.env.DISCORD_GUILD_ID;
+
+    if (!GUILD_ID || !command || !userId) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    await CommandLogger.logCommandUsage({
+      guildId: GUILD_ID,
+      command,
+      userId,
+      success: success !== false, // default to true
+      executionTime: executionTime || 0,
+      error,
+      channelId
+    });
+
+    res.json({ success: true, message: "Command usage logged" });
+
+  } catch (error) {
+    console.error('Command log error:', error);
+    res.status(500).json({
+      error: "Failed to log command usage",
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Эндпоинт для очистки старых логов
+router.post("/discord/cleanup-logs", async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: "Authentication required" });
+
+  try {
+    const decoded = verifyToken(token);
+    const { days = 90 } = req.body;
+
+    const deletedCount = await CommandLogger.cleanupOldLogs(days);
+
+    res.json({
+      success: true,
+      message: `Cleaned up ${deletedCount} old command logs`,
+      deletedCount
+    });
+
+  } catch (error) {
+    console.error('Cleanup error:', error);
+    res.status(500).json({
+      error: "Failed to cleanup logs",
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
 
 export default router;

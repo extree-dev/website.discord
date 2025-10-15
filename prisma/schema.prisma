@@ -121,3 +121,20 @@ model SecretCode {
   
   @@map("secret_codes")
 }
+
+model CommandUsage {
+  id        Int      @id @default(autoincrement())
+  guildId   String   @db.VarChar(255)
+  command   String   @db.VarChar(100)
+  userId    String   @db.VarChar(255)
+  success   Boolean
+  executionTime Int  // время выполнения в ms
+  error     String?  @db.Text
+  timestamp DateTime @default(now())
+  channelId String?  @db.VarChar(255)
+
+  @@index([guildId])
+  @@index([command])
+  @@index([timestamp])
+  @@index([userId])
+}

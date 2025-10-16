@@ -25,7 +25,11 @@ import {
   Activity,
   Play,
   StopCircle,
-  BarChart3
+  BarChart3,
+  ChevronDown,
+  Check,
+  Settings,
+
 } from "lucide-react";
 import { SidebarContext } from "@/App.js";
 
@@ -589,26 +593,6 @@ const Dashboard: React.FC = () => {
             <div className={styles.cardHeader}>
               <h3 className={styles.cardTitle}>Command Performance</h3>
               <div className={styles.cardActions}>
-                <div className={styles.filterTabs}>
-                  <button
-                    className={`${styles.filterTab} ${commandFilter === 'all' ? styles.active : ''}`}
-                    onClick={() => setCommandFilter('all')}
-                  >
-                    All
-                  </button>
-                  <button
-                    className={`${styles.filterTab} ${commandFilter === 'moderation' ? styles.active : ''}`}
-                    onClick={() => setCommandFilter('moderation')}
-                  >
-                    Moderation
-                  </button>
-                  <button
-                    className={`${styles.filterTab} ${commandFilter === 'utility' ? styles.active : ''}`}
-                    onClick={() => setCommandFilter('utility')}
-                  >
-                    Utility
-                  </button>
-                </div>
 
                 <button
                   className={styles.iconBtn}
@@ -619,16 +603,68 @@ const Dashboard: React.FC = () => {
                   <RefreshCw size={16} className={loadingCommands ? styles.spinning : ''} />
                 </button>
 
-                <div className={styles.dropdown}>
-                  <Filter size={16} className={styles.iconBtn} aria-label="More options" />
-                  <div className={styles.dropdownContent}>
-                    <button onClick={() => setCommandFilter('all')}>All Commands</button>
-                    <button onClick={() => setCommandFilter('moderation')}>Moderation Only</button>
-                    <button onClick={() => setCommandFilter('utility')}>Utility Only</button>
-                    <div className={styles.dropdownDivider}></div>
-                    <button onClick={() => setActiveTimeRange('24h')}>Last 24 Hours</button>
-                    <button onClick={() => setActiveTimeRange('7d')}>Last 7 Days</button>
-                    <button onClick={() => setActiveTimeRange('30d')}>Last 30 Days</button>
+                <div className={styles.filterDropdown}>
+                  <div className={styles.dropdownTrigger}>
+                    <Filter size={16} className={styles.filterIcon} />
+                    <span>Filters</span>
+                    <ChevronDown size={14} className={styles.chevron} />
+                  </div>
+
+                  <div className={styles.dropdownMenu}>
+                    <div className={styles.menuSection}>
+                      <div className={styles.sectionTitle}>Type Commands</div>
+                      <button
+                        className={`${styles.menuItem} ${commandFilter === 'all' ? styles.active : ''}`}
+                        onClick={() => setCommandFilter('all')}
+                      >
+                        <Check size={16} className={styles.checkIcon} />
+                        All Commands
+                      </button>
+                      <button
+                        className={`${styles.menuItem} ${commandFilter === 'moderation' ? styles.active : ''}`}
+                        onClick={() => setCommandFilter('moderation')}
+                      >
+                        <Shield size={16} className={styles.menuIcon} />
+                        Moderation
+                      </button>
+                      <button
+                        className={`${styles.menuItem} ${commandFilter === 'utility' ? styles.active : ''}`}
+                        onClick={() => setCommandFilter('utility')}
+                      >
+                        <Settings size={16} className={styles.menuIcon} />
+                        Utilities
+                      </button>
+                    </div>
+
+                    <div className={styles.menuDivider}></div>
+
+                    <div className={styles.menuSection}>
+                      <div className={styles.sectionTitle}>Time Period</div>
+                      <button
+                        className={`${styles.menuItem} ${activeTimeRange === '24h' ? styles.active : ''}`}
+                        onClick={() => setActiveTimeRange('24h')}
+                      >
+                        <Clock size={16} className={styles.menuIcon} />
+                        Last 24 hours
+                        {activeTimeRange === '24h' && <div className={styles.activeDot}></div>}
+                      </button>
+                      <button
+                        className={`${styles.menuItem} ${activeTimeRange === '7d' ? styles.active : ''}`}
+                        onClick={() => setActiveTimeRange('7d')}
+                      >
+                        <Calendar size={16} className={styles.menuIcon} />
+                        Last 7 days
+                        {activeTimeRange === '7d' && <div className={styles.activeDot}></div>}
+                      </button>
+                      <button
+                        className={`${styles.menuItem} ${activeTimeRange === '30d' ? styles.active : ''}`}
+                        onClick={() => setActiveTimeRange('30d')}
+                      >
+                        <BarChart3 size={16} className={styles.menuIcon} />
+                        Last 30 days
+                        {activeTimeRange === '30d' && <div className={styles.activeDot}></div>}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -696,8 +732,7 @@ const Dashboard: React.FC = () => {
                 ))
               ) : (
                 <div className={styles.emptyState}>
-                  <BarChart3 size={32} />
-                  No command data available
+                  <p>This section is under development. We apologize for any inconvenience.</p>
                   <small>Command usage statistics will appear here</small>
                   <button
                     className={styles.retryBtn}

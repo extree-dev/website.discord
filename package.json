@@ -4,9 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently --kill-others-on-fail=false --raw -n SERVER,CLIENT,BOT -c \"blue,green,magenta\" \"bun run dev:server\" \"bun run dev:client\"",
+    "dev": "concurrently --kill-others-on-fail=false --raw -n SERVER,CLIENT,BOT -c \"blue,green,magenta\" \"bun run dev:server\" \"bun run dev:client\" \"bun run dev:bot\"",
     "dev:server": "cd src/server && NODE_PATH=../../node_modules bun --bun index.ts",
     "dev:client": "vite",
+    "dev:bot": "cd sentinel.bot && bun run bot.js",
     "db:sync": "bun scripts/db-sync.js"
   },
   "dependencies": {

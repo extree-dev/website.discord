@@ -138,3 +138,43 @@ model CommandUsage {
   @@index([timestamp])
   @@index([userId])
 }
+
+// Модель для статистики команд
+model CommandStats {
+  id        Int      @id @default(autoincrement())
+  command   String
+  guildId   String
+  userId    String
+  success   Boolean
+  executionTime Int  // время выполнения в ms
+  error     String?
+  timestamp DateTime @default(now())
+
+  @@index([command])
+  @@index([guildId])
+  @@index([timestamp])
+  @@map("command_stats")
+}
+
+// Модель для состояний команд (включено/выключено)
+model CommandState {
+  id               Int    @id @default(autoincrement())
+  guildId          String @unique
+  disabledCommands String[] // массив отключенных команд
+
+  @@map("command_states")
+}
+
+// Модель для аудита команд
+model CommandAuditLog {
+  id          Int      @id @default(autoincrement())
+  guildId     String
+  action      String   // enable, disable, reload
+  commandName String
+  executorId  String
+  executedAt  DateTime @default(now())
+
+  @@index([guildId])
+  @@index([executedAt])
+  @@map("command_audit_log")
+}

@@ -307,6 +307,8 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  
+
   const loadModeratorStats = async (token: string) => {
     try {
       const API_BASE = 'http://localhost:4000/api';
@@ -681,55 +683,85 @@ const Dashboard: React.FC = () => {
             <div className={styles.commandStats}>
               {loadingCommands ? (
                 <div className={styles.loadingState}>
-                  <RefreshCw size={20} className={styles.spinning} />
+                  <RefreshCw size={24} className={styles.spinning} />
                   <p>Loading command statistics...</p>
                 </div>
               ) : commandStats.length > 0 ? (
-                commandStats.map((command, index) => (
-                  <div key={index} className={styles.commandStat}>
-                    <div className={styles.commandInfo}>
-                      <div className={styles.commandHeader}>
-                        <span className={styles.commandName}>{command.name}</span>
-                        {getPerformanceIcon(command.successRate)}
-                      </div>
-                      <div className={styles.commandDetails}>
-                        <span className={styles.commandUsage}>
-                          <strong>{command.usage}</strong> uses
-                        </span>
-                        <span className={`${styles.responseTime} ${getResponseTimeColor(command.avgResponseTime)}`}>
-                          {command.avgResponseTime}ms
-                        </span>
-                        {command.lastUsed && (
-                          <span className={styles.lastUsed}>
-                            {command.lastUsed}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                commandStats.map((command, index) => {
+                  const performanceLevel = command.successRate >= 95 ? 'optimal' :
+                    command.successRate >= 85 ? 'good' :
+                      command.successRate >= 70 ? 'warning' : 'critical';
 
-                    <div className={styles.successRate}>
-                      <div className={styles.rateInfo}>
-                        <span className={styles.rateText}>{command.successRate}%</span>
-                        <span className={styles.rateDetails}>
-                          {command.success}/{command.usage} successful
-                        </span>
+                  const responseTimeClass = command.avgResponseTime < 500 ? 'fast' :
+                    command.avgResponseTime < 1000 ? 'medium' : 'slow';
+
+                  const successRateClass = command.successRate >= 95 ? 'high' :
+                    command.successRate >= 85 ? 'medium' : 'low';
+
+                  return (
+                    <div key={index} className={styles.commandStat}>
+                      {/* Command Icon */}
+
+                      {/* Command Info */}
+                      <div className={styles.commandInfo}>
+                        <div className={styles.commandHeader}>
+                          <span className={styles.commandName}>/{command.name}</span>
+                          <span className={`${styles.performanceBadge} ${styles[performanceLevel]}`}>
+                            {performanceLevel}
+                          </span>
+                        </div>
+
+                        <div className={styles.commandDetails}>
+                          <div className={`${styles.commandMetric} ${styles.usage}`}>
+                            <span className={styles.metricIcon}>📈</span>
+                            <span className={styles.metricValue}>{command.usage}</span>
+                            <span>uses</span>
+                          </div>
+
+                          <div className={`${styles.commandMetric} ${styles.response}`}>
+                            <span className={styles.metricIcon}>⚡</span>
+                            <span className={`${styles.responseTime} ${styles[responseTimeClass]}`}>
+                              {command.avgResponseTime}ms
+                            </span>
+                          </div>
+
+                          {command.lastUsed && (
+                            <div className={`${styles.commandMetric} ${styles.time}`}>
+                              <span className={styles.metricIcon}></span>
+                              <span className={styles.lastUsed}>{command.lastUsed}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className={styles.rateBar}>
-                        <div
-                          className={`${styles.rateFill} ${command.successRate >= 95 ? styles.high :
-                            command.successRate >= 85 ? styles.medium : styles.low
-                            }`}
-                          style={{ width: `${command.successRate}%` }}
-                        ></div>
-                      </div>
-                      <div className={styles.rateLabels}>
-                        <span>0%</span>
-                        <span>50%</span>
-                        <span>100%</span>
+
+                      {/* Success Rate */}
+                      <div className={styles.successRate}>
+                        <div className={styles.rateHeader}>
+                          <span className={`${styles.rateValue} ${styles[successRateClass]}`}>
+                            {command.successRate}%
+                          </span>
+                          <span className={styles.rateDetails}>
+                            {command.success}/{command.usage} successful
+                          </span>
+                        </div>
+
+                        <div className={styles.rateVisual}>
+                          <div className={styles.rateBar}>
+                            <div
+                              className={`${styles.rateFill} ${styles[successRateClass]}`}
+                              style={{ width: `${command.successRate}%` }}
+                            ></div>
+                          </div>
+                          <div className={styles.rateLabels}>
+                            <span>0%</span>
+                            <span>50%</span>
+                            <span>100%</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className={styles.emptyState}>
                   <p>This section is under development. We apologize for any inconvenience.</p>
@@ -748,24 +780,30 @@ const Dashboard: React.FC = () => {
               <div className={styles.cardFooter}>
                 <div className={styles.footerStats}>
                   <div className={styles.footerStat}>
-                    <span className={styles.footerLabel}>Total Commands:</span>
+                    <div className={styles.footerIcon}>📋</div>
                     <span className={styles.footerValue}>
                       {commandStats.reduce((sum, cmd) => sum + cmd.usage, 0)}
                     </span>
+                    <span className={styles.footerLabel}>Total Commands</span>
                   </div>
+
                   <div className={styles.footerStat}>
-                    <span className={styles.footerLabel}>Success Rate:</span>
+                    <div className={styles.footerIcon}>✅</div>
                     <span className={styles.footerValue}>
                       {Math.round(commandStats.reduce((sum, cmd) => sum + cmd.successRate, 0) / commandStats.length)}%
                     </span>
+                    <span className={styles.footerLabel}>Success Rate</span>
                   </div>
+
                   <div className={styles.footerStat}>
-                    <span className={styles.footerLabel}>Avg Response:</span>
+                    <div className={styles.footerIcon}>⚡</div>
                     <span className={styles.footerValue}>
                       {Math.round(commandStats.reduce((sum, cmd) => sum + cmd.avgResponseTime, 0) / commandStats.length)}ms
                     </span>
+                    <span className={styles.footerLabel}>Avg Response</span>
                   </div>
                 </div>
+
                 <span className={styles.periodInfo}>
                   Showing {commandFilter} commands for {activeTimeRange}
                 </span>

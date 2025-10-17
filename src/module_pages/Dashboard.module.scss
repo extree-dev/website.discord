@@ -188,17 +188,6 @@
   margin-bottom: 1rem;
 }
 
-.metricIcon {
-  width: 48px;
-  height: 48px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
 .trendingUp {
   color: #10b981;
 }
@@ -417,8 +406,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem;
-  border-radius: 10px;
+  padding: 2rem;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
   transition: background 0.3s ease;
   animation: waveIn 0.5s ease-out both;
 
@@ -429,7 +419,10 @@
   }
 
   &:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.1));
+    color: var(--sidebar-text);
+    border: 1px solid rgba(99, 102, 241, 0.5);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
   }
 }
 
@@ -453,14 +446,6 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-}
-
-.rateBar {
-  width: 100px;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-  overflow: hidden;
 }
 
 .rateFill {
@@ -890,16 +875,6 @@
   gap: 12px;
 }
 
-.commandStat {
-  display: flex;
-  justify-content: between;
-  align-items: center;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-}
-
 .commandInfo {
   flex: 1;
   display: flex;
@@ -956,13 +931,6 @@
   color: #6c757d;
 }
 
-.rateBar {
-  height: 6px;
-  background: #e9ecef;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
 .rateFill {
   height: 100%;
   border-radius: 3px;
@@ -994,13 +962,6 @@
     margin-top: 12px;
     font-size: 14px;
   }
-}
-
-// Card Footer
-.cardFooter {
-  padding: 12px 0 0;
-  border-top: 1px solid #e9ecef;
-  margin-top: 16px;
 }
 
 .periodInfo {
@@ -1099,30 +1060,87 @@
   margin: 4px 0;
 }
 
-// Command Stats Container
+// Command Stats - Enhanced Version
 .commandStats {
-  padding: 16px 24px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  max-height: 400px;
+  gap: 1rem;
+  padding: 1.5rem;
+  max-height: 500px;
   overflow-y: auto;
+
+  // Custom scrollbar
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-radius: 3px;
+  }
 }
 
-// Individual Command Stat
-.commandStat {
+// Command Stats - Enhanced Version
+.commandStats {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  background: #fafbfc;
-  border-radius: 8px;
-  border: 1px solid #e1e5e9;
-  transition: all 0.2s;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  max-height: 500px;
+  overflow-y: auto;
 
-  &:hover {
-    border-color: #007bff;
-    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+  // Custom scrollbar
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-radius: 3px;
+  }
+}
+
+.commandIcon {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+  transition: all 0.4s ease;
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent);
+    transition: left 0.6s ease;
+  }
+
+  .commandStat:hover &::after {
+    left: 100%;
   }
 }
 
@@ -1130,28 +1148,91 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.75rem;
 }
 
 .commandHeader {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.75rem;
 }
 
 .commandName {
-  font-weight: 600;
-  color: #1a1d21;
-  font-size: 14px;
-  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.performanceBadge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  &.optimal {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+
+  &.good {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+  }
+
+  &.warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+
+  &.critical {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
 }
 
 .commandDetails {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 12px;
-  color: #6c757d;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.commandMetric {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #888;
+
+  .metricValue {
+    font-weight: 600;
+    color: #ffffff;
+  }
+
+  &.usage {
+    .metricIcon {
+      color: #6366f1;
+    }
+  }
+
+  &.response {
+    .metricIcon {
+      color: #f59e0b;
+    }
+  }
+
+  &.time {
+    .metricIcon {
+      color: #10b981;
+    }
+  }
 }
 
 .commandUsage {
@@ -1159,38 +1240,84 @@
 }
 
 .responseTime {
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: 'Monaco', 'Consolas', monospace;
-  font-size: 11px;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-family: 'JetBrains Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
 
   &.fast {
-    background: #d4edda;
-    color: #155724;
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
   }
 
   &.medium {
-    background: #fff3cd;
-    color: #856404;
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
   }
 
   &.slow {
-    background: #f8d7da;
-    color: #721c24;
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
   }
 }
 
 .lastUsed {
-  font-size: 11px;
-  color: #868e96;
+  font-size: 0.75rem;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+
+  &::before {
+    content: '🕒';
+    font-size: 0.875rem;
+  }
 }
 
 // Success Rate Section
 .successRate {
-  flex: 0 0 140px;
+  flex: 0 0 160px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.75rem;
+}
+
+.rateHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rateValue {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+
+  &.high {
+    color: #10b981;
+    text-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+  }
+
+  &.medium {
+    color: #f59e0b;
+    text-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+  }
+
+  &.low {
+    color: #ef4444;
+    text-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+  }
+}
+
+.rateVisual {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .rateInfo {
@@ -1217,42 +1344,80 @@
 }
 
 .rateDetails {
-  font-size: 11px;
-  color: #6c757d;
+  font-size: 0.75rem;
+  color: #888;
+  text-align: right;
 }
 
+
 .rateBar {
-  height: 6px;
-  background: #e9ecef;
-  border-radius: 3px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
   overflow: hidden;
   position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.05) 50%,
+        rgba(255, 255, 255, 0.05) 100%);
+    background-size: 20px 100%;
+  }
 }
 
 .rateFill {
   height: 100%;
-  border-radius: 3px;
-  transition: width 0.3s ease;
+  border-radius: 4px;
+  position: relative;
+  transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent);
+    animation: shimmer 2s infinite;
+  }
 
   &.high {
-    background: linear-gradient(90deg, #28a745, #20c997);
+    background: linear-gradient(90deg, #10b981, #34d399, #10b981);
+    background-size: 200% 100%;
+    animation: gradientShift 3s ease infinite;
   }
 
   &.medium {
-    background: linear-gradient(90deg, #ffc107, #fd7e14);
+    background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b);
+    background-size: 200% 100%;
+    animation: gradientShift 3s ease infinite;
   }
 
   &.low {
-    background: linear-gradient(90deg, #dc3545, #e83e8c);
+    background: linear-gradient(90deg, #ef4444, #f87171, #ef4444);
+    background-size: 200% 100%;
+    animation: gradientShift 3s ease infinite;
   }
 }
 
 .rateLabels {
   display: flex;
   justify-content: space-between;
-  font-size: 9px;
-  color: #868e96;
-  margin-top: 2px;
+  font-size: 0.625rem;
+  color: #666;
+  font-weight: 600;
 }
 
 // Performance Icons
@@ -1322,40 +1487,153 @@
 
 // Card Footer
 .cardFooter {
-  padding: 16px 24px;
-  border-top: 1px solid #f1f3f4;
-  background: #fafbfc;
+  padding: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 0 0 24px 24px;
 }
 
 .footerStats {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .footerStat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
+  }
 }
 
+.footerIcon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1rem;
+}
+
+
 .footerLabel {
-  font-size: 12px;
-  color: #6c757d;
+  font-size: 0.75rem;
+  color: #888;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
 }
 
 .footerValue {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1a1d21;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1;
 }
 
 .periodInfo {
-  font-size: 12px;
-  color: #868e96;
+  font-size: 0.875rem;
+  color: #666;
   text-align: center;
   display: block;
+
+  &::before {
+    content: '📊 ';
+    font-size: 0.875rem;
+  }
+}
+
+// Animations
+@keyframes slideInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes gradientShift {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+// Responsive Design
+@include tablet {
+  .commandStat {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .commandDetails {
+    justify-content: center;
+  }
+
+  .successRate {
+    flex: none;
+    width: 100%;
+  }
+
+  .footerStats {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+@include mobile {
+  .commandStats {
+    padding: 1rem;
+  }
+
+  .commandStat {
+    padding: 1.25rem;
+  }
+
+  .commandDetails {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .rateHeader {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
 }
 
 // Scrollbar Styling

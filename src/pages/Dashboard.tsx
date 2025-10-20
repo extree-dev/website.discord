@@ -29,7 +29,6 @@ import {
   ChevronDown,
   Check,
   Settings,
-
 } from "lucide-react";
 import { SidebarContext } from "@/App.js";
 
@@ -94,23 +93,135 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshingAudit, setRefreshingAudit] = useState(false);
-
+  const [memberHistory, setMemberHistory] = useState<{ date: string, count: number }[]>([]);
   const [commandStats, setCommandStats] = useState<CommandStats[]>([]);
   const [loadingCommands, setLoadingCommands] = useState(false);
   const [commandFilter, setCommandFilter] = useState<'all' | 'moderation' | 'utility'>('all');
-
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
+  const [nextRefreshTime, setNextRefreshTime] = useState<Date | null>(null);
+  const [realTimeStats, setRealTimeStats] = useState<{
+    totalMembers: number;
+    onlineMembers: number;
+    memberGrowth: any;
+  } | null>(null);
+  const [liveStats, setLiveStats] = useState<{
+    totalMembers: number;
+    onlineMembers: number;
+    voiceMembers: number;
+    yesterdayComparison: any;
+  } | null>(null);
+
+  // Функция загрузки реальной статистики
+  const loadRealTimeStats = async (token: string) => {
+    // Проверяем что botStatus загружен
+    if (!botStatus?.serverId) {
+      console.log('⏳ Waiting for bot status...');
+      return;
+    }
+
+    try {
+      const API_BASE = 'http://localhost:3002';
+
+      // Загружаем статистику роста
+      const growthResponse = await fetch(`${API_BASE}/api/member-growth?guildId=${botStatus.serverId}&period=7d`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      // Загружаем живую статистику
+      const liveResponse = await fetch(`${API_BASE}/api/live-stats?guildId=${botStatus.serverId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (growthResponse.ok && liveResponse.ok) {
+        const growthData = await growthResponse.json();
+        const liveData = await liveResponse.json();
+
+        setRealTimeStats({
+          totalMembers: growthData.currentMembers,
+          onlineMembers: liveData.onlineMembers,
+          memberGrowth: growthData.growth
+        });
+
+        setLiveStats(liveData);
+
+        console.log('✅ Real-time stats loaded:', { growthData, liveData });
+      } else {
+        console.log('❌ Real-time stats failed:', {
+          growthStatus: growthResponse.status,
+          liveStatus: liveResponse.status
+        });
+      }
+    } catch (error) {
+      console.error('Error loading real-time stats:', error);
+    }
+  };
+
+  // Обновляем функцию calculateMemberChange для работы с реальными данными
+  const calculateRealMemberChange = (): { change: number; isPositive: boolean; period: string; actualChange: number } => {
+    if (!realTimeStats?.memberGrowth || realTimeStats.memberGrowth.length < 2) {
+      return { change: 0, isPositive: true, period: 'recently', actualChange: 0 };
+    }
+
+    const current = realTimeStats.memberGrowth[realTimeStats.memberGrowth.length - 1];
+    const previous = realTimeStats.memberGrowth[realTimeStats.memberGrowth.length - 2];
+
+    const change = ((current.memberCount - previous.memberCount) / previous.memberCount) * 100;
+    const actualChange = current.memberCount - previous.memberCount;
+
+    return {
+      change: Math.round(change * 10) / 10,
+      isPositive: change >= 0,
+      period: 'last check',
+      actualChange
+    };
+  };
+
+  const calculateRealOnlineChange = (): { change: number; isPositive: boolean; period: string } => {
+    if (!liveStats?.yesterdayComparison || liveStats.yesterdayComparison.onlineCount === 0) {
+      return { change: 0, isPositive: true, period: 'average' };
+    }
+
+    const change = ((liveStats.onlineMembers - liveStats.yesterdayComparison.onlineCount) / liveStats.yesterdayComparison.onlineCount) * 100;
+
+    return {
+      change: Math.round(change * 10) / 10,
+      isPositive: change >= 0,
+      period: 'yesterday'
+    };
+  };
+
+
 
   useEffect(() => {
     if (!autoRefresh) return;
 
     const interval = setInterval(() => {
-      console.log('🔄 Auto-refreshing audit log...');
-      loadAuditLog(localStorage.getItem('auth_token') || '');
-    }, 2 * 60 * 1000); // 2 минуты
+      const now = new Date();
+      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+      // Обновляем только если прошло больше 1 часа с последнего обновления
+      if (!lastRefreshTime || lastRefreshTime < oneHourAgo) {
+        console.log('🔄 Auto-refreshing audit log (1 hour interval)...');
+        loadAuditLog(localStorage.getItem('auth_token') || '');
+        setLastRefreshTime(now);
+        setNextRefreshTime(new Date(now.getTime() + 60 * 60 * 1000));
+      } else {
+        const nextRefresh = new Date(lastRefreshTime.getTime() + 60 * 60 * 1000);
+        setNextRefreshTime(nextRefresh);
+        const minutesLeft = Math.ceil((nextRefresh.getTime() - now.getTime()) / (60 * 1000));
+        console.log(`⏳ Next auto-refresh in ${minutesLeft} minutes`);
+      }
+    }, 5 * 60 * 1000); // Проверяем каждые 5 минут
 
     return () => clearInterval(interval);
-  }, [autoRefresh]);
+  }, [autoRefresh, lastRefreshTime]);
 
   const [messageStats, setMessageStats] = useState<{
     totalMessages: number;
@@ -206,7 +317,6 @@ const Dashboard: React.FC = () => {
     return styles.slow;
   };
 
-
   useEffect(() => {
     if (botStatus?.isOnServer) {
       loadCommandStats(localStorage.getItem('auth_token') || '');
@@ -258,8 +368,11 @@ const Dashboard: React.FC = () => {
           // Загружаем статистику модераторов
           loadModeratorStats(token);
 
-          // Загружаем audit log
+          // Загружаем audit log с ограничением
           loadAuditLog(token);
+
+          // ⚠️ ВАЖНО: Загружаем реальную статистику ПОСЛЕ установки botStatus
+          loadRealTimeStats(token);
         }
       }
 
@@ -275,7 +388,9 @@ const Dashboard: React.FC = () => {
     try {
       setRefreshingAudit(true);
       const API_BASE = 'http://localhost:4000/api';
-      const response = await fetch(`${API_BASE}/discord/audit-logs`, {
+
+      // ⚠️ ИЗМЕНЕНИЕ: Ограничиваем лимит 10 записями
+      const response = await fetch(`${API_BASE}/discord/audit-logs?limit=10`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -285,29 +400,29 @@ const Dashboard: React.FC = () => {
       if (response.ok) {
         const auditData = await response.json();
 
-        // Фильтруем пустые или неполные записи
-        const validActivities = auditData.recentActivities.filter((activity: Activity) =>
-          activity.userName && activity.userName !== 'Unknown' && activity.targetName && activity.targetName !== 'Unknown'
-        );
+        // ДЕБАГ: посмотрим что приходит
+        console.log('🔍 DEBUG Audit data:', {
+          total: auditData.total,
+          source: auditData.source,
+          activitiesCount: auditData.recentActivities?.length
+        });
 
         // Всегда передаем массив (даже пустой)
-        setRecentActivities(validActivities.length > 0 ? validActivities : auditData.recentActivities || []);
-        console.log('✅ Audit log loaded:', auditData);
+        setRecentActivities(auditData.recentActivities || []);
+        setLastRefreshTime(new Date());
+        setNextRefreshTime(new Date(new Date().getTime() + 60 * 60 * 1000));
+        console.log('✅ Audit log loaded with', auditData.recentActivities?.length || 0, 'activities');
       } else {
         console.log('❌ Audit log failed');
-        // Устанавливаем пустой массив вместо undefined
         setRecentActivities([]);
       }
     } catch (error) {
       console.error('Error loading audit log:', error);
-      // Устанавливаем пустой массив вместо undefined
       setRecentActivities([]);
     } finally {
       setRefreshingAudit(false);
     }
   };
-
-  
 
   const loadModeratorStats = async (token: string) => {
     try {
@@ -333,16 +448,50 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const calculateMemberChange = (currentTotal: number): number => {
-    const baseValue = 1200;
-    const change = ((currentTotal - baseValue) / baseValue) * 100;
-    return Math.round(change * 10) / 10;
+  const calculateMemberChange = (currentTotal: number): { change: number, isPositive: boolean, period: string } => {
+    if (!serverStats || memberHistory.length === 0) {
+      return { change: 12, isPositive: true, period: 'yesterday' };
+    }
+
+    // Получаем данные за последние 7 дней
+    const lastWeekData = memberHistory.slice(-7);
+
+    if (lastWeekData.length < 2) {
+      return { change: 0, isPositive: true, period: 'recently' };
+    }
+
+    // Среднее значение за предыдущую неделю (исключая сегодня)
+    const previousWeekAverage = lastWeekData
+      .slice(0, -1)
+      .reduce((sum, day) => sum + day.count, 0) / (lastWeekData.length - 1);
+
+    // Текущее значение
+    const currentValue = currentTotal;
+
+    // Расчет процентного изменения
+    const change = ((currentValue - previousWeekAverage) / previousWeekAverage) * 100;
+
+    // Определяем период для отображения
+    const period = lastWeekData.length >= 7 ? 'last week' : 'recently';
+
+    return {
+      change: Math.round(change * 10) / 10,
+      isPositive: change >= 0,
+      period
+    };
   };
 
-  const calculateOnlineChange = (currentOnline: number): number => {
-    const baseValue = 300;
-    const change = ((currentOnline - baseValue) / baseValue) * 100;
-    return Math.round(change * 10) / 10;
+  const calculateOnlineChange = (currentOnline: number): { change: number, isPositive: boolean, period: string } => {
+    // Базовый расчет для онлайн пользователей
+    const baseOnline = 250; // среднее онлайн пользователей
+
+    const change = ((currentOnline - baseOnline) / baseOnline) * 100;
+
+    return {
+      change: Math.round(change * 10) / 10,
+      isPositive: change >= 0,
+      period: 'average'
+    };
   };
 
   const calculateCommandChange = (currentCommands: number): number => {
@@ -353,34 +502,68 @@ const Dashboard: React.FC = () => {
 
   const metricsData = {
     totalMembers: {
-      value: serverStats?.members.total || 1250,
-      change: serverStats ? calculateMemberChange(serverStats.members.total) : +12
+      value: realTimeStats?.totalMembers || serverStats?.members.total || 1250,
+      ...calculateRealMemberChange()
     },
     onlineNow: {
-      value: serverStats?.members.online || 312,
-      change: serverStats ? calculateOnlineChange(serverStats.members.online) : +5
+      value: realTimeStats?.onlineMembers || serverStats?.members.online || 312,
+      ...calculateRealOnlineChange()
     },
     messagesToday: {
       value: messageStats?.messagesToday || 245,
-      change: messageStats?.changeVsAverage || +8
+      change: messageStats?.changeVsAverage || +8,
+      isPositive: (messageStats?.changeVsAverage || 0) >= 0,
+      period: 'average'
     },
     activeModerators: {
       value: activeModerators || 8,
-      change: 0
+      change: 0,
+      isPositive: true,
+      period: 'current'
+    }
+  };
+
+  const loadMemberHistory = async (token: string) => {
+    try {
+      const API_BASE = 'http://localhost:4000/api';
+      const response = await fetch(`${API_BASE}/discord/member-history`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const historyData = await response.json();
+        setMemberHistory(historyData);
+      } else {
+        // Fallback: создаем демо-данные
+        const demoHistory = [
+          { date: '2024-01-01', count: 1180 },
+          { date: '2024-01-02', count: 1195 },
+          { date: '2024-01-03', count: 1210 },
+          { date: '2024-01-04', count: 1225 },
+          { date: '2024-01-05', count: 1240 },
+          { date: '2024-01-06', count: 1255 },
+          { date: '2024-01-07', count: 1270 },
+        ];
+        setMemberHistory(demoHistory);
+      }
+    } catch (error) {
+      console.error('Error loading member history:', error);
     }
   };
 
   useEffect(() => {
     loadDashboardData();
 
-    const interval = setInterval(() => {
-      if (!botStatus?.isOnServer) {
-        console.log('🔄 Auto-checking bot status...');
-        loadDashboardData();
-      }
-    }, 60000);
+    // Перезагрузить данные через 15 секунд после запуска (когда бот готов)
+    const timeout = setTimeout(() => {
+      console.log('Reloading data after bot startup...');
+      loadDashboardData();
+    }, 15000);
 
-    return () => clearInterval(interval);
+    return () => clearTimeout(timeout);
   }, []);
 
   const mockStatsData = {
@@ -397,6 +580,22 @@ const Dashboard: React.FC = () => {
     { name: "/clear", usage: 25, success: 100 },
     { name: "/kick", usage: 18, success: 96 }
   ];
+
+  // Функция для форматирования времени до следующего обновления
+  const formatTimeUntilRefresh = () => {
+    if (!nextRefreshTime) return '';
+
+    const now = new Date();
+    const diffMs = nextRefreshTime.getTime() - now.getTime();
+    const diffMins = Math.max(0, Math.ceil(diffMs / (60 * 1000)));
+
+    if (diffMins === 0) return 'soon';
+    if (diffMins < 60) return `in ${diffMins} min`;
+
+    const hours = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+    return `in ${hours}h ${mins}m`;
+  };
 
   if (!loading && botStatus && !botStatus.isOnServer) {
     return (
@@ -436,6 +635,7 @@ const Dashboard: React.FC = () => {
             <span className={styles.header__subtitle}>
               Real-time insights and moderation analytics
               {botStatus?.serverName && ` • ${botStatus.serverName}`}
+              {lastRefreshTime && ` • Updated: ${lastRefreshTime.toLocaleTimeString()}`}
             </span>
           </div>
           <div className={styles.header__right}>
@@ -454,6 +654,7 @@ const Dashboard: React.FC = () => {
               className={styles.refreshBtn}
               onClick={loadDashboardData}
               disabled={refreshing}
+              title="Refresh dashboard data"
             >
               <RefreshCw size={20} className={refreshing ? styles.spinning : ''} />
             </button>
@@ -473,14 +674,21 @@ const Dashboard: React.FC = () => {
               <TrendingUp size={16} className={styles.trendingUp} />
             </div>
             <h3 className={styles.metricValue}>
-              {serverStats ? serverStats.members.total.toLocaleString() : 'Loading...'}
+              {realTimeStats?.totalMembers?.toLocaleString() || serverStats?.members.total.toLocaleString() || 'Loading...'}
             </h3>
             <p className={styles.metricLabel}>Total Members</p>
             <div className={styles.metricChange}>
-              <span className={styles.changePositive}>
-                +{metricsData.totalMembers.change}%
+              <span className={metricsData.totalMembers.isPositive ? styles.changePositive : styles.changeNegative}>
+                {metricsData.totalMembers.isPositive ? '+' : ''}{metricsData.totalMembers.change}%
+                {metricsData.totalMembers.actualChange !== 0 && (
+                  <span className={styles.actualChange}>
+                    ({metricsData.totalMembers.actualChange > 0 ? '+' : ''}{metricsData.totalMembers.actualChange})
+                  </span>
+                )}
               </span>
-              <span className={styles.changeText}>from yesterday</span>
+              <span className={styles.changeText}>
+                vs. {metricsData.totalMembers.period}
+              </span>
             </div>
           </div>
 
@@ -492,14 +700,16 @@ const Dashboard: React.FC = () => {
               <TrendingUp size={16} className={styles.trendingUp} />
             </div>
             <h3 className={styles.metricValue}>
-              {serverStats?.members.online ?? '0'}
+              {realTimeStats?.onlineMembers ?? serverStats?.members.online ?? '0'}
             </h3>
             <p className={styles.metricLabel}>Online Now</p>
             <div className={styles.metricChange}>
-              <span className={styles.changePositive}>
-                +{metricsData.onlineNow.change}%
+              <span className={metricsData.onlineNow.isPositive ? styles.changePositive : styles.changeNegative}>
+                {metricsData.onlineNow.isPositive ? '+' : ''}{metricsData.onlineNow.change}%
               </span>
-              <span className={styles.changeText}>peak today</span>
+              <span className={styles.changeText}>
+                vs. {metricsData.onlineNow.period}
+              </span>
             </div>
           </div>
 
@@ -539,22 +749,30 @@ const Dashboard: React.FC = () => {
         <div className={styles.contentGrid}>
           <div className={styles.activityCard}>
             <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>Recent Moderation Actions</h3>
+              <h3 className={styles.cardTitle}>
+                Recent Moderation Actions
+                <span className={styles.limitBadge}>Last 10 actions</span>
+              </h3>
               <div className={styles.headerActions}>
-                {/* УБРАЛ ДУБЛИРУЮЩУЮСЯ КНОПКУ */}
                 <button
                   className={styles.viewAllBtn}
                   onClick={() => loadAuditLog(localStorage.getItem('auth_token') || '')}
                   disabled={refreshingAudit}
+                  title="Refresh audit log (updates hourly)"
                 >
                   <RefreshCw size={14} className={refreshingAudit ? styles.spinning : ''} />
                   {refreshingAudit ? 'Refreshing...' : 'Refresh'}
                 </button>
+                {nextRefreshTime && (
+                  <span className={styles.refreshInfo}>
+                    Auto-refresh {formatTimeUntilRefresh()}
+                  </span>
+                )}
               </div>
             </div>
             <div className={styles.activityList}>
               {recentActivities.length > 0 ? (
-                recentActivities.map((activity, index) => (
+                recentActivities.slice(0, 10).map((activity, index) => ( // ⚠️ Ограничиваем 10 записями
                   <div key={activity.id || `activity-${index}`} className={styles.activityItem}>
                     <div className={styles.activityIcon}>
                       {activity.status === 'success' ? (
@@ -700,8 +918,6 @@ const Dashboard: React.FC = () => {
 
                   return (
                     <div key={index} className={styles.commandStat}>
-                      {/* Command Icon */}
-
                       {/* Command Info */}
                       <div className={styles.commandInfo}>
                         <div className={styles.commandHeader}>
@@ -713,13 +929,17 @@ const Dashboard: React.FC = () => {
 
                         <div className={styles.commandDetails}>
                           <div className={`${styles.commandMetric} ${styles.usage}`}>
-                            <span className={styles.metricIcon}>📈</span>
+                            <span className={styles.metricIcon}>
+                              <TrendingUp size={14} />
+                            </span>
                             <span className={styles.metricValue}>{command.usage}</span>
                             <span>uses</span>
                           </div>
 
                           <div className={`${styles.commandMetric} ${styles.response}`}>
-                            <span className={styles.metricIcon}>⚡</span>
+                            <span className={styles.metricIcon}>
+                              <Zap size={14} />
+                            </span>
                             <span className={`${styles.responseTime} ${styles[responseTimeClass]}`}>
                               {command.avgResponseTime}ms
                             </span>
@@ -727,7 +947,9 @@ const Dashboard: React.FC = () => {
 
                           {command.lastUsed && (
                             <div className={`${styles.commandMetric} ${styles.time}`}>
-                              <span className={styles.metricIcon}></span>
+                              <span className={styles.metricIcon}>
+                                <Clock size={14} />
+                              </span>
                               <span className={styles.lastUsed}>{command.lastUsed}</span>
                             </div>
                           )}
@@ -780,7 +1002,9 @@ const Dashboard: React.FC = () => {
               <div className={styles.cardFooter}>
                 <div className={styles.footerStats}>
                   <div className={styles.footerStat}>
-                    <div className={styles.footerIcon}>📋</div>
+                    <div className={styles.footerIcon}>
+                      <BarChart3 size={16} />
+                    </div>
                     <span className={styles.footerValue}>
                       {commandStats.reduce((sum, cmd) => sum + cmd.usage, 0)}
                     </span>
@@ -788,23 +1012,34 @@ const Dashboard: React.FC = () => {
                   </div>
 
                   <div className={styles.footerStat}>
-                    <div className={styles.footerIcon}>✅</div>
+                    <div className={styles.footerIcon}>
+                      <CheckCircle size={16} />
+                    </div>
                     <span className={styles.footerValue}>
-                      {Math.round(commandStats.reduce((sum, cmd) => sum + cmd.successRate, 0) / commandStats.length)}%
+                      {commandStats.length > 0
+                        ? Math.round(commandStats.reduce((sum, cmd) => sum + cmd.successRate, 0) / commandStats.length)
+                        : 0
+                      }%
                     </span>
                     <span className={styles.footerLabel}>Success Rate</span>
                   </div>
 
                   <div className={styles.footerStat}>
-                    <div className={styles.footerIcon}>⚡</div>
+                    <div className={styles.footerIcon}>
+                      <Zap size={16} />
+                    </div>
                     <span className={styles.footerValue}>
-                      {Math.round(commandStats.reduce((sum, cmd) => sum + cmd.avgResponseTime, 0) / commandStats.length)}ms
+                      {commandStats.length > 0
+                        ? Math.round(commandStats.reduce((sum, cmd) => sum + cmd.avgResponseTime, 0) / commandStats.length)
+                        : 0
+                      }ms
                     </span>
                     <span className={styles.footerLabel}>Avg Response</span>
                   </div>
                 </div>
 
                 <span className={styles.periodInfo}>
+                  <Calendar size={12} style={{ marginRight: '4px' }} />
                   Showing {commandFilter} commands for {activeTimeRange}
                 </span>
               </div>

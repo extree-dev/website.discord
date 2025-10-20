@@ -1,21 +1,30 @@
-// discordClient.js
-import { Client, GatewayIntentBits } from 'discord.js';
+// В sentinel.bot/discordClient.js
+const { Client, GatewayIntentBits } = require('discord.js');
 
-let clientInstance = null;
+let discordClient = null;
 
-export const getClient = () => {
-    if (!clientInstance) {
-        clientInstance = new Client({
+function initializeClient() {
+    if (!discordClient) {
+        discordClient = new Client({
             intents: [
                 GatewayIntentBits.Guilds,
                 GatewayIntentBits.GuildMessages,
                 GatewayIntentBits.MessageContent,
-                GatewayIntentBits.GuildMembers,
-                GatewayIntentBits.DirectMessages,
-                GatewayIntentBits.GuildPresences
+                GatewayIntentBits.GuildMembers
             ]
         });
-        clientInstance.login(process.env.DISCORD_TOKEN);
     }
-    return clientInstance;
+    return discordClient;
+}
+
+function getClient() {
+    if (!discordClient) {
+        throw new Error('Discord client not initialized. Call initializeClient first.');
+    }
+    return discordClient;
+}
+
+module.exports = {
+    initializeClient,
+    getClient
 };

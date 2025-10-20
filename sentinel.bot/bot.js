@@ -1,14 +1,15 @@
 require('dotenv').config({ path: '../.env' });
-import { PrismaClient, Prisma } from "@prisma/client"; // Добавлен Prisma
+const { PrismaClient } = require('@prisma/client');
 const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
+const { initializeClient, getClient } = require('./discordClient.mjs');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 
-console.log('🤖 Starting Sentinel bot...');
+console.log('Starting Sentinel bot...');
 
 // Проверяем переменные окружения
-console.log('🔍 Environment check:');
+console.log('Environment check:');
 console.log('DISCORD_BOT_TOKEN exists:', !!process.env.DISCORD_BOT_TOKEN);
 console.log('DISCORD_BOT_TOKEN length:', process.env.DISCORD_BOT_TOKEN?.length);
 console.log('DISCORD_BOT_TOKEN starts with:', process.env.DISCORD_BOT_TOKEN?.substring(0, 10));
@@ -16,9 +17,12 @@ console.log('GUILD_ID:', process.env.DISCORD_GUILD_ID);
 console.log('CLIENT_ID:', process.env.DISCORD_CLIENT_ID);
 
 if (!process.env.DISCORD_BOT_TOKEN) {
-    console.error('❌ DISCORD_BOT_TOKEN not found in .env file');
+    console.error(' DISCORD_BOT_TOKEN not found in .env file');
     process.exit(1);
 }
+
+// Инициализируем клиент через нашу функцию
+const client = initializeClient();
 
 // КЛАСС ДЛЯ ТРЕКИНГА КОМАНД
 class CommandTracker {
@@ -31,7 +35,7 @@ class CommandTracker {
     async recordCommand(commandName, success, responseTime, guildId, userId, error = null) {
         // Проверяем обязательные поля
         if (!guildId || !userId) {
-            console.log('⚠️ Missing guildId or userId for command tracking');
+            console.log('Missing guildId or userId for command tracking');
             return;
         }
 
@@ -65,12 +69,12 @@ class CommandTracker {
                     timestamp: new Date()
                 }
             });
-            console.log(`💾 Saved to DB: ${commandName}, guild: ${guildId}, user: ${userId}`);
+            console.log(`Saved to DB: ${commandName}, guild: ${guildId}, user: ${userId}`);
         } catch (dbError) {
-            console.error('❌ Error saving command stats to DB:', dbError.message);
+            console.error(' Error saving command stats to DB:', dbError.message);
         }
 
-        console.log(`📝 Command tracked: ${commandName}, success: ${success}, time: ${responseTime}ms`);
+        console.log(`Command tracked: ${commandName}, success: ${success}, time: ${responseTime}ms`);
     }
 
     getCommandType(commandName) {
@@ -149,18 +153,117 @@ class CommandTracker {
     }
 }
 
+// Добавляем в bot.js класс для сбора статистики
+class StatsCollector {
+    constructor() {
+        this.memberHistory = new Map();
+        this.startTime = Date.now();
+        this.prisma = new PrismaClient();
+    }
+
+    // Сохраняем статистику каждые 30 минут
+    async saveServerStats(guild) {
+        try {
+            const totalMembers = guild.memberCount;
+
+            // Получаем реальное количество онлайн пользователей
+            await guild.members.fetch();
+            const onlineMembers = guild.members.cache.filter(member =>
+                member.presence?.status === 'online' ||
+                member.presence?.status === 'idle' ||
+                member.presence?.status === 'dnd'
+            ).size;
+
+            // Сохраняем в БД
+            await this.prisma.serverStats.create({
+                data: {
+                    guildId: guild.id,
+                    memberCount: totalMembers,
+                    onlineCount: onlineMembers,
+                    timestamp: new Date()
+                }
+            });
+
+            console.log(`REAL STATS: ${totalMembers} members, ${onlineMembers} online`);
+
+        } catch (error) {
+            console.error('Error saving server stats:', error);
+        }
+    }
+
+    // Расчет реального роста
+    calculateRealGrowth(currentStats, previousStats) {
+        if (!previousStats || previousStats.memberCount === 0) {
+            return { change: 0, isPositive: true, period: 'new' };
+        }
+
+        const change = ((currentStats.memberCount - previousStats.memberCount) / previousStats.memberCount) * 100;
+        const isPositive = change >= 0;
+
+        // Определяем период на основе разницы во времени
+        const timeDiff = currentStats.timestamp - previousStats.timestamp;
+        const hoursDiff = timeDiff / (1000 * 60 * 60);
+
+        let period = 'recently';
+        if (hoursDiff >= 24) period = 'yesterday';
+        if (hoursDiff >= 168) period = 'last week';
+
+        return {
+            change: Math.round(change * 10) / 10,
+            isPositive,
+            period,
+            actualChange: currentStats.memberCount - previousStats.memberCount
+        };
+    }
+
+    // Получаем последние статистические данные
+    async getLatestStats(guildId) {
+        try {
+            const stats = await this.prisma.serverStats.findMany({
+                where: { guildId },
+                orderBy: { timestamp: 'desc' },
+                take: 10
+            });
+
+            return stats.length > 0 ? stats : null;
+        } catch (error) {
+            console.error('Error getting latest stats:', error);
+            return null;
+        }
+    }
+}
+
+// Создаем глобальный сборщик статистики
+global.statsCollector = new StatsCollector();
+
+// Запускаем периодический сбор статистики
+function startStatsCollection(client) {
+    setInterval(async () => {
+        try {
+            const guild = client.guilds.cache.get(process.env.GUILD_ID);
+            if (guild) {
+                await global.statsCollector.saveServerStats(guild);
+            }
+        } catch (error) {
+            console.error('Error in stats collection:', error);
+        }
+    }, 5 * 60 * 1000); // Каждые 5 минут
+}
+
+// Запускаем сбор статистики после подключения бота
+client.once('ready', () => {
+    console.log('🔄 Starting stats collection...');
+    startStatsCollection(client);
+
+    // Сохраняем начальную статистику
+    const guild = client.guilds.cache.get(process.env.GUILD_ID);
+    if (guild) {
+        global.statsCollector.saveServerStats(guild);
+    }
+});
+
 // Создаем глобальный трекер
 global.commandTracker = new CommandTracker();
-
-// Создаем клиент Discord
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers
-    ]
-});
 
 // Коллекция для команд
 client.commands = new Collection();
@@ -175,9 +278,9 @@ for (const file of commandFiles) {
 
     if ('data' in command && 'execute' in command) {
         client.commands.set(command.data.name, command);
-        console.log(`🔧 Loaded command: /${command.data.name}`);
+        console.log(`Loaded command: /${command.data.name}`);
     } else {
-        console.log(`⚠️ Command ${filePath} is missing required properties`);
+        console.log(`Command ${filePath} is missing required properties`);
     }
 }
 
@@ -194,7 +297,7 @@ async function registerCommands() {
             }
         }
 
-        console.log(`🔄 Starting automatic command registration for ${commands.length} commands...`);
+        console.log(` Starting automatic command registration for ${commands.length} commands...`);
 
         const rest = new REST().setToken(process.env.DISCORD_BOT_TOKEN);
 
@@ -208,29 +311,29 @@ async function registerCommands() {
                 ),
                 { body: commands }
             );
-            console.log(`✅ Successfully registered ${guildData.length} guild commands.`);
+            console.log(` Successfully registered ${guildData.length} guild commands.`);
             guildData.forEach(cmd => console.log(`   - /${cmd.name}`));
         } catch (guildError) {
-            console.log('❌ Guild command registration failed:', guildError.message);
+            console.log(' Guild command registration failed:', guildError.message);
         }
 
         // 2. Затем регистрируем ГЛОБАЛЬНЫЕ команды (для значка)
         try {
-            console.log('🌍 Registering GLOBAL commands for badge...');
+            console.log(' Registering GLOBAL commands for badge...');
             const globalData = await rest.put(
                 Routes.applicationCommands(process.env.CLIENT_ID || process.env.DISCORD_CLIENT_ID),
                 { body: commands }
             );
-            console.log(`✅ Global commands registered successfully! ${globalData.length} commands.`);
-            console.log('🎉 Badge "Supports Slash Commands" should appear within 24 hours!');
+            console.log(` Global commands registered successfully! ${globalData.length} commands.`);
+            console.log(' Badge "Supports Slash Commands" should appear within 24 hours!');
         } catch (globalError) {
-            console.log('❌ Global command registration failed:', globalError.message);
-            console.log('💡 This may affect the badge appearance, but bot will continue working.');
+            console.log(' Global command registration failed:', globalError.message);
+            console.log(' This may affect the badge appearance, but bot will continue working.');
         }
 
     } catch (error) {
-        console.error('❌ Error during command registration:', error);
-        console.log('💡 But continuing bot startup...');
+        console.error(' Error during command registration:', error);
+        console.log(' But continuing bot startup...');
     }
 }
 
@@ -248,7 +351,7 @@ for (const file of eventFiles) {
         client.on(event.name, (...args) => event.execute(...args));
     }
 
-    console.log(`🎯 Loaded event: ${event.name}`);
+    console.log(`Loaded event: ${event.name}`);
 }
 
 // Запускаем API
@@ -256,24 +359,24 @@ const { startAPI } = require('./api.js');
 startAPI();
 
 // Пробуем подключиться к боту
-console.log('🔐 Attempting to login to Discord...');
+console.log('Attempting to login to Discord...');
 client.login(process.env.DISCORD_BOT_TOKEN)
     .then(() => {
-        console.log('✅ Bot logged in successfully');
+        console.log('Bot logged in successfully');
 
         // ЗАПУСКАЕМ АВТОМАТИЧЕСКУЮ РЕГИСТРАЦИЮ ПОСЛЕ УСПЕШНОГО ЛОГИНА
         registerCommands();
     })
     .catch(error => {
-        console.error('❌ Bot login failed:', error.message);
-        console.log('💡 But API is still running!');
+        console.error('Bot login failed:', error.message);
+        console.log('But API is still running!');
     });
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-    console.log('🛑 Shutting down...');
+    console.log('Shutting down...');
     const finalStats = global.commandTracker.getTotalStats();
-    console.log(`📊 Final stats: ${finalStats.totalUsage} commands tracked`);
+    console.log(`Final stats: ${finalStats.totalUsage} commands tracked`);
     client.destroy();
     process.exit(0);
 });

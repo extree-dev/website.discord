@@ -24,14 +24,12 @@ const failedAttempts = new Map();
 // ==================== КЭШ ДЛЯ ПОЛЬЗОВАТЕЛЕЙ DISCORD ====================
 
 const userCache = new Map();
-const cacheTimeout = 5 * 60 * 1000; // 5 минут
+const CACHE_TTL = 5 * 60 * 1000; // 5 минут
 
 async function fetchUserWithCache(userId: string) {
-  if (userCache.has(userId)) {
-    const cached = userCache.get(userId);
-    if (Date.now() - cached.timestamp < cacheTimeout) {
-      return cached.data;
-    }
+  const cached = userCache.get(userId);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
   }
 
   try {
@@ -44,20 +42,14 @@ async function fetchUserWithCache(userId: string) {
 
     if (userResponse.ok) {
       const userData = await userResponse.json();
-      const result = {
-        username: userData.username,
-        global_name: userData.global_name,
-        discriminator: userData.discriminator
-      };
-
       userCache.set(userId, {
-        data: result,
+        data: userData,
         timestamp: Date.now()
       });
-      return result;
-    } else {
+      return userData;
     }
   } catch (error) {
+    console.error(`Error fetching user ${userId}:`, error);
   }
 
   return null;
@@ -1489,46 +1481,7 @@ router.get("/server/roles", async (req, res) => {
   }
 });
 
-// Функция для получения ролей сервера с Discord API
-async function fetchServerRolesWithPermissions(): Promise<any[]> {
-  try {
-    const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
-    const GUILD_ID = process.env.DISCORD_GUILD_ID;
 
-    if (!BOT_TOKEN || !GUILD_ID) {
-      throw new Error('Bot token or guild ID not configured');
-    }
-
-    const response = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/roles`, {
-      headers: {
-        'Authorization': `Bot ${BOT_TOKEN}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Discord API error: ${response.status}`);
-    }
-
-    const roles = await response.json();
-
-    // Фильтруем и сортируем роли
-    return roles
-      .filter((role: any) => !role.managed && role.name !== '@everyone')
-      .sort((a: any, b: any) => b.position - a.position)
-      .map((role: any) => ({
-        id: role.id,
-        name: role.name,
-        color: role.color,
-        position: role.position,
-        permissions: role.permissions
-      }));
-
-  } catch (error) {
-    console.error('Failed to fetch server roles from Discord:', error);
-    throw error;
-  }
-}
 
 // ==================== ЛОГАУТ ====================
 
@@ -2083,7 +2036,6 @@ router.get("/discord/bot-status", async (req, res) => {
       const guildData = await response.json();
       botStatus.serverName = guildData.name;
     } else {
-      console.log(`❌ Bot is NOT on server. Status: ${response.status}`);
     }
 
     res.json(botStatus);
@@ -2341,7 +2293,7 @@ router.get("/discord/moderator-stats", async (req, res) => {
   }
 });
 
-// Эндпоинт для получения audit log
+// Эндпоинт для получения audit log через Discord Bot
 router.get("/discord/audit-logs", async (req, res) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: "Authentication required" });
@@ -2351,257 +2303,67 @@ router.get("/discord/audit-logs", async (req, res) => {
     const GUILD_ID = process.env.DISCORD_GUILD_ID;
 
     if (!GUILD_ID) {
-      console.error('❌ DISCORD_GUILD_ID is not set in environment variables');
       return res.status(500).json({ error: "Server configuration error" });
     }
 
-    const auditResponse = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/audit-logs?limit=20`, {
+    const limit = parseInt(req.query.limit as string) || 10; // По умолчанию 10 записей
+
+    // Обращаемся к Discord Bot вместо прямого Discord API
+    const botResponse = await fetch(`http://localhost:3002/api/audit-logs?limit=${limit}&guildId=${GUILD_ID}`, {
       headers: {
-        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
         'Content-Type': 'application/json'
       }
     });
 
-    if (!auditResponse.ok) {
-      const errorText = await auditResponse.text();
-      return res.status(auditResponse.status).json({
-        error: "Failed to fetch audit logs",
-        details: `Discord API returned ${auditResponse.status}: ${errorText}`
-      });
+    let auditData;
+
+    if (!botResponse.ok) {
+      const errorText = await botResponse.text();
+      console.error('Bot API error:', botResponse.status, errorText);
+      // Fallback: получаем из БД если бот недоступен
+      auditData = {
+        recentActivities: await getAuditLogsFromDB(limit),
+        source: 'database-fallback'
+      };
+    } else {
+      auditData = await botResponse.json();
     }
 
-    const auditData = await auditResponse.json();
-    if (auditData.audit_log_entries && auditData.audit_log_entries.length > 0) {
-    }
-
-    const moderationActions = await transformAuditLogToActivities(auditData.audit_log_entries || [], GUILD_ID);
+    // ТРАНСФОРМИРУЕМ ДАННЫЕ ДЛЯ ФРОНТЕНДА
+    const transformedActivities = auditData.recentActivities.map((activity: any) => ({
+      id: activity.id,
+      user: activity.user,
+      userName: activity.userName,
+      action: transformActionForFrontend(activity.action, activity.actionType),
+      target: activity.target,
+      targetName: activity.targetName,
+      targetType: activity.targetType,
+      reason: activity.reason,
+      time: activity.time,
+      timestamp: activity.timestamp,
+      status: activity.status,
+      details: activity.details
+    }));
 
     res.json({
-      recentActivities: moderationActions,
-      total: moderationActions.length,
-      generatedAt: new Date().toISOString()
+      recentActivities: transformedActivities,
+      total: transformedActivities.length,
+      generatedAt: auditData.generatedAt || new Date().toISOString(),
+      source: auditData.source || 'bot-transformed'
     });
 
   } catch (error) {
     console.error('Audit log fetch error:', error);
-    res.status(500).json({
-      error: "Failed to fetch audit logs",
-      details: error instanceof Error ? error.message : 'Unknown error'
+    // Fallback на данные из БД
+    const dbLogs = await getAuditLogsFromDB(10);
+    res.json({
+      recentActivities: dbLogs,
+      total: dbLogs.length,
+      generatedAt: new Date().toISOString(),
+      source: 'database-error-fallback'
     });
   }
 });
-
-// Функция для преобразования audit log в наш формат
-async function transformAuditLogToActivities(auditLogEntries: any[], guildId: string) {
-  const actions = [];
-  const processedEntries = new Set();
-
-  for (const entry of auditLogEntries) {
-    try {
-      if (processedEntries.has(entry.id)) continue;
-      processedEntries.add(entry.id);
-
-      // Получаем информацию о пользователе
-      let userName = 'Unknown';
-      if (entry.user_id) {
-        const userData = await fetchUserWithCache(entry.user_id);
-        if (userData) {
-          userName = userData.global_name || userData.username || `User${entry.user_id}`;
-        } else {
-        }
-      }
-
-      const actionInfo = getActionType(entry.action_type);
-      let targetName = 'Unknown';
-      let reason = entry.reason || 'No reason provided';
-
-      // Обрабатываем разные типы действий
-      switch (entry.action_type) {
-        case 24: // MEMBER_ROLE_UPDATE (старый)
-        case 25: // MEMBER_ROLE_UPDATE (новый)
-          await processRoleUpdate(entry, actionInfo);
-          targetName = await getTargetName(entry.target_id);
-          break;
-
-        case 26: // BOT_ADD
-          actionInfo.action = 'added bot';
-          targetName = await getTargetName(entry.target_id) || 'bot';
-          break;
-
-        case 72: // INTEGRATION_CREATE
-          actionInfo.action = 'added integration';
-          targetName = entry.options?.name || 'integration';
-          break;
-
-        case 28: // MESSAGE_DELETE
-          actionInfo.action = 'deleted message in';
-          targetName = await getChannelName(entry.target_id) || 'channel';
-          break;
-
-        case 31: // UNPIN_MESSAGE
-          actionInfo.action = 'unpinned message in';
-          targetName = await getChannelName(entry.target_id) || 'channel';
-          break;
-
-        default:
-          targetName = await getTargetName(entry.target_id);
-          break;
-      }
-
-      // Правильный расчет timestamp
-      const timestamp = new Date(parseInt(entry.id) / 4194304 + 1420070400000);
-
-      actions.push({
-        id: entry.id,
-        user: entry.user_id,
-        userName: userName,
-        action: actionInfo.action,
-        target: entry.target_id,
-        targetName: targetName,
-        reason: reason,
-        time: formatTimeAgo(timestamp),
-        timestamp: timestamp.toISOString(),
-        status: 'success'
-      });
-
-    } catch (error) {
-      console.error('❌ Error processing audit log entry:', error);
-    }
-  }
-  return actions;
-}
-
-async function getTargetName(targetId: string) {
-  if (!targetId) return 'Unknown';
-
-  try {
-    const userData = await fetchUserWithCache(targetId);
-    if (userData) {
-      return userData.global_name || userData.username || `User${targetId}`;
-    }
-  } catch (error) {
-    console.error(`Error getting target name for ${targetId}:`, error);
-  }
-
-  return 'Unknown';
-}
-
-async function getChannelName(channelId: string) {
-  if (!channelId) return 'Unknown';
-
-  try {
-    const channelResponse = await fetch(`https://discord.com/api/v10/channels/${channelId}`, {
-      headers: {
-        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (channelResponse.ok) {
-      const channelData = await channelResponse.json();
-      return channelData.name ? `#${channelData.name}` : 'channel';
-    }
-  } catch (error) {
-    console.error(`Error getting channel name for ${channelId}:`, error);
-  }
-
-  return 'channel';
-}
-
-async function processRoleUpdate(entry: any, actionInfo: any) {
-  if (entry.changes && entry.changes.length > 0) {
-    const roleChange = entry.changes.find((change: any) => change.key === '$add' || change.key === '$remove');
-    if (roleChange) {
-      const actionType = roleChange.key === '$add' ? 'added role to' : 'removed role from';
-
-      // Получаем имя роли из changes
-      let roleName = 'role';
-      if (roleChange.new_value && Array.isArray(roleChange.new_value)) {
-        // Для action_type 25 структура может быть другой
-        const roleData = roleChange.new_value[0];
-        if (roleData && roleData.name) {
-          roleName = roleData.name;
-        } else if (roleData && roleData.id) {
-          // Пытаемся получить имя роли по ID
-          roleName = await getRoleName(roleData.id) || 'role';
-        }
-      }
-
-      actionInfo.action = `${actionType} ${roleName}`;
-    }
-  }
-}
-
-async function getRoleName(roleId: string) {
-  try {
-    const roleResponse = await fetch(`https://discord.com/api/v10/guilds/${process.env.DISCORD_GUILD_ID}/roles`, {
-      headers: {
-        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (roleResponse.ok) {
-      const roles = await roleResponse.json();
-      const role = roles.find((r: any) => r.id === roleId);
-      return role ? role.name : null;
-    }
-  } catch (error) {
-    console.error('Error fetching role name:', error);
-  }
-  return null;
-}
-
-// Функция для преобразования action_type в читаемый формат
-function getActionType(actionType: number) {
-  const actions: { [key: number]: { action: string; icon: string } } = {
-    1: { action: 'updated server', icon: 'server' },
-    10: { action: 'created channel', icon: 'channel' },
-    11: { action: 'updated channel', icon: 'channel' },
-    12: { action: 'deleted channel', icon: 'channel' },
-    13: { action: 'created channel overwrite', icon: 'permissions' },
-    14: { action: 'updated channel overwrite', icon: 'permissions' },
-    15: { action: 'deleted channel overwrite', icon: 'permissions' },
-    20: { action: 'kicked', icon: 'kick' },
-    21: { action: 'pruned members', icon: 'prune' },
-    22: { action: 'banned', icon: 'ban' },
-    23: { action: 'unbanned', icon: 'unban' },
-    24: { action: 'updated member roles', icon: 'role' },
-    25: { action: 'updated member roles', icon: 'role' }, // MEMBER_ROLE_UPDATE
-    26: { action: 'added bot to server', icon: 'bot' },
-    27: { action: 'updated emoji', icon: 'emoji' },
-    28: { action: 'deleted message', icon: 'delete' },
-    29: { action: 'bulk deleted messages', icon: 'bulk_delete' },
-    30: { action: 'pinned message', icon: 'pin' },
-    31: { action: 'unpinned message', icon: 'unpin' },
-    72: { action: 'added integration', icon: 'integration' },
-    73: { action: 'updated integration', icon: 'integration' },
-    74: { action: 'removed integration', icon: 'integration' },
-  };
-
-  return actions[actionType] || { action: 'performed action', icon: 'default' };
-}
-
-// Функция для форматирования времени (как "2 min ago")
-function formatTimeAgo(timestamp: Date) {
-  const now = new Date();
-  const diffMs = now.getTime() - timestamp.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins} min ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-
-  // Для событий старше недели показываем дату
-  return timestamp.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: diffDays > 365 ? 'numeric' : undefined
-  });
-}
 
 // Эндпоинт для статистики команд через Sentinel бота
 router.get("/discord/command-stats", async (req, res) => {
@@ -2611,8 +2373,6 @@ router.get("/discord/command-stats", async (req, res) => {
   try {
     const period = req.query.period as string || '24h';
     const filter = req.query.filter as string || 'all';
-
-    console.log('📊 Fetching command stats...', { period, filter });
 
     // Пробуем получить данные от бота
     let botData: any;
@@ -2632,7 +2392,6 @@ router.get("/discord/command-stats", async (req, res) => {
 
       if (botResponse.ok) {
         botData = await botResponse.json();
-        console.log('✅ Received data from bot:', botData.commands?.length || 0, 'commands');
       } else {
         throw new Error(`Bot API responded with status: ${botResponse.status}`);
       }
@@ -2688,6 +2447,629 @@ router.get("/discord/command-stats", async (req, res) => {
     });
   }
 });
+
+// Упрощенный эндпоинт для логирования (пока)
+router.post("/discord/log-command", async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: "Authentication required" });
+
+  try {
+    const { command, success = true, executionTime = 0 } = req.body;
+
+    // Пока просто логируем в консоль
+    // Позже подключим базу данных
+
+    res.json({
+      success: true,
+      message: "Command usage logged",
+      loggedAt: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Command log error:', error);
+    res.status(500).json({
+      error: "Failed to log command usage",
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Эндпоинт для очистки старых логов
+router.post("/discord/cleanup-logs", async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: "Authentication required" });
+
+  try {
+    const decoded = verifyToken(token);
+    const { days = 90 } = req.body;
+
+    const deletedCount = await CommandLogger.cleanupOldLogs(days);
+
+    res.json({
+      success: true,
+      message: `Cleaned up ${deletedCount} old command logs`,
+      deletedCount
+    });
+
+  } catch (error) {
+    console.error('Cleanup error:', error);
+    res.status(500).json({
+      error: "Failed to cleanup logs",
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+async function processRoleUpdate(entry: any, fullAuditData: any) {
+  let targetName = 'Unknown User';
+  let action = 'updated roles for';
+  const details: any = { type: 'role_update', changes: [] };
+
+  targetName = await getTargetName(entry.target_id);
+
+  if (entry.changes && entry.changes.length > 0) {
+    for (const change of entry.changes) {
+      if (change.key === '$add' && Array.isArray(change.new_value)) {
+        for (const roleData of change.new_value) {
+          const roleName = await getRoleName(roleData.id) || 'Unknown Role';
+          details.changes.push({ type: 'added', roleName, roleId: roleData.id });
+        }
+      } else if (change.key === '$remove' && Array.isArray(change.new_value)) {
+        for (const roleData of change.new_value) {
+          const roleName = await getRoleName(roleData.id) || 'Unknown Role';
+          details.changes.push({ type: 'removed', roleName, roleId: roleData.id });
+        }
+      }
+    }
+
+    const addedRoles = details.changes.filter((c: any) => c.type === 'added');
+    const removedRoles = details.changes.filter((c: any) => c.type === 'removed');
+
+    if (addedRoles.length > 0 && removedRoles.length > 0) {
+      action = `updated roles for`;
+    } else if (addedRoles.length > 0) {
+      const roleNames = addedRoles.map((r: any) => r.roleName).join(', ');
+      action = `added roles ${roleNames} to`;
+    } else if (removedRoles.length > 0) {
+      const roleNames = removedRoles.map((r: any) => r.roleName).join(', ');
+      action = `removed roles ${roleNames} from`;
+    }
+  }
+
+  return { targetName, action, details };
+}
+
+// Вспомогательные функции
+async function getTargetName(targetId: string) {
+  if (!targetId) return 'Unknown';
+  try {
+    const userData = await fetchUserWithCache(targetId);
+    if (userData) {
+      return userData.global_name || userData.username || `User${targetId}`;
+    }
+  } catch (error) {
+    console.error(`Error getting target name for ${targetId}:`, error);
+  }
+  return 'Unknown';
+}
+
+async function getChannelName(channelId: string) {
+  if (!channelId) return 'Unknown';
+  try {
+    const channelResponse = await fetch(`https://discord.com/api/v10/channels/${channelId}`, {
+      headers: {
+        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (channelResponse.ok) {
+      const channelData = await channelResponse.json();
+      return channelData.name ? `#${channelData.name}` : 'channel';
+    }
+  } catch (error) {
+    console.error(`Error getting channel name for ${channelId}:`, error);
+  }
+  return 'channel';
+}
+
+async function getRoleName(roleId: string): Promise<string | null> {
+  try {
+    const GUILD_ID = process.env.DISCORD_GUILD_ID;
+    const response = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/roles`, {
+      headers: {
+        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (response.ok) {
+      const roles = await response.json();
+      const role = roles.find((r: any) => r.id === roleId);
+      return role ? role.name : null;
+    }
+  } catch (error) {
+    console.error(`Error fetching role ${roleId}:`, error);
+  }
+  return null;
+}
+
+// Функция для получения логов из БД
+async function getAuditLogsFromDB(limit: number) {
+  try {
+    const logs = await prisma.auditLog.findMany({
+      take: limit,
+      orderBy: { timestamp: 'desc' },
+      select: {
+        id: true,
+        action: true,
+        actionType: true,
+        userId: true,
+        userName: true,
+        targetId: true,
+        targetName: true,
+        targetType: true,
+        reason: true,
+        timestamp: true,
+        changes: true,
+        extra: true
+      }
+    });
+
+    // Форматируем для фронтенда
+    return logs.map(log => ({
+      id: log.id,
+      user: log.userId,
+      userName: log.userName,
+      action: log.action,
+      target: log.targetId,
+      targetName: log.targetName,
+      targetType: log.targetType,
+      reason: log.reason,
+      time: formatTimeAgo(new Date(log.timestamp)),
+      timestamp: log.timestamp.toISOString(),
+      status: 'success',
+      details: {
+        changes: log.changes,
+        extra: log.extra
+      }
+    }));
+
+  } catch (error) {
+    console.error('Error getting logs from DB:', error);
+    return [];
+  }
+}
+
+// Функция для получения ролей сервера с Discord API
+async function fetchServerRolesWithPermissions(): Promise<any[]> {
+  try {
+    const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+    const GUILD_ID = process.env.DISCORD_GUILD_ID;
+
+    if (!BOT_TOKEN || !GUILD_ID) {
+      throw new Error('Bot token or guild ID not configured');
+    }
+
+    const response = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/roles`, {
+      headers: {
+        'Authorization': `Bot ${BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Discord API error: ${response.status}`);
+    }
+
+    const roles = await response.json();
+
+    // Фильтруем и сортируем роли
+    return roles
+      .filter((role: any) => !role.managed && role.name !== '@everyone')
+      .sort((a: any, b: any) => b.position - a.position)
+      .map((role: any) => ({
+        id: role.id,
+        name: role.name,
+        color: role.color,
+        position: role.position,
+        permissions: role.permissions
+      }));
+
+  } catch (error) {
+    console.error('Failed to fetch server roles from Discord:', error);
+    throw error;
+  }
+}
+
+// Обновленная функция для преобразования audit log с полным покрытием
+async function transformAuditLogToActivities(auditLogEntries: any[], fullAuditData: any, guildId: string) {
+  const actions = [];
+  const processedEntries = new Set();
+
+  for (const entry of auditLogEntries) {
+    try {
+      // Пропускаем дубликаты
+      if (processedEntries.has(entry.id)) {
+        continue;
+      }
+      processedEntries.add(entry.id);
+
+      // Получаем информацию о модераторе
+      let moderatorName = 'Unknown User';
+      let moderatorAvatar = null;
+
+      if (entry.user_id) {
+        const userData = await fetchUserWithCache(entry.user_id);
+        if (userData) {
+          moderatorName = userData.global_name || userData.username || `User${entry.user_id}`;
+          moderatorAvatar = userData.avatar ?
+            `https://cdn.discordapp.com/avatars/${entry.user_id}/${userData.avatar}.png` : null;
+        } else {
+        }
+      }
+
+      // Получаем информацию о действии
+      const actionInfo = getEnhancedActionType(entry.action_type);
+      let targetName = 'Unknown';
+      let targetType = 'user';
+      let reason = entry.reason || 'No reason provided';
+      let details = {};
+      let finalAction = actionInfo.action;
+
+      // Обрабатываем разные типы действий согласно Discord API
+      switch (entry.action_type) {
+        // GUILD
+        case 1: // GUILD_UPDATE
+          targetName = 'server';
+          targetType = 'guild';
+          details = { type: 'guild_update' };
+          break;
+
+        // CHANNEL
+        case 10: // CHANNEL_CREATE
+          targetName = entry.options?.name || 'New Channel';
+          targetType = 'channel';
+          details = { type: 'channel_create' };
+          break;
+
+        case 11: // CHANNEL_UPDATE
+          targetName = await getChannelName(entry.target_id) || 'Unknown Channel';
+          targetType = 'channel';
+          details = { type: 'channel_update' };
+          break;
+
+        case 12: // CHANNEL_DELETE
+          targetName = entry.options?.name || 'Deleted Channel';
+          targetType = 'channel';
+          details = { type: 'channel_delete' };
+          break;
+
+        // MEMBER
+        case 20: // MEMBER_KICK
+          targetName = await getTargetName(entry.target_id);
+          details = { type: 'kick' };
+          break;
+
+        case 22: // MEMBER_BAN_ADD
+          targetName = await getTargetName(entry.target_id);
+          details = { type: 'ban' };
+          break;
+
+        case 23: // MEMBER_BAN_REMOVE
+          targetName = await getTargetName(entry.target_id);
+          details = { type: 'unban' };
+          break;
+
+        case 24: // MEMBER_UPDATE
+        case 25: // MEMBER_ROLE_UPDATE
+          const roleUpdateResult = await processRoleUpdate(entry, fullAuditData);
+          targetName = roleUpdateResult.targetName;
+          finalAction = roleUpdateResult.action;
+          details = roleUpdateResult.details;
+          break;
+
+        case 26: // MEMBER_MOVE
+          targetName = await getTargetName(entry.target_id);
+          details = { type: 'member_move' };
+          break;
+
+        case 27: // MEMBER_DISCONNECT
+          targetName = await getTargetName(entry.target_id);
+          details = { type: 'member_disconnect' };
+          break;
+
+        // ROLE
+        case 30: // ROLE_CREATE
+          targetName = entry.options?.name || 'New Role';
+          targetType = 'role';
+          details = { type: 'role_create' };
+          break;
+
+        case 31: // ROLE_UPDATE
+          targetName = await getRoleName(entry.target_id) || 'Unknown Role';
+          targetType = 'role';
+          details = { type: 'role_update' };
+          break;
+
+        case 32: // ROLE_DELETE
+          targetName = entry.options?.name || 'Deleted Role';
+          targetType = 'role';
+          details = { type: 'role_delete' };
+          break;
+
+        // MESSAGE
+        case 72: // MESSAGE_DELETE
+          const channelName = await getChannelName(entry.target_id);
+          targetName = channelName || 'Unknown Channel';
+          targetType = 'channel';
+          details = {
+            type: 'message_delete',
+            count: entry.options?.count || 1,
+            channelId: entry.target_id
+          };
+          finalAction = `deleted ${entry.options?.count || 'multiple'} messages in ${targetName}`;
+          break;
+
+        case 73: // MESSAGE_BULK_DELETE
+          targetName = await getChannelName(entry.target_id) || 'Unknown Channel';
+          targetType = 'channel';
+          details = {
+            type: 'message_bulk_delete',
+            count: entry.options?.count || 'multiple',
+            channelId: entry.target_id
+          };
+          break;
+
+        case 74: // MESSAGE_PIN
+          targetName = await getChannelName(entry.target_id) || 'Unknown Channel';
+          targetType = 'channel';
+          details = { type: 'message_pin' };
+          break;
+
+        case 75: // MESSAGE_UNPIN
+          targetName = await getChannelName(entry.target_id) || 'Unknown Channel';
+          targetType = 'channel';
+          details = { type: 'message_unpin' };
+          break;
+
+        // DEFAULT - для неизвестных типов
+        default:
+          targetName = await getTargetName(entry.target_id) || await getChannelName(entry.target_id) || await getRoleName(entry.target_id) || 'Unknown Target';
+          details = { type: 'other', action_type: entry.action_type };
+          break;
+      }
+
+      // ПРАВИЛЬНЫЙ расчет timestamp из Snowflake ID
+      const timestamp = extractTimestampFromSnowflake(entry.id);
+
+      actions.push({
+        id: entry.id,
+        user: entry.user_id,
+        userName: moderatorName,
+        userAvatar: moderatorAvatar,
+        action: finalAction,
+        actionType: entry.action_type,
+        target: entry.target_id,
+        targetName: targetName,
+        targetType: targetType,
+        reason: reason,
+        time: formatTimeAgo(timestamp),
+        timestamp: timestamp.toISOString(),
+        status: 'success',
+        details: details,
+        changes: entry.changes || []
+      });
+
+    } catch (error) {
+      console.error('❌ Error processing audit log entry:', error);
+    }
+  }
+
+  // Сортируем по времени (новые сначала)
+  const sortedActions = actions.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return sortedActions;
+}
+
+// Обновленная функция для определения типов действий
+function getEnhancedActionType(actionType: number) {
+  const actionTypes: { [key: number]: { action: string, category: string } } = {
+    // GUILD
+    1: { action: 'updated server', category: 'server' },
+
+    // CHANNEL
+    10: { action: 'created channel', category: 'channel' },
+    11: { action: 'updated channel', category: 'channel' },
+    12: { action: 'deleted channel', category: 'channel' },
+    13: { action: 'created channel permission', category: 'channel' },
+    14: { action: 'updated channel permission', category: 'channel' },
+    15: { action: 'deleted channel permission', category: 'channel' },
+
+    // MEMBER
+    20: { action: 'kicked member', category: 'moderation' },
+    21: { action: 'pruned members', category: 'moderation' },
+    22: { action: 'banned member', category: 'moderation' },
+    23: { action: 'unbanned member', category: 'moderation' },
+    24: { action: 'updated member', category: 'member' },
+    25: { action: 'updated member roles', category: 'roles' },
+    26: { action: 'moved member', category: 'voice' },
+    27: { action: 'disconnected member', category: 'voice' },
+    28: { action: 'updated voice state', category: 'voice' },
+
+    // ROLE
+    30: { action: 'created role', category: 'roles' },
+    31: { action: 'updated role', category: 'roles' },
+    32: { action: 'deleted role', category: 'roles' },
+
+    // MESSAGE
+    72: { action: 'deleted message', category: 'messages' },
+    73: { action: 'bulk deleted messages', category: 'messages' },
+    74: { action: 'pinned message', category: 'messages' },
+    75: { action: 'unpinned message', category: 'messages' },
+
+    // INTEGRATION
+    80: { action: 'created integration', category: 'integration' },
+    81: { action: 'updated integration', category: 'integration' },
+    82: { action: 'deleted integration', category: 'integration' },
+
+    // STAGE_INSTANCE
+    83: { action: 'created stage', category: 'stage' },
+    84: { action: 'updated stage', category: 'stage' },
+    85: { action: 'deleted stage', category: 'stage' },
+
+    // STICKER
+    90: { action: 'created sticker', category: 'sticker' },
+    91: { action: 'updated sticker', category: 'sticker' },
+    92: { action: 'deleted sticker', category: 'sticker' },
+
+    // THREAD
+    110: { action: 'created thread', category: 'thread' },
+    111: { action: 'updated thread', category: 'thread' },
+    112: { action: 'deleted thread', category: 'thread' },
+  };
+
+  return actionTypes[actionType] || { action: 'performed action', category: 'other' };
+}
+
+// Функция для трансформации действий для фронтенда согласно Discord API
+function transformActionForFrontend(action: string, actionType: string | number): string {
+  // Если действие уже нормальное, возвращаем как есть
+  if (action !== 'performed action') {
+    return action;
+  }
+
+  // Нормализуем actionType в число
+  const actionTypeNum = typeof actionType === 'string' ? parseInt(actionType) : actionType;
+
+  // Полная карта действий согласно Discord API Documentation
+  // https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object-audit-log-events
+  const auditLogActionMap: { [key: number]: string } = {
+    // GUILD
+    1: 'updated server', // GUILD_UPDATE
+
+    // CHANNEL
+    10: 'created channel', // CHANNEL_CREATE
+    11: 'updated channel', // CHANNEL_UPDATE
+    12: 'deleted channel', // CHANNEL_DELETE
+    13: 'created channel permission', // CHANNEL_OVERWRITE_CREATE
+    14: 'updated channel permission', // CHANNEL_OVERWRITE_UPDATE
+    15: 'deleted channel permission', // CHANNEL_OVERWRITE_DELETE
+
+    // MEMBER
+    20: 'kicked member', // MEMBER_KICK
+    21: 'pruned members', // MEMBER_PRUNE
+    22: 'banned member', // MEMBER_BAN_ADD
+    23: 'unbanned member', // MEMBER_BAN_REMOVE
+    24: 'updated member', // MEMBER_UPDATE
+    25: 'updated member roles', // MEMBER_ROLE_UPDATE
+    26: 'moved member', // MEMBER_MOVE
+    27: 'disconnected member', // MEMBER_DISCONNECT
+    28: 'updated voice state', // VOICE_STATE_UPDATE
+
+    // ROLE
+    30: 'created role', // ROLE_CREATE
+    31: 'updated role', // ROLE_UPDATE
+    32: 'deleted role', // ROLE_DELETE
+
+    // INVITE
+    40: 'created invite', // INVITE_CREATE
+    41: 'updated invite', // INVITE_UPDATE
+    42: 'deleted invite', // INVITE_DELETE
+
+    // WEBHOOK
+    50: 'created webhook', // WEBHOOK_CREATE
+    51: 'updated webhook', // WEBHOOK_UPDATE
+    52: 'deleted webhook', // WEBHOOK_DELETE
+
+    // EMOJI
+    60: 'created emoji', // EMOJI_CREATE
+    61: 'updated emoji', // EMOJI_UPDATE
+    62: 'deleted emoji', // EMOJI_DELETE
+
+    // MESSAGE
+    72: 'deleted message', // MESSAGE_DELETE
+    73: 'bulk deleted messages', // MESSAGE_BULK_DELETE
+    74: 'pinned message', // MESSAGE_PIN
+    75: 'unpinned message', // MESSAGE_UNPIN
+
+    // INTEGRATION
+    80: 'created integration', // INTEGRATION_CREATE
+    81: 'updated integration', // INTEGRATION_UPDATE
+    82: 'deleted integration', // INTEGRATION_DELETE
+
+    // STAGE_INSTANCE
+    83: 'created stage', // STAGE_INSTANCE_CREATE
+    84: 'updated stage', // STAGE_INSTANCE_UPDATE
+    85: 'deleted stage', // STAGE_INSTANCE_DELETE
+
+    // STICKER
+    90: 'created sticker', // STICKER_CREATE
+    91: 'updated sticker', // STICKER_UPDATE
+    92: 'deleted sticker', // STICKER_DELETE
+
+    // GUILD_SCHEDULED_EVENT
+    100: 'created event', // GUILD_SCHEDULED_EVENT_CREATE
+    101: 'updated event', // GUILD_SCHEDULED_EVENT_UPDATE
+    102: 'deleted event', // GUILD_SCHEDULED_EVENT_DELETE
+
+    // THREAD
+    110: 'created thread', // THREAD_CREATE
+    111: 'updated thread', // THREAD_UPDATE
+    112: 'deleted thread', // THREAD_DELETE
+
+    // APPLICATION_COMMAND_PERMISSION
+    121: 'updated command permissions', // APPLICATION_COMMAND_PERMISSION_UPDATE
+
+    // AUTO_MODERATION
+    140: 'created automod rule', // AUTO_MODERATION_RULE_CREATE
+    141: 'updated automod rule', // AUTO_MODERATION_RULE_UPDATE
+    142: 'deleted automod rule', // AUTO_MODERATION_RULE_DELETE
+    143: 'triggered automod rule', // AUTO_MODERATION_BLOCK_MESSAGE
+    144: 'flagged automod message', // AUTO_MODERATION_FLAG_TO_CHANNEL
+    145: 'quarantined user', // AUTO_MODERATION_USER_COMMUNICATION_DISABLED
+
+    // CREATOR_MONETIZATION
+    150: 'created monetization request', // CREATOR_MONETIZATION_REQUEST_CREATED
+    151: 'updated monetization terms', // CREATOR_MONETIZATION_TERMS_ACCEPTED
+
+    // ONBOARDING
+    160: 'updated onboarding', // GUILD_ONBOARDING_UPDATE
+
+    // GUILD_HOME
+    170: 'updated home settings', // GUILD_HOME_SETTINGS_UPDATE
+
+    // GUILD_DIRECTORY
+    180: 'updated directory entry', // GUILD_DIRECTORY_ENTRY_CREATE
+    181: 'removed directory entry', // GUILD_DIRECTORY_ENTRY_UPDATE
+
+    // GUILD_INVITES
+    190: 'updated invite settings', // GUILD_INVITES_UPDATE
+  };
+
+  const result = auditLogActionMap[actionTypeNum] || 'performed action';
+
+  // Отладка для непонятных actionType
+  if (result === 'performed action') {
+  }
+
+  return result;
+}
+
+// Остальные функции без изменений
+function extractTimestampFromSnowflake(snowflake: string): Date {
+  const discordEpoch = 1420070400000;
+  const snowflakeInt = BigInt(snowflake);
+  const timestamp = Number(snowflakeInt >> 22n) + discordEpoch;
+  return new Date(timestamp);
+}
+
+function formatTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (diffInSeconds < 60) return 'just now';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+  return date.toLocaleDateString();
+}
 
 // Демо-данные с более реалистичными значениями
 async function getDemoCommandStats(period: string, filter: string) {
@@ -2762,63 +3144,5 @@ function getTimeAgo(): string {
   return randomTime.text;
 }
 
-// Упрощенный эндпоинт для логирования (пока)
-router.post("/discord/log-command", async (req, res) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ error: "Authentication required" });
-
-  try {
-    const { command, success = true, executionTime = 0 } = req.body;
-
-    console.log('📝 Command logged:', {
-      command,
-      success,
-      executionTime,
-      timestamp: new Date().toISOString()
-    });
-
-    // Пока просто логируем в консоль
-    // Позже подключим базу данных
-
-    res.json({
-      success: true,
-      message: "Command usage logged",
-      loggedAt: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error('Command log error:', error);
-    res.status(500).json({
-      error: "Failed to log command usage",
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Эндпоинт для очистки старых логов
-router.post("/discord/cleanup-logs", async (req, res) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ error: "Authentication required" });
-
-  try {
-    const decoded = verifyToken(token);
-    const { days = 90 } = req.body;
-
-    const deletedCount = await CommandLogger.cleanupOldLogs(days);
-
-    res.json({
-      success: true,
-      message: `Cleaned up ${deletedCount} old command logs`,
-      deletedCount
-    });
-
-  } catch (error) {
-    console.error('Cleanup error:', error);
-    res.status(500).json({
-      error: "Failed to cleanup logs",
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
 
 export default router;

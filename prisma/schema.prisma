@@ -178,3 +178,38 @@ model CommandAuditLog {
   @@index([executedAt])
   @@map("command_audit_log")
 }
+
+
+model AuditLog {
+  id        String   @id @unique
+  action    String
+  actionType String
+  userId    String
+  userName  String
+  targetId  String
+  targetName String
+  targetType String
+  reason    String?
+  timestamp DateTime
+  changes   Json?
+  extra     Json?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([timestamp])
+  @@index([userId])
+  @@index([actionType])
+}
+
+model ServerStats {
+  id          Int      @id @default(autoincrement())
+  guildId     String
+  memberCount Int
+  onlineCount Int
+  timestamp   DateTime @default(now())
+  
+  @@index([guildId])
+  @@index([timestamp])
+  @@map("server_stats")
+}

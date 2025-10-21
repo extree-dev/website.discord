@@ -213,3 +213,21 @@ model ServerStats {
   @@index([timestamp])
   @@map("server_stats")
 }
+
+model Alert {
+  id          String   @id @default(cuid())
+  type        String   // spam_attack, mass_join, message_spike, etc
+  severity    String   // low, medium, high, critical
+  title       String
+  description String
+  guildId     String
+  data        Json?    // Дополнительные данные
+  timestamp   DateTime @default(now())
+  status      String   @default("active") // active, resolved, investigating
+  resolvedBy  String?
+  resolvedAt  DateTime?
+  
+  @@index([guildId])
+  @@index([timestamp])
+  @@index([status])
+}

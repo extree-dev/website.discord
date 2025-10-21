@@ -29,7 +29,9 @@ import {
   ChevronDown,
   Check,
   Settings,
+  User
 } from "lucide-react";
+import { FaUser, FaHashtag, FaExclamationTriangle, FaComment, FaShieldAlt, FaDiscord, FaBan, FaClock, FaLock } from 'react-icons/fa';
 import { SidebarContext } from "@/App.js";
 
 interface BotStatus {
@@ -85,7 +87,43 @@ interface CommandStats {
   lastUsed?: string;
 }
 
+interface HealthStats {
+  responseTime: {
+    value: number;
+    status: string;
+    label: string;
+    unit: string;
+  };
+  uptime: {
+    value: number;
+    status: string;
+    label: string;
+    unit: string;
+  };
+  activeIssues: {
+    value: number;
+    status: string;
+    label: string;
+    unit: string;
+  };
+  performance: any;
+}
+
+interface Alert {
+  id: string;
+  type: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  title: string;
+  description: string;
+  timestamp: string;
+  data?: any;
+}
+
 const Dashboard: React.FC = () => {
+  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [loadingAlerts, setLoadingAlerts] = useState(false);
   const [activeTimeRange, setActiveTimeRange] = useState<'24h' | '7d' | '30d'>('24h');
   const [notifications, setNotifications] = useState(3);
   const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
@@ -111,10 +149,127 @@ const Dashboard: React.FC = () => {
     voiceMembers: number;
     yesterdayComparison: any;
   } | null>(null);
+  const [healthStats, setHealthStats] = useState<HealthStats | null>(null);
+
+  const showAlertDetails = (alert: Alert) => {
+    setSelectedAlert(alert);
+    setShowDetailsModal(true);
+  };
+
+  // Добавь эти функции в Dashboard компонент (перед return)
+  const getActionIcon = (actionType: number) => {
+    switch (actionType) {
+      case 1: return <FaBan size={18} color="#ef4444" />; // Блокировка сообщения
+      case 2: return <FaExclamationTriangle size={18} color="#f59e0b" />; // Предупреждение
+      case 3: return <FaClock size={18} color="#8b5cf6" />; // Таймаут
+      case 4: return <FaLock size={18} color="#6366f1" />; // Блокировка контента
+      default: return <FaShieldAlt size={18} color="#6b7280" />;
+    }
+  };
+
+  const getActionTitle = (actionType: number) => {
+    switch (actionType) {
+      case 1: return 'Блокировка сообщения';
+      case 2: return 'Предупреждение';
+      case 3: return 'Таймаут пользователя';
+      case 4: return 'Блокировка контента';
+      default: return 'Действие автомода';
+    }
+  };
+
+  const getActionDescription = (actionType: number) => {
+    switch (actionType) {
+      case 1: return 'блокировка сообщения';
+      case 2: return 'отправка предупреждения';
+      case 3: return 'таймаут пользователя';
+      case 4: return 'блокировка контента';
+      default: return 'действие автомода';
+    }
+  };
+
+  // Функция загрузки статистики здоровья сервера
+  const fetchServerHealth = async (guildId: string): Promise<HealthStats | null> => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const API_BASE = 'http://localhost:3002';
+
+      const response = await fetch(`${API_BASE}/api/health/server-health?guildId=${guildId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.data;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching server health:', error);
+      return null;
+    }
+  };
+
+  // Компонент ServerHealthCard
+  const ServerHealthCard: React.FC<{ guildId: string }> = ({ guildId }) => {
+    useEffect(() => {
+      const loadHealthData = async () => {
+        const data = await fetchServerHealth(guildId);
+        setHealthStats(data);
+      };
+
+      loadHealthData();
+      const interval = setInterval(loadHealthData, 30000);
+
+      return () => clearInterval(interval);
+    }, [guildId]);
+
+    if (!healthStats) {
+      return <div>Loading server health...</div>;
+    }
+
+    return (
+      <div className={styles.statsCard}>
+        <div className={styles.cardHeader}>
+          <h3 className={styles.cardTitle}>Server Health</h3>
+          <Calendar size={16} />
+        </div>
+        <div className={styles.healthStats}>
+          <div className={styles.healthStat}>
+            <div className={styles.healthLabel}>Response Time</div>
+            <div className={styles.healthValue}>{healthStats.responseTime.value}ms</div>
+            <div className={styles.healthStatus}>
+              <div className={`${styles.statusDot} ${styles[healthStats.responseTime.status]}`}></div>
+              {healthStats.responseTime.status === 'optimal' ? 'Optimal' :
+                healthStats.responseTime.status === 'warning' ? 'Slow' : 'Critical'}
+            </div>
+          </div>
+          <div className={styles.healthStat}>
+            <div className={styles.healthLabel}>Uptime</div>
+            <div className={styles.healthValue}>{healthStats.uptime.value}%</div>
+            <div className={styles.healthStatus}>
+              <div className={`${styles.statusDot} ${styles[healthStats.uptime.status]}`}></div>
+              {healthStats.uptime.status === 'optimal' ? 'Stable' :
+                healthStats.uptime.status === 'warning' ? 'Unstable' : 'Critical'}
+            </div>
+          </div>
+          <div className={styles.healthStat}>
+            <div className={styles.healthLabel}>Active Issues</div>
+            <div className={styles.healthValue}>{healthStats.activeIssues.value}</div>
+            <div className={styles.healthStatus}>
+              <div className={`${styles.statusDot} ${styles[healthStats.activeIssues.status]}`}></div>
+              {healthStats.activeIssues.status === 'optimal' ? 'None' :
+                healthStats.activeIssues.status === 'warning' ? 'Monitoring' : 'Critical'}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // Функция загрузки реальной статистики
   const loadRealTimeStats = async (token: string) => {
-    // Проверяем что botStatus загружен
     if (!botStatus?.serverId) {
       console.log('⏳ Waiting for bot status...');
       return;
@@ -123,7 +278,6 @@ const Dashboard: React.FC = () => {
     try {
       const API_BASE = 'http://localhost:3002';
 
-      // Загружаем статистику роста
       const growthResponse = await fetch(`${API_BASE}/api/member-growth?guildId=${botStatus.serverId}&period=7d`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -131,7 +285,6 @@ const Dashboard: React.FC = () => {
         }
       });
 
-      // Загружаем живую статистику
       const liveResponse = await fetch(`${API_BASE}/api/live-stats?guildId=${botStatus.serverId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -197,8 +350,6 @@ const Dashboard: React.FC = () => {
     };
   };
 
-
-
   useEffect(() => {
     if (!autoRefresh) return;
 
@@ -206,7 +357,6 @@ const Dashboard: React.FC = () => {
       const now = new Date();
       const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 
-      // Обновляем только если прошло больше 1 часа с последнего обновления
       if (!lastRefreshTime || lastRefreshTime < oneHourAgo) {
         console.log('🔄 Auto-refreshing audit log (1 hour interval)...');
         loadAuditLog(localStorage.getItem('auth_token') || '');
@@ -218,7 +368,7 @@ const Dashboard: React.FC = () => {
         const minutesLeft = Math.ceil((nextRefresh.getTime() - now.getTime()) / (60 * 1000));
         console.log(`⏳ Next auto-refresh in ${minutesLeft} minutes`);
       }
-    }, 5 * 60 * 1000); // Проверяем каждые 5 минут
+    }, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, [autoRefresh, lastRefreshTime]);
@@ -272,7 +422,6 @@ const Dashboard: React.FC = () => {
       { name: "/avatar", usage: 67, success: 67, failures: 0, successRate: 100, avgResponseTime: 40, totalExecutionTime: 2680, lastUsed: "5 minutes ago" }
     ];
 
-    // Фильтрация по типу команд
     if (commandFilter === 'moderation') {
       return baseStats.filter(cmd =>
         ['/ban', '/mute', '/warn', '/clear', '/kick', '/slowmode', '/lock'].includes(cmd.name)
@@ -323,13 +472,11 @@ const Dashboard: React.FC = () => {
     }
   }, [activeTimeRange, commandFilter, botStatus?.isOnServer]);
 
-  // Инициализируем пустым массивом вместо undefined
   const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
 
   const sidebarContext = useContext(SidebarContext);
   const isSidebarCollapsed = sidebarContext?.isCollapsed || false;
 
-  // Функция загрузки данных
   const loadDashboardData = async () => {
     try {
       setRefreshing(true);
@@ -342,7 +489,6 @@ const Dashboard: React.FC = () => {
 
       const API_BASE = 'http://localhost:4000/api';
 
-      // Загружаем статус бота
       const botResponse = await fetch(`${API_BASE}/discord/bot-status`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -354,9 +500,8 @@ const Dashboard: React.FC = () => {
         const botData = await botResponse.json();
         setBotStatus(botData);
 
-        // Если бот на сервере, загружаем статистику
         if (botData.isOnServer) {
-          // Загружаем статистику сервера
+          // Сначала загружаем основные данные
           const statsResponse = await fetch(`${API_BASE}/discord/server-stats`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
@@ -365,14 +510,15 @@ const Dashboard: React.FC = () => {
             setServerStats(statsData);
           }
 
-          // Загружаем статистику модераторов
-          loadModeratorStats(token);
+          // Затем загружаем остальные данные
+          await Promise.all([
+            loadModeratorStats(token),
+            loadAuditLog(token),
+            loadRealTimeStats(token)
+          ]);
 
-          // Загружаем audit log с ограничением
-          loadAuditLog(token);
-
-          // ⚠️ ВАЖНО: Загружаем реальную статистику ПОСЛЕ установки botStatus
-          loadRealTimeStats(token);
+          // И только после этого загружаем алерты
+          loadAlerts(token);
         }
       }
 
@@ -389,7 +535,6 @@ const Dashboard: React.FC = () => {
       setRefreshingAudit(true);
       const API_BASE = 'http://localhost:4000/api';
 
-      // ⚠️ ИЗМЕНЕНИЕ: Ограничиваем лимит 10 записями
       const response = await fetch(`${API_BASE}/discord/audit-logs?limit=10`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -399,15 +544,12 @@ const Dashboard: React.FC = () => {
 
       if (response.ok) {
         const auditData = await response.json();
-
-        // ДЕБАГ: посмотрим что приходит
         console.log('🔍 DEBUG Audit data:', {
           total: auditData.total,
           source: auditData.source,
           activitiesCount: auditData.recentActivities?.length
         });
 
-        // Всегда передаем массив (даже пустой)
         setRecentActivities(auditData.recentActivities || []);
         setLastRefreshTime(new Date());
         setNextRefreshTime(new Date(new Date().getTime() + 60 * 60 * 1000));
@@ -425,6 +567,10 @@ const Dashboard: React.FC = () => {
   };
 
   const loadModeratorStats = async (token: string) => {
+    if (!botStatus?.serverId) {
+      console.log('⏳ Waiting for bot status to load real-time stats...');
+      return;
+    }
     try {
       const API_BASE = 'http://localhost:4000/api';
       const response = await fetch(`${API_BASE}/discord/moderator-stats`, {
@@ -439,12 +585,11 @@ const Dashboard: React.FC = () => {
         setActiveModerators(statsData.activeModerators);
         console.log('✅ Moderator stats loaded:', statsData);
       } else {
-        // Fallback на моковые данные
         setActiveModerators(8);
       }
     } catch (error) {
       console.error('Error loading moderator stats:', error);
-      setActiveModerators(8); // Fallback
+      setActiveModerators(8);
     }
   };
 
@@ -453,25 +598,19 @@ const Dashboard: React.FC = () => {
       return { change: 12, isPositive: true, period: 'yesterday' };
     }
 
-    // Получаем данные за последние 7 дней
     const lastWeekData = memberHistory.slice(-7);
 
     if (lastWeekData.length < 2) {
       return { change: 0, isPositive: true, period: 'recently' };
     }
 
-    // Среднее значение за предыдущую неделю (исключая сегодня)
     const previousWeekAverage = lastWeekData
       .slice(0, -1)
       .reduce((sum, day) => sum + day.count, 0) / (lastWeekData.length - 1);
 
-    // Текущее значение
     const currentValue = currentTotal;
-
-    // Расчет процентного изменения
     const change = ((currentValue - previousWeekAverage) / previousWeekAverage) * 100;
 
-    // Определяем период для отображения
     const period = lastWeekData.length >= 7 ? 'last week' : 'recently';
 
     return {
@@ -482,9 +621,7 @@ const Dashboard: React.FC = () => {
   };
 
   const calculateOnlineChange = (currentOnline: number): { change: number, isPositive: boolean, period: string } => {
-    // Базовый расчет для онлайн пользователей
-    const baseOnline = 250; // среднее онлайн пользователей
-
+    const baseOnline = 250;
     const change = ((currentOnline - baseOnline) / baseOnline) * 100;
 
     return {
@@ -537,7 +674,6 @@ const Dashboard: React.FC = () => {
         const historyData = await response.json();
         setMemberHistory(historyData);
       } else {
-        // Fallback: создаем демо-данные
         const demoHistory = [
           { date: '2024-01-01', count: 1180 },
           { date: '2024-01-02', count: 1195 },
@@ -557,7 +693,6 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     loadDashboardData();
 
-    // Перезагрузить данные через 15 секунд после запуска (когда бот готов)
     const timeout = setTimeout(() => {
       console.log('Reloading data after bot startup...');
       loadDashboardData();
@@ -581,7 +716,6 @@ const Dashboard: React.FC = () => {
     { name: "/kick", usage: 18, success: 96 }
   ];
 
-  // Функция для форматирования времени до следующего обновления
   const formatTimeUntilRefresh = () => {
     if (!nextRefreshTime) return '';
 
@@ -595,6 +729,92 @@ const Dashboard: React.FC = () => {
     const hours = Math.floor(diffMins / 60);
     const mins = diffMins % 60;
     return `in ${hours}h ${mins}m`;
+  };
+
+  const loadAlerts = async (token: string) => {
+    try {
+      setLoadingAlerts(true);
+
+      // Ждем пока botStatus загрузится
+      if (!botStatus?.serverId) {
+        console.log('⏳ Waiting for bot status to load alerts...');
+        return;
+      }
+
+      const API_BASE = 'http://localhost:3002';
+      const response = await fetch(`${API_BASE}/api/alerts?guildId=${botStatus.serverId}&limit=5`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const alertsData = await response.json();
+        setAlerts(alertsData.alerts);
+      } else {
+        // Fallback на моковые данные
+        setAlerts([
+          {
+            id: '1',
+            type: 'spam_attack',
+            severity: 'high',
+            title: 'Spam attack detected',
+            description: 'Multiple spam accounts joining',
+            timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString()
+          },
+          {
+            id: '2',
+            type: 'high_traffic',
+            severity: 'medium',
+            title: 'High message rate',
+            description: 'Unusual activity in #general',
+            timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString()
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error loading alerts:', error);
+    } finally {
+      setLoadingAlerts(false);
+    }
+  };
+
+  useEffect(() => {
+    // Когда botStatus загружается, загружаем алерты
+    if (botStatus?.isOnServer && botStatus.serverId) {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        console.log('Loading alerts after bot status update...');
+        loadAlerts(token);
+      }
+    }
+  }, [botStatus?.serverId, botStatus?.isOnServer]);
+
+  // Функция для разрешения алерта
+  const resolveAlert = async (alertId: string) => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const API_BASE = 'http://localhost:3002';
+
+      const response = await fetch(`${API_BASE}/api/alerts/${alertId}/resolve`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          resolvedBy: 'user' // В реальности используйте имя пользователя
+        })
+      });
+
+      if (response.ok) {
+        // Обновляем список алертов
+        loadAlerts(token || '');
+      }
+    } catch (error) {
+      console.error('Error resolving alert:', error);
+    }
   };
 
   if (!loading && botStatus && !botStatus.isOnServer) {
@@ -772,7 +992,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div className={styles.activityList}>
               {recentActivities.length > 0 ? (
-                recentActivities.slice(0, 10).map((activity, index) => ( // ⚠️ Ограничиваем 10 записями
+                recentActivities.slice(0, 10).map((activity, index) => (
                   <div key={activity.id || `activity-${index}`} className={styles.activityItem}>
                     <div className={styles.activityIcon}>
                       {activity.status === 'success' ? (
@@ -918,7 +1138,6 @@ const Dashboard: React.FC = () => {
 
                   return (
                     <div key={index} className={styles.commandStat}>
-                      {/* Command Info */}
                       <div className={styles.commandInfo}>
                         <div className={styles.commandHeader}>
                           <span className={styles.commandName}>/{command.name}</span>
@@ -956,7 +1175,6 @@ const Dashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Success Rate */}
                       <div className={styles.successRate}>
                         <div className={styles.rateHeader}>
                           <span className={`${styles.rateValue} ${styles[successRateClass]}`}>
@@ -1046,9 +1264,12 @@ const Dashboard: React.FC = () => {
             )}
           </div>
 
+          {/* ЗАКОММЕНТИРУЙТЕ ЭТУ СТРОКУ: */}
+          {/* {botStatus?.serverId && <ServerHealthCard guildId={botStatus.serverId} />} */}
+
           <div className={styles.statsCard}>
             <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>Server Health</h3>
+              <h3 className={styles.cardTitle}>Server Health ( This block is under development )</h3>
               <Calendar size={16} />
             </div>
             <div className={styles.healthStats}>
@@ -1078,35 +1299,155 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           </div>
-
           <div className={styles.alertsCard}>
             <div className={styles.cardHeader}>
               <h3 className={styles.cardTitle}>Active Alerts</h3>
-              <AlertTriangle size={16} className={styles.alertIcon} />
+              <div className={styles.headerActions}>
+                <button
+                  className={styles.viewAllBtn}
+                  onClick={() => loadAlerts(localStorage.getItem('auth_token') || '')}
+                  disabled={loadingAlerts}
+                >
+                  <RefreshCw size={14} className={loadingAlerts ? styles.spinning : ''} />
+                  {loadingAlerts ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
             </div>
             <div className={styles.alertList}>
-              <div className={styles.alertItem}>
-                <div className={styles.alertSeverity}>
-                  <div className={`${styles.severityDot} ${styles.high}`}></div>
+              {alerts.length > 0 ? (
+                alerts.map((alert) => (
+                  <div key={alert.id} className={styles.alertItem}>
+                    <div className={styles.alertSeverity}>
+                      <div className={`${styles.severityDot} ${styles[alert.severity]}`}></div>
+                    </div>
+                    <div className={styles.alertContent}>
+                      <div className={styles.alertTitle}>{alert.title}</div>
+                      <div className={styles.alertDescription}>{alert.description}</div>
+
+                      {/* ДЕТАЛИ АВТОМОДА */}
+                      {alert.type === 'automod_triggered' && alert.data && (
+                        <div className={styles.alertDetails}>
+                          {/* ЗАГОЛОВОК С ДЕЙСТВИЯМИ */}
+                          <div className={styles.alertHeader}>
+                            <div className={styles.alertIcon}>
+                              <FaDiscord size={14} className={styles.cardIcon} />
+                            </div>
+                            <div className={styles.alertHeaderContent}>
+                              <div className={styles.alertMainTitle}>DISCORD AUTOMOD</div>
+                              <div className={styles.alertSubtitle}>
+                                {alert.data.actions && alert.data.actions.length > 0? (
+                                  `Measures applied: ${alert.data.actions.map((a: any) => getActionDescription(a.type)).join(', ')}`
+                                ) : (
+                                  'Automatic moderation worked'
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* BASIC INFORMATION IN CARDS */}
+                          <div className={styles.detailsGrid}>
+                            {/* USER CARD */}
+                            <div className={styles.detailCard}>
+                              <div className={styles.cardHeader}>
+                                <FaUser size={14} className={styles.cardIcon} />
+                                <span>User</span>
+                              </div>
+                              <div className={styles.cardContent}>
+                                <div className={styles.userInfo}>
+                                  <span className={styles.username}>{alert.data.user}</span>
+                                  <span className={styles.userId}>ID: {alert.data.userId}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* КАРТОЧКА КАНАЛА */}
+                            <div className={styles.detailCard}>
+                              <div className={styles.cardHeader}>
+                                <FaHashtag size={14} className={styles.cardIcon} />
+                                <span>Channel</span>
+                              </div>
+                              <div className={styles.cardContent}>
+                                <span className={styles.channelName}>#{alert.data.channel}</span>
+                              </div>
+                            </div>
+
+                            {/* КАРТОЧКА ПРИЧИНЫ */}
+                            <div className={styles.detailCard}>
+                              <div className={styles.cardHeader}>
+                                <FaExclamationTriangle size={14} className={styles.cardIcon} />
+                                <span>Reason</span>
+                              </div>
+                              <div className={styles.cardContent}>
+                                <span className={styles.reason}>{alert.data.reason}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* СООБЩЕНИЕ */}
+                          <div className={styles.messageCard}>
+                            <div className={styles.cardHeader}>
+                              <FaComment size={14} className={styles.cardIcon} />
+                              <span>Message</span>
+                            </div>
+                            <div className={styles.messageContent}>
+                              "{alert.data.content}"
+                            </div>
+                          </div>
+
+                          {/* ДЕТАЛИ ДЕЙСТВИЙ */}
+                          {alert.data.actions && alert.data.actions.length > 0 && (
+                            <div className={styles.actionsCard}>
+                              <div className={styles.cardHeader}>
+                                <FaShieldAlt size={14} className={styles.cardIcon} />
+                                <span>Actions applied ({alert.data.actions.length})</span>
+                              </div>
+                              <div className={styles.actionsGrid}>
+                                {alert.data.actions.map((action: any, index: number) => (
+                                  <div key={index} className={styles.actionItem}>
+                                    <div className={styles.actionIcon}>
+                                      {getActionIcon(action.type)}
+                                    </div>
+                                    <div className={styles.actionContent}>
+                                      <div className={styles.actionTitle}>
+                                        {getActionTitle(action.type)}
+                                      </div>
+                                      <div className={styles.actionDescription}>
+                                        {getActionDescription(action.type)}
+                                        {action.duration && (
+                                          <span className={styles.duration}> • {action.duration}</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <div className={styles.alertTime}>
+                        {new Date(alert.timestamp).toLocaleTimeString()} •
+                        {Math.floor((Date.now() - new Date(alert.timestamp).getTime()) / 60000)} min ago
+                      </div>
+                    </div>
+                    <div className={styles.alertActions}>
+                      <button
+                        className={styles.alertActionResolve}
+                        onClick={() => resolveAlert(alert.id)}
+                        title="Mark as resolved"
+                      >
+                        Resolve
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className={styles.emptyState}>
+                  <CheckCircle size={24} className={styles.success} />
+                  <p>No active alerts</p>
+                  <small>All systems are functioning normally</small>
                 </div>
-                <div className={styles.alertContent}>
-                  <div className={styles.alertTitle}>Spam attack detected</div>
-                  <div className={styles.alertDescription}>Multiple spam accounts joining</div>
-                  <div className={styles.alertTime}>5 minutes ago</div>
-                </div>
-                <button className={styles.alertAction}>Review</button>
-              </div>
-              <div className={styles.alertItem}>
-                <div className={styles.alertSeverity}>
-                  <div className={`${styles.severityDot} ${styles.medium}`}></div>
-                </div>
-                <div className={styles.alertContent}>
-                  <div className={styles.alertTitle}>High message rate</div>
-                  <div className={styles.alertDescription}>Unusual activity in #general</div>
-                  <div className={styles.alertTime}>15 minutes ago</div>
-                </div>
-                <button className={styles.alertAction}>Monitor</button>
-              </div>
+              )}
             </div>
           </div>
         </div>

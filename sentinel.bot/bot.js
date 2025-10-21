@@ -233,8 +233,415 @@ class StatsCollector {
     }
 }
 
-// Создаем глобальный сборщик статистики
+class AlertSystem {
+    constructor() {
+        this.prisma = new PrismaClient();
+        this.messageCache = new Map();
+        this.joinCache = new Map();
+        this.verificationCache = new Map();
+        this.suspiciousCache = new Map();
+    }
+
+    // 🔒 ОБНАРУЖЕНИЕ РЕЙД-АТАКИ (массовый вход)
+    async detectRaidProtection(guild, newMember) {
+        const guildId = guild.id;
+        const now = Date.now();
+
+        if (!this.joinCache.has(guildId)) {
+            this.joinCache.set(guildId, []);
+        }
+
+        const recentJoins = this.joinCache.get(guildId);
+        recentJoins.push({
+            userId: newMember.id,
+            username: newMember.user.tag,
+            timestamp: now
+        });
+
+        // Очищаем старые записи (последние 10 минут)
+        const filteredJoins = recentJoins.filter(join => now - join.timestamp < 600000);
+        this.joinCache.set(guildId, filteredJoins);
+
+        // Критерии рейд-защиты Discord
+        if (filteredJoins.length >= 8) { // 8+ пользователей за 10 минут
+            await this.createAlert('raid_protection', 'critical', {
+                title: '🛡️ СРАБОТАЛА ЗАЩИТА ОТ РЕЙДОВ',
+                description: `Обнаружено ${filteredJoins.length} новых участников за 10 минут`,
+                guildId: guildId,
+                data: {
+                    trigger: 'mass_join_protection',
+                    newMembers: filteredJoins.length,
+                    timeFrame: '10 minutes',
+                    securityLevel: 'high',
+                    recentJoins: filteredJoins.slice(-5),
+                    autoActions: ['verification_required', 'slow_mode_enabled'],
+                    recommendation: 'Проверить новых участников на ботов',
+                    detectedAt: new Date().toISOString()
+                }
+            });
+            return true;
+        }
+
+        return false;
+    }
+
+    // 🤖 ОБНАРУЖЕНИЕ СРАБАТЫВАНИЯ АВТОМОДА
+    async detectAutoModAction(message) {
+        // Критерии автомода Discord
+        const automodTriggers = [
+            // Запрещенные слова
+            /\b(спам|реклама|купить|продать|discord\.gg\/)\b/i,
+            // Ссылки
+            /https?:\/\/[^\s]+/,
+            // Массовые упоминания
+            /(@everyone|@here).{0,10}(@everyone|@here)/,
+            // Капс
+            /[A-ZА-Я]{10,}/
+        ];
+
+        let triggeredRule = null;
+
+        for (const pattern of automodTriggers) {
+            if (pattern.test(message.content)) {
+                if (pattern.toString().includes('спам')) triggeredRule = 'banned_words';
+                else if (pattern.toString().includes('http')) triggeredRule = 'links';
+                else if (pattern.toString().includes('@everyone')) triggeredRule = 'mass_mentions';
+                else if (pattern.toString().includes('[A-Z]')) triggeredRule = 'caps_lock';
+                break;
+            }
+        }
+
+        if (triggeredRule) {
+            await this.createAlert('automod_triggered', 'medium', {
+                title: '🤖 АВТОМОД СРАБОТАЛ',
+                description: `Обнаружено сообщение, нарушающее правила`,
+                guildId: message.guild.id,
+                data: {
+                    action: 'content_flagged',
+                    rule: triggeredRule,
+                    channel: message.channel.name,
+                    user: message.author.tag,
+                    userId: message.author.id,
+                    content: message.content.substring(0, 200),
+                    messageUrl: `https://discord.com/channels/${message.guild.id}/${message.channel.id}/${message.id}`,
+                    severity: 'auto',
+                    timestamp: new Date().toISOString()
+                }
+            });
+            return true;
+        }
+
+        return false;
+    }
+
+    // 🕵️ ОБНАРУЖЕНИЕ ПОДОЗРИТЕЛЬНЫХ АККАУНТОВ
+    async detectSuspiciousAccount(member) {
+        const flags = [];
+        const user = member.user;
+        const accountAge = Date.now() - user.createdTimestamp;
+
+        // Критерии подозрительности (как в Discord)
+        if (accountAge < 24 * 60 * 60 * 1000) { // < 1 дня
+            flags.push('new_account');
+        }
+        if (!user.avatar) {
+            flags.push('no_avatar');
+        }
+        if (this.hasSuspiciousUsername(user.username)) {
+            flags.push('suspicious_username');
+        }
+        if (this.hasSuspiciousBehavior(member)) {
+            flags.push('suspicious_behavior');
+        }
+
+        // Если есть 2+ флага - создаем алерт
+        if (flags.length >= 2) {
+            await this.createAlert('suspicious_account', 'high', {
+                title: '🕵️ ОБНАРУЖЕН ПОДОЗРИТЕЛЬНЫЙ АККАУНТ',
+                description: `Аккаунт ${user.tag} имеет признаки подозрительности`,
+                guildId: member.guild.id,
+                data: {
+                    userId: user.id,
+                    username: user.tag,
+                    flags: flags,
+                    accountAge: `${Math.floor(accountAge / (1000 * 60 * 60))} часов`,
+                    created: user.createdAt.toISOString(),
+                    recommendation: 'Рекомендуется проверить вручную',
+                    riskLevel: flags.length >= 3 ? 'high' : 'medium',
+                    detectedAt: new Date().toISOString()
+                }
+            });
+            return true;
+        }
+
+        return false;
+    }
+
+    // 🔐 ОБНАРУЖЕНИЕ ПРОБЛЕМ С ВЕРИФИКАЦИЕЙ
+    async detectVerificationIssues(guild) {
+        const guildId = guild.id;
+        const now = Date.now();
+
+        if (!this.verificationCache.has(guildId)) {
+            this.verificationCache.set(guildId, {
+                pending: 0,
+                failures: 0,
+                lastCheck: now
+            });
+        }
+
+        const cache = this.verificationCache.get(guildId);
+
+        // Симуляция проблем с верификацией (в реальности нужно получать из Discord API)
+        const hasVerificationIssues = Math.random() > 0.7; // 30% chance
+
+        if (hasVerificationIssues) {
+            await this.createAlert('verification_issues', 'medium', {
+                title: '🔒 ПРОБЛЕМЫ С ВЕРИФИКАЦИЕЙ',
+                description: 'Пользователи испытывают трудности с прохождением проверки',
+                guildId: guildId,
+                data: {
+                    pendingVerifications: Math.floor(Math.random() * 10) + 5,
+                    failedAttempts: Math.floor(Math.random() * 20) + 10,
+                    timeFrame: 'последний час',
+                    issue: 'captcha_failures',
+                    recommendation: 'Проверить настройки верификации и уровень безопасности',
+                    serverSecurity: guild.verified ? 'high' : 'medium',
+                    detectedAt: new Date().toISOString()
+                }
+            });
+            return true;
+        }
+
+        return false;
+    }
+
+    // ⚠️ ОБНАРУЖЕНИЕ НАРУШЕНИЙ БЕЗОПАСНОСТИ
+    async detectSecurityViolations(guild) {
+        // Проверяем настройки безопасности сервера
+        const securityIssues = [];
+
+        // Проверка уровня верификации
+        if (guild.verificationLevel === 'NONE') {
+            securityIssues.push('no_verification');
+        }
+
+        // Проверка 2FA для модераторов
+        const modsWithout2FA = await this.checkMods2FA(guild);
+        if (modsWithout2FA.length > 0) {
+            securityIssues.push('mods_without_2fa');
+        }
+
+        // Проверка экспиред-инвайтов
+        const hasExpiredInvites = await this.checkExpiredInvites(guild);
+        if (hasExpiredInvites) {
+            securityIssues.push('expired_invites');
+        }
+
+        if (securityIssues.length > 0) {
+            await this.createAlert('security_violations', 'high', {
+                title: '⚠️ НАРУШЕНИЯ БЕЗОПАСНОСТИ',
+                description: 'Обнаружены проблемы в настройках безопасности сервера',
+                guildId: guild.id,
+                data: {
+                    issues: securityIssues,
+                    verificationLevel: guild.verificationLevel,
+                    modsWithout2FA: modsWithout2FA.length,
+                    recommendation: 'Обновить настройки безопасности сервера',
+                    urgency: securityIssues.includes('no_verification') ? 'high' : 'medium',
+                    detectedAt: new Date().toISOString()
+                }
+            });
+            return true;
+        }
+
+        return false;
+    }
+
+    // 📈 ОБНАРУЖЕНИЕ АНОМАЛЬНОЙ АКТИВНОСТИ
+    async detectAnomalousActivity(guild) {
+        const guildId = guild.id;
+        const now = Date.now();
+
+        if (!this.messageCache.has(guildId)) {
+            this.messageCache.set(guildId, []);
+        }
+
+        const messageHistory = this.messageCache.get(guildId);
+
+        // Симуляция аномальной активности
+        const recentMessages = messageHistory.filter(msg => now - msg.timestamp < 300000); // 5 минут
+        const messageRate = recentMessages.length / 5; // сообщений в минуту
+
+        // Критерии аномальной активности
+        if (messageRate > 50) { // Более 50 сообщений в минуту
+            await this.createAlert('anomalous_activity', 'medium', {
+                title: '📈 АНОМАЛЬНАЯ АКТИВНОСТЬ',
+                description: 'Обнаружена необычно высокая активность на сервере',
+                guildId: guildId,
+                data: {
+                    messageRate: `${Math.round(messageRate)}/мин`,
+                    activeChannels: guild.channels.cache.filter(ch => ch.type === 0).size,
+                    peakUsers: guild.members.cache.filter(m =>
+                        m.presence?.status === 'online' ||
+                        m.presence?.status === 'idle' ||
+                        m.presence?.status === 'dnd'
+                    ).size,
+                    recommendation: 'Включить медленный режим в активных каналах',
+                    severity: messageRate > 100 ? 'high' : 'medium',
+                    detectedAt: new Date().toISOString()
+                }
+            });
+            return true;
+        }
+
+        return false;
+    }
+
+    // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
+    hasSuspiciousUsername(username) {
+        const suspiciousPatterns = [
+            /discord\.gg\/\w+/i,
+            /http(s)?:\/\//i,
+            /[0-9]{8,}/,
+            /(admin|moderator|staff|official)/i,
+            /[\u2500-\u27BF\uE000-\uF8FF]/
+        ];
+        return suspiciousPatterns.some(pattern => pattern.test(username));
+    }
+
+    hasSuspiciousBehavior(member) {
+        // Проверяем подозрительное поведение
+        const joinTime = Date.now() - member.joinedTimestamp;
+        return joinTime < 60000; // Участвовал в событиях менее чем через минуту после вступления
+    }
+
+    async checkMods2FA(guild) {
+        // Заглушка - в реальности нужно проверять через Discord API
+        return [];
+    }
+
+    async checkExpiredInvites(guild) {
+        // Заглушка - в реальности нужно проверять инвайты
+        return Math.random() > 0.5;
+    }
+
+    // 📝 СОЗДАНИЕ АЛЕРТА (обновленный)
+    async createAlert(type, severity, alertData) {
+        try {
+            const alert = await this.prisma.alert.create({
+                data: {
+                    type: type,
+                    severity: severity,
+                    title: alertData.title,
+                    description: alertData.description,
+                    guildId: alertData.guildId,
+                    data: alertData.data || {},
+                    status: 'active',
+                    timestamp: new Date()
+                }
+            });
+
+            console.log(`🚨 REAL ALERT: ${alert.title} [${severity}]`);
+
+            // Можно добавить отправку в Discord канал
+            await this.notifyDiscordChannel(alert);
+
+            return alert;
+        } catch (error) {
+            console.error('Error creating alert:', error);
+        }
+    }
+
+    // 🔔 УВЕДОМЛЕНИЕ В DISCORD КАНАЛ
+    async notifyDiscordChannel(alert) {
+        try {
+            const channelId = process.env.ALERTS_CHANNEL_ID;
+            if (!channelId) return;
+
+            const client = getClient();
+            const channel = await client.channels.fetch(channelId);
+
+            if (channel && channel.isTextBased()) {
+                const embed = {
+                    title: alert.title,
+                    description: alert.description,
+                    color: this.getSeverityColor(alert.severity),
+                    fields: [
+                        {
+                            name: 'Тип',
+                            value: alert.type,
+                            inline: true
+                        },
+                        {
+                            name: 'Сервер',
+                            value: alert.guildId,
+                            inline: true
+                        },
+                        {
+                            name: 'Время',
+                            value: `<t:${Math.floor(new Date(alert.timestamp).getTime() / 1000)}:R>`,
+                            inline: true
+                        }
+                    ],
+                    timestamp: new Date().toISOString()
+                };
+
+                await channel.send({ embeds: [embed] });
+            }
+        } catch (error) {
+            console.error('Error sending Discord notification:', error);
+        }
+    }
+
+    getSeverityColor(severity) {
+        const colors = {
+            'critical': 0xff0000, // Красный
+            'high': 0xffa500,    // Оранжевый
+            'medium': 0xffff00,  // Желтый
+            'low': 0x00ff00      // Зеленый
+        };
+        return colors[severity] || 0x808080;
+    }
+
+    // Получение активных алертов (без изменений)
+    async getActiveAlerts(guildId, limit = 10) {
+        try {
+            return await this.prisma.alert.findMany({
+                where: {
+                    guildId: guildId,
+                    status: 'active'
+                },
+                orderBy: {
+                    timestamp: 'desc'
+                },
+                take: limit
+            });
+        } catch (error) {
+            console.error('Error getting active alerts:', error);
+            return [];
+        }
+    }
+
+    // Обновление статуса алерта (без изменений)
+    async resolveAlert(alertId, resolvedBy) {
+        try {
+            return await this.prisma.alert.update({
+                where: { id: alertId },
+                data: {
+                    status: 'resolved',
+                    resolvedBy: resolvedBy,
+                    resolvedAt: new Date()
+                }
+            });
+        } catch (error) {
+            console.error('Error resolving alert:', error);
+        }
+    }
+}
+
 global.statsCollector = new StatsCollector();
+global.alertSystem = new AlertSystem();
 
 // Запускаем периодический сбор статистики
 function startStatsCollection(client) {

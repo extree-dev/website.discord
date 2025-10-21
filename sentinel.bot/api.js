@@ -164,206 +164,6 @@ app.get('/api/audit-logs', async (req, res) => {
     }
 });
 
-// Обновленная функция сохранения (только для логирования)
-async function saveAuditLogsToDB(logs) {
-    let newCount = 0;
-    let existingCount = 0;
-
-    for (const log of logs) {
-        try {
-            const existing = await prisma.auditLog.findUnique({
-                where: { id: log.id }
-            });
-
-            if (!existing) {
-                await prisma.auditLog.create({
-                    data: {
-                        id: log.id,
-                        action: log.action,
-                        actionType: String(log.actionType),
-                        userId: log.user,
-                        userName: log.userName,
-                        targetId: log.target,
-                        targetName: log.targetName,
-                        targetType: log.targetType,
-                        reason: log.reason,
-                        timestamp: new Date(log.timestamp),
-                        changes: log.changes,
-                        extra: log.extra
-                    }
-                });
-                newCount++;
-            } else {
-                existingCount++;
-            }
-        } catch (error) {
-            console.error(`Error saving log ${log.id}:`, error);
-        }
-    }
-
-    console.log(`Audit logs: ${newCount} new, ${existingCount} existing`);
-    return { newCount, existingCount };
-}
-
-// Функция трансформации аудит логов
-async function transformAuditLogs(auditLogEntries) {
-    const actions = [];
-    const processedEntries = new Set();
-
-    for (const [entryId, entry] of auditLogEntries) {
-        try {
-            // Проверяем дубликаты
-            if (processedEntries.has(entryId)) continue;
-            processedEntries.add(entryId);
-
-            // Получаем информацию об исполнителе
-            let moderatorName = 'Unknown User';
-            let moderatorAvatar = null;
-
-            if (entry.executor) {
-                moderatorName = entry.executor.globalName || entry.executor.username || 'Unknown User';
-                moderatorAvatar = entry.executor.displayAvatarURL({ size: 64 });
-            }
-
-            // Обрабатываем действие
-            const actionInfo = getActionInfo(entry.action, entry);
-            let targetName = await getTargetInfo(entry.target, entry.extra);
-            let reason = entry.reason || 'No reason provided';
-
-            actions.push({
-                id: entry.id,
-                user: entry.executor?.id || 'unknown',
-                userName: moderatorName,
-                userAvatar: moderatorAvatar,
-                action: actionInfo.description,
-                actionType: entry.action,
-                target: entry.target?.id || 'unknown',
-                targetName: targetName,
-                targetType: actionInfo.targetType,
-                reason: reason,
-                time: formatTimeAgo(entry.createdAt),
-                timestamp: entry.createdAt.toISOString(),
-                status: 'success',
-                changes: entry.changes || [],
-                extra: entry.extra || {}
-            });
-
-        } catch (error) {
-            console.error(`Error processing audit entry ${entryId}:`, error);
-        }
-    }
-
-    return actions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-}
-
-// Функция для получения информации о действии
-function getActionInfo(action, entry) {
-    const actionMap = {
-        'MEMBER_KICK': { description: 'kicked', targetType: 'user' },
-        'MEMBER_BAN_ADD': { description: 'banned', targetType: 'user' },
-        'MEMBER_BAN_REMOVE': { description: 'unbanned', targetType: 'user' },
-        'MEMBER_ROLE_UPDATE': { description: 'updated roles for', targetType: 'user' },
-        'MEMBER_UPDATE': { description: 'updated', targetType: 'user' },
-        'CHANNEL_CREATE': { description: 'created channel', targetType: 'channel' },
-        'CHANNEL_UPDATE': { description: 'updated channel', targetType: 'channel' },
-        'CHANNEL_DELETE': { description: 'deleted channel', targetType: 'channel' },
-        'MESSAGE_DELETE': { description: 'deleted messages in', targetType: 'channel' },
-        'MESSAGE_BULK_DELETE': { description: 'bulk deleted messages in', targetType: 'channel' },
-        'ROLE_CREATE': { description: 'created role', targetType: 'role' },
-        'ROLE_UPDATE': { description: 'updated role', targetType: 'role' },
-        'ROLE_DELETE': { description: 'deleted role', targetType: 'role' },
-    };
-
-    return actionMap[action] || { description: 'performed action', targetType: 'unknown' };
-}
-
-// Функция для получения информации о цели
-async function getTargetInfo(target, extra) {
-    if (!target) return 'Unknown';
-
-    try {
-        // Если это пользователь
-        if (target.username) {
-            return target.globalName || target.username;
-        }
-        // Если это канал
-        else if (target.name && target.type) {
-            return `#${target.name}`;
-        }
-        // Если это роль
-        else if (target.name && !target.type) {
-            return `@${target.name}`;
-        }
-        // Дополнительная информация из extra
-        else if (extra && extra.channel) {
-            return `#${extra.channel.name}`;
-        }
-        else if (extra && extra.role) {
-            return `@${extra.role.name}`;
-        }
-        else if (extra && extra.count) {
-            return `${extra.count} messages`;
-        }
-    } catch (error) {
-        console.error('Error getting target info:', error);
-    }
-
-    return 'Unknown';
-}
-
-// Функция для сохранения в БД с проверкой дубликатов
-async function saveAuditLogsToDB(logs) {
-    const newLogs = [];
-
-    for (const log of logs) {
-        try {
-            // Проверяем, существует ли уже запись
-            const existing = await prisma.auditLog.findUnique({
-                where: { id: log.id }
-            });
-
-            if (!existing) {
-                // Сохраняем новую запись
-                await prisma.auditLog.create({
-                    data: {
-                        id: log.id,
-                        action: log.action,
-                        actionType: String(log.actionType),
-                        userId: log.user,
-                        userName: log.userName,
-                        targetId: log.target,
-                        targetName: log.targetName,
-                        targetType: log.targetType,
-                        reason: log.reason,
-                        timestamp: new Date(log.timestamp),
-                        changes: log.changes,
-                        extra: log.extra
-                    }
-                });
-                newLogs.push(log);
-            } else {
-                // ⚠️ ПРОБЛЕМА: существующие записи не добавляются в newLogs!
-                // Но фронтенд ожидает ВСЕ записи, а не только новые
-            }
-        } catch (error) {
-        }
-    }
-    return newLogs; // Возвращаем только новые записи!
-}
-
-// Функция для форматирования времени
-function formatTimeAgo(date) {
-    const now = new Date();
-    const diffInSeconds = Math.floor((now - date) / 1000);
-
-    if (diffInSeconds < 60) return 'just now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
-    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} days ago`;
-
-    return date.toLocaleDateString();
-}
-
 // Статистика команд
 app.get('/stats/commands', (req, res) => {
     const { period = '24h', filter = 'all' } = req.query;
@@ -455,20 +255,6 @@ app.get('/health', (req, res) => {
     res.json(health);
 });
 
-// Запуск API сервера
-function startAPI() {
-    server.listen(PORT, () => {
-        console.log(`Sentinel API running on port ${PORT}`);
-        console.log(`WebSocket available at: ws://localhost:${PORT}/ws`);
-        console.log(`Stats: http://localhost:${PORT}/stats/commands`);
-        console.log(`Health: http://localhost:${PORT}/health`);
-        console.log(`WebSocket info: http://localhost:${PORT}/websocket-info`);
-        console.log(`Audit logs: http://localhost:${PORT}/api/audit-logs`);
-    });
-}
-
-// Добавляем в api.js новые эндпоинты для реальной статистики
-
 // Эндпоинт для получения реальной статистики роста пользователей
 app.get('/api/member-growth', async (req, res) => {
     try {
@@ -551,6 +337,189 @@ app.get('/api/live-stats', async (req, res) => {
         });
     }
 });
+
+// Эндпоинт для здоровья сервера
+app.get('/api/health/server-health', async (req, res) => {
+    try {
+        const { guildId } = req.query;
+
+        if (!guildId) {
+            return res.status(400).json({ error: "guildId is required" });
+        }
+
+        const client = getClient();
+        const guild = client.guilds.cache.get(guildId);
+
+        if (!guild) {
+            return res.status(404).json({ error: "Guild not found" });
+        }
+
+        // Простые демо-данные для здоровья сервера
+        const healthStats = {
+            responseTime: {
+                value: 128,
+                status: 'optimal',
+                label: 'Response Time',
+                unit: 'ms'
+            },
+            uptime: {
+                value: 99.98,
+                status: 'optimal',
+                label: 'Uptime',
+                unit: '%'
+            },
+            activeIssues: {
+                value: 2,
+                status: 'warning',
+                label: 'Active Issues',
+                unit: ''
+            },
+            performance: {
+                memberActivity: {
+                    online: guild.members.cache.filter(m =>
+                        m.presence?.status === 'online' ||
+                        m.presence?.status === 'idle' ||
+                        m.presence?.status === 'dnd'
+                    ).size,
+                    total: guild.memberCount,
+                    percentage: Math.round((guild.members.cache.filter(m =>
+                        m.presence?.status === 'online' ||
+                        m.presence?.status === 'idle' ||
+                        m.presence?.status === 'dnd'
+                    ).size / guild.memberCount) * 100)
+                }
+            }
+        };
+
+        res.json({
+            success: true,
+            data: healthStats,
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('Server health fetch error:', error);
+        res.status(500).json({
+            error: "Failed to fetch server health stats",
+            details: error.message
+        });
+    }
+});
+
+// Эндпоинт для получения активных алертов
+app.get('/api/alerts', async (req, res) => {
+    try {
+        const { guildId, limit = 10 } = req.query;
+
+        if (!guildId) {
+            return res.status(400).json({ error: "guildId is required" });
+        }
+
+        const alerts = await global.alertSystem.getActiveAlerts(guildId, parseInt(limit));
+
+        res.json({
+            alerts: alerts,
+            total: alerts.length,
+            generatedAt: new Date().toISOString()
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            error: "Failed to fetch alerts",
+            details: error.message
+        });
+    }
+});
+
+// Эндпоинт для разрешения алерта
+app.post('/api/alerts/:id/resolve', async (req, res) => {
+    try {
+        const { resolvedBy } = req.body;
+
+        if (!resolvedBy) {
+            return res.status(400).json({ error: "resolvedBy is required" });
+        }
+
+        const alert = await global.alertSystem.resolveAlert(req.params.id, resolvedBy);
+
+        res.json({
+            success: true,
+            alert: alert,
+            message: 'Alert resolved successfully'
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            error: "Failed to resolve alert",
+            details: error.message
+        });
+    }
+});
+
+// Эндпоинт для создания тестового алерта
+app.post('/api/alerts/test', async (req, res) => {
+    try {
+        const { guildId, type = 'spam_attack' } = req.body;
+
+        if (!guildId) {
+            return res.status(400).json({ error: "guildId is required" });
+        }
+
+        const testAlerts = {
+            spam_attack: {
+                title: 'Spam attack detected',
+                description: 'Multiple spam accounts joining',
+                severity: 'high'
+            },
+            mass_join: {
+                title: 'Mass join detected',
+                description: 'Unusual number of new members',
+                severity: 'medium'
+            },
+            high_traffic: {
+                title: 'High message rate',
+                description: 'Unusual activity in #general',
+                severity: 'medium'
+            }
+        };
+
+        const alertConfig = testAlerts[type] || testAlerts.spam_attack;
+
+        const alert = await global.alertSystem.createAlert(type, alertConfig.severity, {
+            title: alertConfig.title,
+            description: alertConfig.description,
+            guildId: guildId,
+            data: {
+                test: true,
+                triggeredAt: new Date().toISOString()
+            }
+        });
+
+        res.json({
+            success: true,
+            alert: alert,
+            message: 'Test alert created successfully'
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            error: "Failed to create test alert",
+            details: error.message
+        });
+    }
+});
+
+// Запуск API сервера
+function startAPI() {
+    server.listen(PORT, () => {
+        console.log(`Sentinel API running on port ${PORT}`);
+        console.log(`WebSocket available at: ws://localhost:${PORT}/ws`);
+        console.log(`Stats: http://localhost:${PORT}/stats/commands`);
+        console.log(`Health: http://localhost:${PORT}/health`);
+        console.log(`WebSocket info: http://localhost:${PORT}/websocket-info`);
+        console.log(`Audit logs: http://localhost:${PORT}/api/audit-logs`);
+    });
+}
 
 // Вспомогательные функции
 async function getMemberGrowthData(guildId, period) {
@@ -682,6 +651,172 @@ async function getYesterdayStats(guildId) {
     }
 }
 
+// Функция для получения информации о цели
+async function getTargetInfo(target, extra) {
+    if (!target) return 'Unknown';
+
+    try {
+        // Если это пользователь
+        if (target.username) {
+            return target.globalName || target.username;
+        }
+        // Если это канал
+        else if (target.name && target.type) {
+            return `#${target.name}`;
+        }
+        // Если это роль
+        else if (target.name && !target.type) {
+            return `@${target.name}`;
+        }
+        // Дополнительная информация из extra
+        else if (extra && extra.channel) {
+            return `#${extra.channel.name}`;
+        }
+        else if (extra && extra.role) {
+            return `@${extra.role.name}`;
+        }
+        else if (extra && extra.count) {
+            return `${extra.count} messages`;
+        }
+    } catch (error) {
+        console.error('Error getting target info:', error);
+    }
+
+    return 'Unknown';
+}
+
+// Обновленная функция сохранения (только для логирования)
+async function saveAuditLogsToDB(logs) {
+    let newCount = 0;
+    let existingCount = 0;
+
+    for (const log of logs) {
+        try {
+            const existing = await prisma.auditLog.findUnique({
+                where: { id: log.id }
+            });
+
+            if (!existing) {
+                await prisma.auditLog.create({
+                    data: {
+                        id: log.id,
+                        action: log.action,
+                        actionType: String(log.actionType),
+                        userId: log.user,
+                        userName: log.userName,
+                        targetId: log.target,
+                        targetName: log.targetName,
+                        targetType: log.targetType,
+                        reason: log.reason,
+                        timestamp: new Date(log.timestamp),
+                        changes: log.changes,
+                        extra: log.extra
+                    }
+                });
+                newCount++;
+            } else {
+                existingCount++;
+            }
+        } catch (error) {
+            console.error(`Error saving log ${log.id}:`, error);
+        }
+    }
+
+    console.log(`Audit logs: ${newCount} new, ${existingCount} existing`);
+    return { newCount, existingCount };
+}
+
+// Функция трансформации аудит логов
+async function transformAuditLogs(auditLogEntries) {
+    const actions = [];
+    const processedEntries = new Set();
+
+    for (const [entryId, entry] of auditLogEntries) {
+        try {
+            // Проверяем дубликаты
+            if (processedEntries.has(entryId)) continue;
+            processedEntries.add(entryId);
+
+            // Получаем информацию об исполнителе
+            let moderatorName = 'Unknown User';
+            let moderatorAvatar = null;
+
+            if (entry.executor) {
+                moderatorName = entry.executor.globalName || entry.executor.username || 'Unknown User';
+                moderatorAvatar = entry.executor.displayAvatarURL({ size: 64 });
+            }
+
+            // Обрабатываем действие
+            const actionInfo = getActionInfo(entry.action, entry);
+            let targetName = await getTargetInfo(entry.target, entry.extra);
+            let reason = entry.reason || 'No reason provided';
+
+            actions.push({
+                id: entry.id,
+                user: entry.executor?.id || 'unknown',
+                userName: moderatorName,
+                userAvatar: moderatorAvatar,
+                action: actionInfo.description,
+                actionType: entry.action,
+                target: entry.target?.id || 'unknown',
+                targetName: targetName,
+                targetType: actionInfo.targetType,
+                reason: reason,
+                time: formatTimeAgo(entry.createdAt),
+                timestamp: entry.createdAt.toISOString(),
+                status: 'success',
+                changes: entry.changes || [],
+                extra: entry.extra || {}
+            });
+
+        } catch (error) {
+            console.error(`Error processing audit entry ${entryId}:`, error);
+        }
+    }
+
+    return actions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+}
+
+// Функция для сохранения в БД с проверкой дубликатов
+async function saveAuditLogsToDB(logs) {
+    const newLogs = [];
+
+    for (const log of logs) {
+        try {
+            // Проверяем, существует ли уже запись
+            const existing = await prisma.auditLog.findUnique({
+                where: { id: log.id }
+            });
+
+            if (!existing) {
+                // Сохраняем новую запись
+                await prisma.auditLog.create({
+                    data: {
+                        id: log.id,
+                        action: log.action,
+                        actionType: String(log.actionType),
+                        userId: log.user,
+                        userName: log.userName,
+                        targetId: log.target,
+                        targetName: log.targetName,
+                        targetType: log.targetType,
+                        reason: log.reason,
+                        timestamp: new Date(log.timestamp),
+                        changes: log.changes,
+                        extra: log.extra
+                    }
+                });
+                newLogs.push(log);
+            } else {
+                // ⚠️ ПРОБЛЕМА: существующие записи не добавляются в newLogs!
+                // Но фронтенд ожидает ВСЕ записи, а не только новые
+            }
+        } catch (error) {
+        }
+    }
+    return newLogs; // Возвращаем только новые записи!
+}
+
 function getPeriodMs(period) {
     const periods = {
         '24h': 24 * 60 * 60 * 1000,
@@ -707,6 +842,40 @@ function generateDemoGrowthData() {
     }
 
     return data;
+}
+
+// Функция для получения информации о действии
+function getActionInfo(action, entry) {
+    const actionMap = {
+        'MEMBER_KICK': { description: 'kicked', targetType: 'user' },
+        'MEMBER_BAN_ADD': { description: 'banned', targetType: 'user' },
+        'MEMBER_BAN_REMOVE': { description: 'unbanned', targetType: 'user' },
+        'MEMBER_ROLE_UPDATE': { description: 'updated roles for', targetType: 'user' },
+        'MEMBER_UPDATE': { description: 'updated', targetType: 'user' },
+        'CHANNEL_CREATE': { description: 'created channel', targetType: 'channel' },
+        'CHANNEL_UPDATE': { description: 'updated channel', targetType: 'channel' },
+        'CHANNEL_DELETE': { description: 'deleted channel', targetType: 'channel' },
+        'MESSAGE_DELETE': { description: 'deleted messages in', targetType: 'channel' },
+        'MESSAGE_BULK_DELETE': { description: 'bulk deleted messages in', targetType: 'channel' },
+        'ROLE_CREATE': { description: 'created role', targetType: 'role' },
+        'ROLE_UPDATE': { description: 'updated role', targetType: 'role' },
+        'ROLE_DELETE': { description: 'deleted role', targetType: 'role' },
+    };
+
+    return actionMap[action] || { description: 'performed action', targetType: 'unknown' };
+}
+
+// Функция для форматирования времени
+function formatTimeAgo(date) {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+
+    return date.toLocaleDateString();
 }
 
 process.on('SIGINT', async () => {

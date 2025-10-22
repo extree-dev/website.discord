@@ -6,6 +6,8 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 
+const prisma = new PrismaClient();
+
 console.log('Starting Sentinel bot...');
 
 // Проверяем переменные окружения
@@ -702,6 +704,27 @@ async function registerCommands() {
             const command = require(filePath);
             if ('data' in command && 'execute' in command) {
                 commands.push(command.data.toJSON());
+
+                // СОХРАНЯЕМ КОМАНДУ В БАЗУ ДАННЫХ
+                try {
+                    await prisma.botCommand.upsert({
+                        where: { name: command.data.name },
+                        update: {
+                            description: command.data.description,
+                            category: command.data.category || 'utility',
+                            lastUpdated: new Date()
+                        },
+                        create: {
+                            name: command.data.name,
+                            description: command.data.description,
+                            category: command.data.category || 'utility',
+                            registeredAt: new Date()
+                        }
+                    });
+                    console.log(`Saved command to DB: /${command.data.name}`);
+                } catch (dbError) {
+                    console.error(`Error saving command ${command.data.name} to DB:`, dbError.message);
+                }
             }
         }
 
@@ -711,7 +734,7 @@ async function registerCommands() {
 
         // 1. Сначала регистрируем команды для гильдии (сервера)
         try {
-            console.log('🏠 Registering guild commands...');
+            console.log('Registering guild commands...');
             const guildData = await rest.put(
                 Routes.applicationGuildCommands(
                     process.env.CLIENT_ID || process.env.DISCORD_CLIENT_ID,

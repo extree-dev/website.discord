@@ -6,6 +6,8 @@ const { PrismaClient } = require('@prisma/client');
 const { PermissionFlagsBits } = require('discord.js')
 const cors = require('cors')
 
+require('dotenv').config({ path: '../.env' });
+
 const prisma = new PrismaClient();
 const app = express();
 const PORT = 3002;
@@ -427,6 +429,270 @@ app.get('/api/alerts', async (req, res) => {
         res.status(500).json({
             error: "Failed to fetch alerts",
             details: error.message
+        });
+    }
+});
+
+// Системная статистика
+app.get('/api/system-stats', async (req, res) => {
+    try {
+        const client = getClient();
+
+        const stats = {
+            totalServers: client.guilds.cache.size,
+            totalUsers: client.guilds.cache.reduce((sum, guild) => sum + guild.memberCount, 0),
+            totalCommands: global.commandTracker ? global.commandTracker.getTotalStats().totalUsage : 0,
+            uptime: process.uptime(),
+            performance: {
+                cpu: Math.floor(Math.random() * 30) + 10, // Демо данные
+                memory: Math.floor(Math.random() * 40) + 40,
+                network: Math.floor(Math.random() * 50) + 20,
+                storage: Math.floor(Math.random() * 30) + 60
+            }
+        };
+
+        res.json({
+            success: true,
+            data: stats,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Список серверов бота
+app.get('/api/bot-guilds', async (req, res) => {
+    try {
+        const client = getClient();
+        const guilds = client.guilds.cache.map(guild => ({
+            id: guild.id,
+            name: guild.name,
+            members: guild.memberCount,
+            enabled: true,
+            icon: guild.iconURL() || '🏠'
+        }));
+
+        res.json({
+            success: true,
+            data: guilds,
+            total: guilds.length
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Эндпоинт для получения количества серверов бота
+app.get('/api/bot/servers', async (req, res) => {
+    try {
+        const client = getClient();
+
+        console.log('🔍 Fetching bot servers...');
+        console.log('Bot ready:', client.isReady());
+        console.log('Guilds cache size:', client.guilds.cache.size);
+        console.log('Available guilds:', client.guilds.cache.map(g => ({ id: g.id, name: g.name, members: g.memberCount })));
+
+        const serverCount = client.guilds.cache.size;
+        const servers = client.guilds.cache.map(guild => ({
+            id: guild.id,
+            name: guild.name,
+            members: guild.memberCount,
+            icon: guild.iconURL() || null,
+            joinedAt: guild.joinedAt,
+            owner: guild.ownerId
+        }));
+
+        const response = {
+            success: true,
+            totalServers: serverCount,
+            servers: servers,
+            botStatus: {
+                isReady: client.isReady(),
+                uptime: client.uptime,
+                ping: client.ws.ping
+            },
+            timestamp: new Date().toISOString()
+        };
+
+        console.log('✅ Bot servers response:', response);
+        res.json(response);
+
+    } catch (error) {
+        console.error('❌ Error fetching bot servers:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch bot servers: ' + error.message,
+            totalServers: 0,
+            servers: [],
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
+// Эндпоинт для статуса бота - ОБНОВЛЕННЫЙ
+app.get('/api/bot/status', async (req, res) => {
+    try {
+        const client = getClient();
+
+        const serverCount = client.guilds.cache.size;
+        const isReady = client.isReady();
+
+        console.log('🔍 Bot status check:');
+        console.log(' - Ready:', isReady);
+        console.log(' - Servers:', serverCount);
+        console.log(' - Uptime:', client.uptime);
+        console.log(' - Ping:', client.ws.ping);
+
+        res.json({
+            success: true,
+            isReady: isReady,
+            totalServers: serverCount,
+            totalUsers: client.guilds.cache.reduce((sum, guild) => sum + guild.memberCount, 0),
+            uptime: client.uptime,
+            ping: client.ws.ping,
+            serverName: serverCount > 0 ? client.guilds.cache.first().name : 'No servers',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('❌ Bot status error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Bot not available: ' + error.message,
+            isReady: false,
+            totalServers: 0,
+            serverName: 'Error'
+        });
+    }
+});
+
+app.get('/discord/bot-status', async (req, res) => {
+    try {
+        const client = getClient();
+
+        console.log('🔍 DEBUG BOT STATUS:');
+        console.log(' - Bot ready:', client.isReady());
+        console.log(' - Guilds cache size:', client.guilds.cache.size);
+        console.log(' - Available guilds:', client.guilds.cache.map(g => ({
+            id: g.id,
+            name: g.name,
+            members: g.memberCount
+        })));
+        console.log(' - First guild:', client.guilds.cache.first()?.name);
+        console.log(' - GUILD_ID from env:', process.env.DISCORD_GUILD_ID);
+        console.log(' - Client ID from env:', process.env.DISCORD_CLIENT_ID);
+
+        // Если бот не готов, ждем немного
+        let serverCount = client.guilds.cache.size;
+        let isReady = client.isReady();
+
+        // Если бот не готов, но мы знаем что он залогинен, даем время на инициализацию
+        if (!isReady && client.uptime > 0) {
+            console.log('🔄 Bot is logging in, waiting for ready state...');
+            // Ждем 2 секунды для инициализации
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            serverCount = client.guilds.cache.size;
+            isReady = client.isReady();
+        }
+
+        const response = {
+            isOnServer: serverCount > 0,
+            totalServers: serverCount,
+            isReady: isReady,
+            uptime: client.uptime,
+            ping: client.ws.ping,
+            serverName: serverCount > 0 ? client.guilds.cache.first().name : 'No servers',
+            lastChecked: new Date().toISOString(),
+            debug: {
+                guilds: client.guilds.cache.map(g => ({ id: g.id, name: g.name })),
+                guildCount: serverCount,
+                isReady: isReady,
+                uptime: client.uptime
+            }
+        };
+
+        console.log('✅ Final bot status:', response);
+        res.json(response);
+
+    } catch (error) {
+        console.error('❌ Bot status error:', error);
+        res.json({
+            isOnServer: false,
+            totalServers: 0,
+            isReady: false,
+            uptime: 0,
+            ping: -1,
+            serverName: 'Error',
+            lastChecked: new Date().toISOString(),
+            error: error.message
+        });
+    }
+});
+
+app.get('/api/bot/ready', async (req, res) => {
+    try {
+        const client = getClient();
+        const isReady = client.isReady();
+        const guildCount = client.guilds.cache.size;
+
+        res.json({
+            isReady: isReady,
+            guildCount: guildCount,
+            uptime: client.uptime,
+            ping: client.ws.ping,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.json({
+            isReady: false,
+            guildCount: 0,
+            uptime: 0,
+            ping: -1,
+            error: error.message
+        });
+    }
+});
+
+// Эндпоинт для получения количества зарегистрированных команд
+app.get('/api/bot/commands', async (req, res) => {
+    try {
+        const client = getClient();
+
+        // Пробуем получить из базы данных
+        let commandsCount = 0;
+        let commandsList = [];
+
+        try {
+            const dbCommands = await prisma.botCommand.findMany({
+                where: { enabled: true },
+                select: { name: true, description: true, category: true }
+            });
+            commandsCount = dbCommands.length;
+            commandsList = dbCommands.map(cmd => `/${cmd.name}`);
+            console.log(`📋 Bot commands from DB: ${commandsCount} commands`);
+        } catch (dbError) {
+            // Fallback на коллекцию бота
+            commandsCount = client.commands ? client.commands.size : 0;
+            commandsList = client.commands ?
+                Array.from(client.commands.keys()).map(name => `/` + name) : [];
+            console.log(`📋 Bot commands from cache: ${commandsCount} commands`);
+        }
+
+        res.json({
+            success: true,
+            totalCommands: commandsCount,
+            commands: commandsList,
+            source: 'database', // или 'cache'
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('❌ Error fetching bot commands:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch bot commands: ' + error.message,
+            totalCommands: 0,
+            commands: []
         });
     }
 });

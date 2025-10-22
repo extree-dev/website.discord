@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.js'
 import './styles/main.scss' // Заменяем index.css на main.scss
 import './assets/fonts/fonts.css'
+import { AuthProvider } from './context/AuthContext.js'
 
 // Инициализация мониторинга производительности
 if (process.env.NODE_ENV === 'production') {
@@ -17,6 +18,8 @@ if (process.env.NODE_ENV === 'production') {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </React.StrictMode>
 )

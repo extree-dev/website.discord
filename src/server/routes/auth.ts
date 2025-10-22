@@ -1481,7 +1481,146 @@ router.get("/server/roles", async (req, res) => {
   }
 });
 
+// ==================== СИСТЕМНАЯ СТАТИСТИКА ====================
 
+router.get("/system-stats", async (req, res) => {
+  try {
+    // Текущая дата
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Запросы к базе данных
+    const totalUsers = await prisma.user.count();
+
+    const usersToday = await prisma.user.count({
+      where: { createdAt: { gte: today } }
+    });
+
+    const usersYesterday = await prisma.user.count({
+      where: {
+        createdAt: {
+          gte: yesterday,
+          lt: today
+        }
+      }
+    });
+
+    // Статистика секретных кодов
+    const totalCodes = await prisma.secretCode.count();
+    const usedCodes = await prisma.secretCode.count({
+      where: { used: true }
+    });
+
+    // КОЛИЧЕСТВО ЗАРЕГИСТРИРОВАННЫХ КОМАНД БОТА ИЗ БАЗЫ ДАННЫХ
+    let registeredCommandsCount = 0;
+    let commandStats = { today: 0, total: 0 };
+
+    try {
+      console.log('🔄 Fetching registered commands from database...');
+
+      // Получаем количество команд ИЗ БАЗЫ ДАННЫХ
+      registeredCommandsCount = await prisma.botCommand.count({
+        where: { enabled: true }
+      });
+
+      console.log(`✅ Database has ${registeredCommandsCount} registered commands`);
+
+    } catch (error) {
+      console.log('⚠️ Database commands unavailable, using API fallback:', String(error));
+
+      // Fallback: запрашиваем у API бота
+      try {
+        const botResponse = await fetch('http://localhost:3002/api/bot/commands');
+        if (botResponse.ok) {
+          const botData = await botResponse.json();
+          registeredCommandsCount = botData.totalCommands || 0;
+        }
+      } catch (apiError) {
+        console.log('Using default command count');
+        registeredCommandsCount = 7; // Стандартное количество команд
+      }
+    }
+
+    // Статистика использования команд (опционально)
+    try {
+      const commandsToday = await prisma.commandStats.count({
+        where: { timestamp: { gte: today } }
+      });
+
+      const commandsTotal = await prisma.commandStats.count();
+
+      commandStats = {
+        today: commandsToday,
+        total: commandsTotal
+      };
+    } catch (dbError) {
+      console.log('Command stats DB unavailable');
+    }
+
+    // Получаем статус бота
+    let botServers = 1;
+    try {
+      const botStatusResponse = await fetch('http://localhost:3002/api/bot/status');
+      if (botStatusResponse.ok) {
+        const botStatus = await botStatusResponse.json();
+        botServers = botStatus.totalServers || 1;
+      }
+    } catch (error) {
+      console.log('Bot status unavailable, using default');
+    }
+
+    // Расчет процента роста пользователей
+    const growthPercentage = usersYesterday > 0
+      ? Math.round((usersToday / usersYesterday - 1) * 100)
+      : usersToday > 0 ? 100 : 0;
+
+    const stats = {
+      users: {
+        total: totalUsers,
+        active: await prisma.user.count({
+          where: {
+            lastLogin: {
+              gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+            }
+          }
+        }),
+        newToday: usersToday,
+        growthPercentage: growthPercentage
+      },
+      secretCodes: {
+        total: totalCodes,
+        used: usedCodes,
+        available: totalCodes - usedCodes
+      },
+      commands: commandStats,
+      system: {
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        timestamp: new Date().toISOString()
+      },
+      totalServers: botServers,
+      totalCommands: registeredCommandsCount, // ← КОЛИЧЕСТВО ЗАРЕГИСТРИРОВАННЫХ КОМАНД
+      performance: {
+        cpu: 45,
+        memory: 65,
+        network: 25,
+        storage: 80
+      }
+    };
+
+    res.json(stats);
+
+  } catch (error) {
+    console.error('System stats error:', error);
+    res.status(500).json({
+      error: "Failed to fetch system statistics",
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
 
 // ==================== ЛОГАУТ ====================
 
@@ -2496,6 +2635,133 @@ router.post("/discord/cleanup-logs", async (req, res) => {
     res.status(500).json({
       error: "Failed to cleanup logs",
       details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+router.get("/bot/servers", async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+
+  if (!token) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  try {
+    const decoded = verifyToken(token);
+
+    // Пробуем получить данные от бота
+    let botData;
+    try {
+      // Используем AbortController для таймаута вместо свойства timeout
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+
+      const botResponse = await fetch('http://localhost:3002/api/bot/servers', {
+        signal: controller.signal
+      });
+
+      clearTimeout(timeout);
+
+      if (botResponse.ok) {
+        botData = await botResponse.json();
+      } else {
+        throw new Error(`Bot API responded with status: ${botResponse.status}`);
+      }
+    } catch (botError) {
+      console.log('Bot API unavailable, using fallback data');
+      // Fallback данные если бот недоступен
+      botData = {
+        success: false,
+        totalServers: 1, // Минимальное значение
+        servers: [],
+        source: 'fallback'
+      };
+    }
+
+    // Форматируем ответ для фронтенда
+    const response = {
+      totalServers: botData.totalServers || 0,
+      servers: botData.servers || [],
+      isOnline: botData.success !== false,
+      lastUpdated: new Date().toISOString(),
+      source: botData.source || 'bot'
+    };
+
+    res.json(response);
+
+  } catch (error) {
+    console.error('Bot servers fetch error:', error);
+    res.status(500).json({
+      error: "Failed to fetch bot servers",
+      totalServers: 0,
+      servers: [],
+      isOnline: false
+    });
+  }
+});
+
+// Эндпоинт для статуса бота
+router.get("/bot/status", async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+
+  if (!token) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  try {
+    const decoded = verifyToken(token);
+
+    let botStatus;
+    try {
+      // Используем AbortController для таймаута
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+
+      const botResponse = await fetch('http://localhost:3002/api/bot/status', {
+        signal: controller.signal
+      });
+
+      clearTimeout(timeout);
+
+      if (botResponse.ok) {
+        botStatus = await botResponse.json();
+      } else {
+        throw new Error('Bot not responding');
+      }
+    } catch (error) {
+      botStatus = {
+        success: false,
+        isReady: false,
+        totalServers: 0,
+        totalUsers: 0,
+        uptime: 0,
+        ping: -1
+      };
+    }
+
+    // Форматируем для фронтенда
+    const status = {
+      isOnServer: botStatus.success && botStatus.totalServers > 0,
+      totalServers: botStatus.totalServers || 0,
+      isReady: botStatus.isReady || false,
+      uptime: botStatus.uptime || 0,
+      ping: botStatus.ping || -1,
+      lastChecked: new Date().toISOString(),
+      serverName: botStatus.serverName || 'Discord Server' // Добавляем serverName
+    };
+
+    res.json(status);
+
+  } catch (error) {
+    console.error('Bot status check error:', error);
+    res.json({
+      isOnServer: false,
+      totalServers: 0,
+      isReady: false,
+      uptime: 0,
+      ping: -1,
+      lastChecked: new Date().toISOString(),
+      serverName: 'Discord Server'
     });
   }
 });

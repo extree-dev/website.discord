@@ -1,24 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import Sidebars from "@/components/Saidbar.js";
-import {
-    FiTrendingUp,
-    FiUsers,
-    FiActivity,
-    FiClock,
-    FiServer,
-    FiAlertTriangle,
-    FiWifi,
-    FiRefreshCw,
-    FiCpu,
-    FiDatabase,
-    FiShield,
-    FiMessageSquare,
-    FiBarChart2,
-    FiGlobe,
-    FiDownload,
-    FiUpload,
-    FiHeart
-} from "react-icons/fi";
+import styles from "../module_pages/DashboardOverview.module.scss";
+import { useAuth } from "@/context/AuthContext.js";
 import {
     Users,
     Eye,
@@ -30,42 +13,192 @@ import {
     Clock,
     CheckCircle,
     XCircle,
-    Search,
     Filter,
     Download,
-    MoreHorizontal,
     Bell,
     Calendar,
+    RefreshCw,
+    Zap,
+    Hash,
+    Activity,
+    Play,
+    StopCircle,
+    BarChart3,
     Server,
     Network,
     Cpu,
     Database,
-    BarChart3,
     Globe,
     Heart
 } from "lucide-react";
-import styles from "../module_pages/DashboardOverview.module.scss";
+import { SidebarContext } from "@/App.js";
+import { FaMemory } from "react-icons/fa";
+
+interface BotStatus {
+    isOnServer: boolean;
+    totalServers: number;
+    isReady: boolean;
+    uptime: number;
+    ping: number;
+    lastChecked: string;
+    serverName?: string;
+}
+
+interface SystemStats {
+    users: {
+        total: number;
+        active: number;
+        newToday: number;
+        growthPercentage: number;
+    };
+    secretCodes: {
+        total: number;
+        used: number;
+        available: number;
+    };
+    commands: {
+        today: number;
+        total: number;
+    };
+    system: {
+        uptime: number;
+        memory: any;
+        timestamp: string;
+    };
+    totalServers?: number;
+    totalCommands?: number;
+    performance?: {
+        cpu: number;
+        memory: number;
+        network: number;
+        storage: number;
+    };
+}
+
+interface LogEntry {
+    time: string;
+    type: string;
+    message: string;
+    user: string;
+}
+
+interface Guild {
+    id: string;
+    name: string;
+    members: number;
+    enabled: boolean;
+    icon: string;
+}
 
 export default function DashboardOverview() {
-
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-    const [guilds, setGuilds] = useState([
-        { id: "123456789", name: "Main Server", members: 1542, enabled: true, icon: "🏠" },
-        { id: "987654321", name: "Test Server", members: 243, enabled: false, icon: "🧪" },
-        { id: "543216789", name: "Gaming Hub", members: 3124, enabled: true, icon: "🎮" },
-        { id: "789123456", name: "Community", members: 876, enabled: true, icon: "👥" }
-    ]);
-
-    const [logs] = useState([
-        { time: "2m ago", type: "success", message: "Bot started successfully", user: "System" },
-        { time: "5m ago", type: "error", message: "/ban failed — Missing Permissions", user: "@Admin" },
-        { time: "12m ago", type: "warn", message: "Rate limit warning — /ping", user: "@Moderator" },
-        { time: "1h ago", type: "success", message: "Auto-moderation rule triggered", user: "System" },
-        { time: "2h ago", type: "info", message: "Scheduled backup completed", user: "System" }
-    ]);
-
+    const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
+    const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
+    const [logs, setLogs] = useState<LogEntry[]>([]);
+    const [guilds, setGuilds] = useState<Guild[]>([]);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    const sidebarContext = useContext(SidebarContext);
+    const isSidebarCollapsed = sidebarContext?.isCollapsed || false;
+
+    // Загрузка данных системы
+    const loadSystemData = async () => {
+        try {
+            setLoading(true);
+            const token = localStorage.getItem('auth_token');
+
+            // ПРАВИЛЬНЫЕ ЭНДПОИНТЫ:
+
+            // 1. Статус бота - через веб-сервер
+            const botResponse = await fetch('/api/bot/status', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (botResponse.ok) {
+                const botData = await botResponse.json();
+                console.log('Bot status from web server:', botData);
+                setBotStatus(botData);
+            } else {
+                console.error('Failed to fetch bot status:', botResponse.status);
+            }
+
+            // 2. Системная статистика - через веб-сервер
+            const statsResponse = await fetch('/api/system-stats', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (statsResponse.ok) {
+                const statsData = await statsResponse.json();
+                console.log('System stats from web server:', statsData);
+                setSystemStats(statsData);
+            } else {
+                console.error('Failed to fetch system stats:', statsResponse.status);
+            }
+
+            // 3. Прямой запрос к боту для отладки (уберите потом)
+            const directBotResponse = await fetch('http://localhost:3002/discord/bot-status');
+            if (directBotResponse.ok) {
+                const directData = await directBotResponse.json();
+                console.log('Direct bot status:', directData);
+            }
+
+        } catch (error) {
+            console.error('Error loading system data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Загрузка системных логов
+    const loadSystemLogs = async (token: string) => {
+        try {
+            const API_BASE = 'http://localhost:3002';
+            // Здесь можно добавить эндпоинт для системных логов
+            // Пока используем моковые данные
+            setLogs([
+                { time: "2m ago", type: "success", message: "Bot started successfully", user: "System" },
+                { time: "5m ago", type: "error", message: "/ban failed — Missing Permissions", user: "@Admin" },
+                { time: "12m ago", type: "warn", message: "Rate limit warning — /ping", user: "@Moderator" },
+                { time: "1h ago", type: "success", message: "Auto-moderation rule triggered", user: "System" },
+                { time: "2h ago", type: "info", message: "Scheduled backup completed", user: "System" }
+            ]);
+        } catch (error) {
+            console.error('Error loading logs:', error);
+        }
+    };
+
+    // Загрузка списка серверов
+    const loadGuilds = async (token: string) => {
+        try {
+            // Моковые данные серверов
+            setGuilds([
+                { id: "123456789", name: "Main Server", members: 1542, enabled: true, icon: "🏠" },
+                { id: "987654321", name: "Test Server", members: 243, enabled: false, icon: "🧪" },
+                { id: "543216789", name: "Gaming Hub", members: 3124, enabled: true, icon: "🎮" },
+                { id: "789123456", name: "Community", members: 876, enabled: true, icon: "👥" }
+            ]);
+        } catch (error) {
+            console.error('Error loading guilds:', error);
+        }
+    };
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        await loadSystemData();
+        setTimeout(() => setIsRefreshing(false), 1000);
+    };
+
+
+    useEffect(() => {
+        loadSystemData();
+    }, []);
 
     const toggleGuildStatus = (id: string) => {
         setGuilds(prev =>
@@ -75,15 +208,7 @@ export default function DashboardOverview() {
         );
     };
 
-    const handleRefresh = async () => {
-        setIsRefreshing(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setIsRefreshing(false);
-    };
-
-    type LogType = 'error' | 'warn' | 'info' | 'success';
-
-    const getLogTypeClass = (type: LogType) => {
+    const getLogTypeClass = (type: string) => {
         switch (type) {
             case 'error': return styles.error;
             case 'warn': return styles.warn;
@@ -93,7 +218,7 @@ export default function DashboardOverview() {
         }
     };
 
-    const getLogIcon = (type: LogType) => {
+    const getLogIcon = (type: string) => {
         switch (type) {
             case 'error': return <XCircle size={16} />;
             case 'warn': return <AlertTriangle size={16} />;
@@ -103,13 +228,22 @@ export default function DashboardOverview() {
         }
     };
 
-    // Performance metrics
-    const performanceData = {
-        cpu: 24,
-        memory: 68,
-        network: 45,
-        storage: 82
-    };
+    if (loading) {
+        return (
+            <div className={`${styles.layout} ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+                <Sidebars
+                    onCollapseChange={setSidebarCollapsed}
+                    collapsed={sidebarCollapsed}
+                />
+                <div className={styles.overviewPage}>
+                    <div className={styles.loading}>
+                        <RefreshCw size={32} className={styles.spinner} />
+                        <p>Loading system overview...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div
@@ -131,6 +265,7 @@ export default function DashboardOverview() {
                             <h1>System Overview</h1>
                             <span className={styles.subtitle}>
                                 Real-time monitoring and performance analytics
+                                {botStatus?.serverName && ` • ${botStatus.serverName}`}
                             </span>
                         </div>
                         <div className={styles.headerActions}>
@@ -146,7 +281,7 @@ export default function DashboardOverview() {
                                 disabled={isRefreshing}
                                 className={styles.refreshBtn}
                             >
-                                <FiRefreshCw size={16} className={isRefreshing ? styles.loading : ''} />
+                                <RefreshCw size={16} className={isRefreshing ? styles.loading : ''} />
                                 Refresh
                             </button>
                         </div>
@@ -162,11 +297,19 @@ export default function DashboardOverview() {
                             </div>
                             <TrendingUp size={16} className={styles.trendingUp} />
                         </div>
-                        <h3 className={styles.metricValue}>245</h3>
-                        <p className={styles.metricLabel}>Active Servers</p>
+                        <h3 className={styles.metricValue}>
+                            {botStatus?.totalServers || systemStats?.totalServers || 0}
+                        </h3>
+                        <p className={styles.metricLabel}>
+                            Active Servers
+                        </p>
                         <div className={styles.metricChange}>
-                            <span className={styles.changePositive}>+12</span>
-                            <span className={styles.changeText}>this week</span>
+                            <span className={botStatus?.isOnServer ? styles.changePositive : styles.changeNeutral}>
+                                {botStatus?.isOnServer ? '+1' : '0'}
+                            </span>
+                            <span className={styles.changeText}>
+                                {botStatus?.isOnServer ? 'connected' : 'offline'}
+                            </span>
                         </div>
                     </div>
 
@@ -177,10 +320,21 @@ export default function DashboardOverview() {
                             </div>
                             <TrendingUp size={16} className={styles.trendingUp} />
                         </div>
-                        <h3 className={styles.metricValue}>18.3K</h3>
-                        <p className={styles.metricLabel}>Users Reached</p>
+                        <h3 className={styles.metricValue}>
+                            {systemStats?.users?.total || '0'}
+                        </h3>
+                        <p className={styles.metricLabel}>
+                            Number of users in the system
+                        </p>
                         <div className={styles.metricChange}>
-                            <span className={styles.changePositive}>+2.1%</span>
+                            <span className={
+                                (systemStats?.users?.growthPercentage || 0) >= 0
+                                    ? styles.changePositive
+                                    : styles.changeNegative
+                            }>
+                                {(systemStats?.users?.growthPercentage || 0) >= 0 ? '+' : ''}
+                                {systemStats?.users?.growthPercentage || 0}%
+                            </span>
                             <span className={styles.changeText}>today</span>
                         </div>
                     </div>
@@ -192,11 +346,15 @@ export default function DashboardOverview() {
                             </div>
                             <TrendingUp size={16} className={styles.trendingUp} />
                         </div>
-                        <h3 className={styles.metricValue}>92.4K</h3>
+                        <h3 className={styles.metricValue}>
+                            {systemStats?.totalCommands?.toLocaleString() || '0'}
+                        </h3>
                         <p className={styles.metricLabel}>Commands Run</p>
                         <div className={styles.metricChange}>
-                            <span className={styles.changePositive}>+15%</span>
-                            <span className={styles.changeText}>vs yesterday</span>
+                            <span className={styles.changePositive}>
+                                +{systemStats?.commands?.today || 0} today
+                            </span>
+                            <span className={styles.changeText}>total</span>
                         </div>
                     </div>
 
@@ -207,11 +365,18 @@ export default function DashboardOverview() {
                             </div>
                             <Heart size={16} className={styles.healthy} />
                         </div>
-                        <h3 className={styles.metricValue}>99.98%</h3>
+                        <h3 className={styles.metricValue}>
+                            {systemStats?.system?.uptime ? '99.98%' : '0%'}
+                        </h3>
                         <p className={styles.metricLabel}>Uptime</p>
-                        <div className={styles.metricChange}>
-                            <span className={styles.changeNeutral}>Stable</span>
-                        </div>
+                        <span className={
+                            (systemStats?.users?.growthPercentage || 0) >= 0
+                                ? styles.changePositive
+                                : styles.changeNegative
+                        }>
+                            {(systemStats?.users?.growthPercentage || 0) >= 0 ? '+' : ''}
+                            {systemStats?.users?.growthPercentage || 0}%
+                        </span>
                     </div>
                 </section>
 
@@ -221,11 +386,11 @@ export default function DashboardOverview() {
                     <div className={styles.statusCard}>
                         <div className={styles.cardHeader}>
                             <h3 className={styles.cardTitle}>
-                                <FiWifi /> Bot Status
+                                <Network size={20} /> Bot Status
                             </h3>
                             <div className={styles.statusIndicator}>
-                                <div className={`${styles.statusDot} ${styles.online}`}></div>
-                                Online
+                                <div className={`${styles.statusDot} ${botStatus?.isOnServer ? styles.online : styles.offline}`}></div>
+                                {botStatus?.isOnServer ? 'Online' : 'Offline'}
                             </div>
                         </div>
                         <div className={styles.statusGrid}>
@@ -267,23 +432,23 @@ export default function DashboardOverview() {
                                 <div className={styles.performanceBar}>
                                     <div
                                         className={styles.performanceFill}
-                                        style={{ width: `${performanceData.cpu}%` }}
+                                        style={{ width: `${systemStats?.performance?.cpu || 0}%` }}
                                     ></div>
                                 </div>
-                                <div className={styles.performanceValue}>{performanceData.cpu}%</div>
+                                <div className={styles.performanceValue}>{systemStats?.performance?.cpu || 0}%</div>
                             </div>
                             <div className={styles.performanceItem}>
                                 <div className={styles.performanceHeader}>
-                                    <Database size={16} />
+                                    <FaMemory size={16} />
                                     <span>Memory</span>
                                 </div>
                                 <div className={styles.performanceBar}>
                                     <div
                                         className={styles.performanceFill}
-                                        style={{ width: `${performanceData.memory}%` }}
+                                        style={{ width: `${systemStats?.performance?.memory || 0}%` }}
                                     ></div>
                                 </div>
-                                <div className={styles.performanceValue}>{performanceData.memory}%</div>
+                                <div className={styles.performanceValue}>{systemStats?.performance?.cpu || 0}%</div>
                             </div>
                             <div className={styles.performanceItem}>
                                 <div className={styles.performanceHeader}>
@@ -293,10 +458,10 @@ export default function DashboardOverview() {
                                 <div className={styles.performanceBar}>
                                     <div
                                         className={styles.performanceFill}
-                                        style={{ width: `${performanceData.network}%` }}
+                                        style={{ width: `${systemStats?.performance?.network || 0}%` }}
                                     ></div>
                                 </div>
-                                <div className={styles.performanceValue}>{performanceData.network}%</div>
+                                <div className={styles.performanceValue}>{systemStats?.performance?.network || 0}%</div>
                             </div>
                             <div className={styles.performanceItem}>
                                 <div className={styles.performanceHeader}>
@@ -306,10 +471,10 @@ export default function DashboardOverview() {
                                 <div className={styles.performanceBar}>
                                     <div
                                         className={styles.performanceFill}
-                                        style={{ width: `${performanceData.storage}%` }}
+                                        style={{ width: `${systemStats?.performance?.storage || 0}%` }}
                                     ></div>
                                 </div>
-                                <div className={styles.performanceValue}>{performanceData.storage}%</div>
+                                <div className={styles.performanceValue}>{systemStats?.performance?.storage || 0}%</div>
                             </div>
                         </div>
                     </div>
@@ -357,9 +522,9 @@ export default function DashboardOverview() {
                         </div>
                         <div className={styles.logsList}>
                             {logs.map((log, index) => (
-                                <div key={index} className={`${styles.logItem} ${getLogTypeClass(log.type as LogType)}`}>
+                                <div key={index} className={`${styles.logItem} ${getLogTypeClass(log.type)}`}>
                                     <div className={styles.logIcon}>
-                                        {getLogIcon(log.type as LogType)}
+                                        {getLogIcon(log.type)}
                                     </div>
                                     <div className={styles.logContent}>
                                         <div className={styles.logMessage}>{log.message}</div>
@@ -379,19 +544,19 @@ export default function DashboardOverview() {
                     <h3 className={styles.sectionTitle}>Quick Actions</h3>
                     <div className={styles.actionsGrid}>
                         <button className={styles.actionBtn}>
-                            <FiServer size={20} />
+                            <Server size={20} />
                             <span>Invite Bot</span>
                         </button>
                         <button className={styles.actionBtn}>
-                            <FiBarChart2 size={20} />
+                            <BarChart3 size={20} />
                             <span>View Analytics</span>
                         </button>
                         <button className={styles.actionBtn}>
-                            <FiShield size={20} />
+                            <Shield size={20} />
                             <span>Security Settings</span>
                         </button>
                         <button className={styles.actionBtn}>
-                            <FiDatabase size={20} />
+                            <Database size={20} />
                             <span>Backup Data</span>
                         </button>
                     </div>

@@ -231,3 +231,40 @@ model Alert {
   @@index([timestamp])
   @@index([status])
 }
+
+// Модель для системных логов
+model SystemLog {
+  id        Int      @id @default(autoincrement())
+  type      String   // error, warn, info, success
+  message   String
+  source    String   // bot, api, database, etc
+  metadata  Json?
+  timestamp DateTime @default(now())
+
+  @@map("system_logs")
+}
+
+// Модель для производительности системы
+model SystemPerformance {
+  id        Int      @id @default(autoincrement())
+  cpu       Float
+  memory    Float
+  network   Float
+  storage   Float
+  timestamp DateTime @default(now())
+
+  @@map("system_performance")
+}
+
+// Модель для зарегистрированных команд
+model BotCommand {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  category    String   // moderation, utility, etc
+  enabled     Boolean  @default(true)
+  registeredAt DateTime @default(now())
+  lastUpdated DateTime @updatedAt
+
+  @@map("bot_commands")
+}

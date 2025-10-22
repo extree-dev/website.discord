@@ -69,29 +69,148 @@
   border-radius: 24px;
   padding: 4px;
   backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 2px;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  }
 }
 
 .timeFilter {
-  padding: 0.5rem 1rem;
-  border: none;
-  background: transparent;
-  color: #888;
+  padding: 8px 20px;
+  border: 1px solid transparent;
   border-radius: 24px;
+  background: transparent;
+  color: #6b7280;
   cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 14px;
   font-weight: 600;
-  font-size: 0.875rem;
-  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+  backdrop-filter: blur(10px);
 
+  // Активное состояние
   &.active {
-    background: rgba(99, 102, 241, 0.2);
-    color: #6366f1;
-    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-    border-radius: 24px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%);
+    color: #ffffff;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    box-shadow:
+      0 4px 12px rgba(99, 102, 241, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.5), transparent);
+    }
   }
 
+  // Ховер состояние для неактивных кнопок
   &:hover:not(.active) {
-    background: rgba(255, 255, 255, 0.1);
-    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+  }
+
+  // Анимация при переключении
+  &:active {
+    transform: scale(0.98);
+  }
+
+  // Градиентный эффект для текста в активном состоянии
+  &.active {
+    text-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
+  }
+}
+
+// Анимация появления
+@keyframes filterSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.timeFilters {
+  animation: filterSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+// Индикатор выбранного периода
+.timeFilter.active::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  background: #6366f1;
+  border-radius: 24px;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+}
+
+// Адаптивность
+@include tablet {
+  .timeFilters {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .timeFilter {
+    flex: 1;
+    text-align: center;
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+}
+
+@include mobile {
+  .timeFilters {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .timeFilter {
+    flex: 1 0 calc(33.333% - 8px);
+    min-width: 0;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}
+
+// Состояние загрузки
+.timeFilter:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+// Интеграция с существующими анимациями
+.timeFilter {
+  @for $i from 1 through 3 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{0.2 + ($i * 0.1)}s;
+    }
   }
 }
 
@@ -278,13 +397,6 @@
 
 .alertsCard {
   animation-delay: 0.7s;
-}
-
-.cardHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
 }
 
 .cardTitle {
@@ -642,66 +754,55 @@
   gap: 1rem;
 }
 
-.alertItem {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  background: rgba(239, 68, 68, 0.05);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: 24px;
-  animation: waveIn 0.5s ease-out both;
-
-  @for $i from 1 through 5 {
-    &:nth-child(#{$i}) {
-      animation-delay: #{0.7 + ($i * 0.1)}s;
-    }
-  }
-}
-
 .alertSeverity {
   flex-shrink: 0;
 }
 
-.severityDot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-
-  &.high {
-    background: #ef4444;
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
-  }
-
-  &.medium {
-    background: #f59e0b;
-    box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
-  }
-
-  &.low {
-    background: #10b981;
-  }
-}
-
 .alertContent {
   flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .alertTitle {
   font-weight: 600;
   color: #ffffff;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.125rem;
 }
 
 .alertDescription {
   font-size: 0.875rem;
   color: #888;
-  margin-bottom: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.alertFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+
+  @include mobile {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+    text-align: center;
+  }
 }
 
 .alertTime {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   color: #666;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  @include mobile {
+    justify-content: center;
+  }
 }
 
 .alertAction {
@@ -820,7 +921,16 @@
   .alertItem {
     flex-direction: column;
     text-align: center;
+  }
+
+  .alertFooter {
+    flex-direction: column;
     gap: 0.75rem;
+  }
+
+  .alertActions {
+    width: 100%;
+    justify-content: center;
   }
 }
 
@@ -2056,11 +2166,11 @@
   align-items: flex-start;
   gap: 12px;
   margin-bottom: 16px;
-  padding: 16px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.15) 100%);
+  padding: 1.5rem;
+  background: rgb(0 0 0 / 29%);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
   color: white;
   position: relative;
   overflow: hidden;
@@ -2111,42 +2221,132 @@
 }
 
 .detailCard {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  background: rgb(0 0 0 / 29%);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 16px;
-  transition: all 0.3s ease;
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 24px;
   position: relative;
   overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.3), transparent);
-  }
-
-  &:hover {
-    transform: translateY(-2px);
-    border-color: rgba(99, 102, 241, 0.3);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-  }
 }
 
 .cardHeader {
   display: flex;
   align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 2;
+}
+
+.cardIcon {
+  color: #6366f1;
+}
+
+.autoModBadge {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: auto;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.cardContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+  padding: 1rem 0 1rem 0;
+}
+
+.reasonSection,
+.triggerSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reasonLabel,
+.triggerLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.reason {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 1.4;
+}
+
+.triggerText {
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.5;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(245, 158, 11, 0.1);
+}
+
+.ruleInfo {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.ruleTag {
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.severity {
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  margin-left: auto;
+}
+
+/* Дополнительные варианты причин (можно динамически подставлять) */
+/* 
+  Запрещенные слова
+  Спам-сообщения  
+  Ссылки без разрешения
+  Оскорбительные выражения
+  Рекламный контент
+  Флуд
+  Капслок
+  И т.д.
+*/
+
+.cardHeader {
+  display: flex;
+  align-items: center;
   gap: 10px;
-  margin-bottom: 12px;
   font-size: 12px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.6);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .cardIcon {
@@ -2180,7 +2380,7 @@
   font-family: 'JetBrains Mono', 'Monaco', 'Consolas', monospace;
   background: rgba(0, 0, 0, 0.3);
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 24px;
   display: inline-block;
 }
 
@@ -2196,28 +2396,6 @@
   color: #ef4444;
   font-size: 15px;
   text-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
-}
-
-// Карточка сообщения
-.messageCard {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 20px;
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.4), transparent);
-  }
 }
 
 .messageContent {
@@ -2427,10 +2605,13 @@
 // Интеграция с существующими стилями алертов
 .alertItem {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-  backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  padding: 20px;
+  border-radius: 24px;
+  animation: waveIn 0.5s ease-out both;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
   animation: waveIn 0.5s ease-out both;
 
   @for $i from 1 through 5 {
@@ -2448,26 +2629,93 @@
 
 .alertActions {
   display: flex;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 0.5rem;
+
+  @include mobile {
+    justify-content: center;
+  }
 }
 
 .alertActionResolve {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #10b981;
-  padding: 8px 16px;
-  border-radius: 12px;
-  font-size: 13px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  color: #6366f1;
+  padding: 0.5rem 1rem;
+  border-radius: 24px;
+  font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
+  white-space: nowrap;
 
   &:hover {
-    background: rgba(16, 185, 129, 0.3);
-    border-color: rgba(16, 185, 129, 0.5);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.15);
+    transform: translateY(-2px);
   }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.limitBadge {
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+  padding: 4px 8px;
+  border-radius: 24px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+// Дополнительные стили для отображения статистики по времени
+.timeRangeStats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 16px;
+  font-size: 12px;
+  color: #6b7280;
+
+  .statItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    .statValue {
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .statLabel {
+      color: #6b7280;
+    }
+  }
+}
+
+// Обновленный header для поддержки статистики
+.header__right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  animation: waveIn 0.8s ease-out 0.2s both;
+
+  @include tablet {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+}
+
+.timeRangeContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }

@@ -320,6 +320,7 @@ class AlertSystem {
                     action: 'content_flagged',
                     rule: triggeredRule,
                     channel: message.channel.name,
+                    channelId: message.channel.id,
                     user: message.author.tag,
                     userId: message.author.id,
                     content: message.content.substring(0, 200),

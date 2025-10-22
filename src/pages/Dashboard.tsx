@@ -123,6 +123,7 @@ const Dashboard: React.FC = () => {
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
   const [loadingAlerts, setLoadingAlerts] = useState(false);
   const [activeTimeRange, setActiveTimeRange] = useState<'24h' | '7d' | '30d'>('24h');
   const [notifications, setNotifications] = useState(3);
@@ -149,7 +150,69 @@ const Dashboard: React.FC = () => {
     voiceMembers: number;
     yesterdayComparison: any;
   } | null>(null);
+  const [timeRangeStats, setTimeRangeStats] = useState({
+    '24h': { alerts: 10, auditLogs: 10 },
+    '7d': { alerts: 30, auditLogs: 30 },
+    '30d': { alerts: 50, auditLogs: 50 }
+  });
   const [healthStats, setHealthStats] = useState<HealthStats | null>(null);
+
+  // Добавь эту функцию в Dashboard компонент
+  const filterAlertsByTimeRange = (alerts: Alert[]) => {
+    const now = new Date();
+    let timeAgo = new Date();
+
+    switch (activeTimeRange) {
+      case '24h':
+        timeAgo.setHours(now.getHours() - 24);
+        break;
+      case '7d':
+        timeAgo.setDate(now.getDate() - 7);
+        break;
+      case '30d':
+        timeAgo.setDate(now.getDate() - 30);
+        break;
+      default:
+        timeAgo.setHours(now.getHours() - 24);
+    }
+
+    return alerts.filter(alert => {
+      const alertDate = new Date(alert.timestamp);
+      return alertDate >= timeAgo;
+    });
+  };
+
+  // Функция фильтрации активностей по времени
+  const filterActivitiesByTimeRange = (activities: Activity[]) => {
+    const now = new Date();
+    let timeAgo = new Date();
+
+    switch (activeTimeRange) {
+      case '24h':
+        timeAgo.setHours(now.getHours() - 24);
+        break;
+      case '7d':
+        timeAgo.setDate(now.getDate() - 7);
+        break;
+      case '30d':
+        timeAgo.setDate(now.getDate() - 30);
+        break;
+      default:
+        timeAgo.setHours(now.getHours() - 24);
+    }
+
+    return activities.filter(activity => {
+      const activityDate = new Date(activity.timestamp || activity.time);
+      return activityDate >= timeAgo;
+    });
+  };
+
+  // Отфильтрованные активности
+  const filteredActivities = filterActivitiesByTimeRange(recentActivities);
+
+  // Отфильтрованные алерты
+  const filteredAlerts = filterAlertsByTimeRange(alerts);
+
 
   const showAlertDetails = (alert: Alert) => {
     setSelectedAlert(alert);
@@ -169,21 +232,21 @@ const Dashboard: React.FC = () => {
 
   const getActionTitle = (actionType: number) => {
     switch (actionType) {
-      case 1: return 'Блокировка сообщения';
-      case 2: return 'Предупреждение';
-      case 3: return 'Таймаут пользователя';
-      case 4: return 'Блокировка контента';
-      default: return 'Действие автомода';
+      case 1: return 'Message Blocked';
+      case 2: return 'Warning';
+      case 3: return 'User Timeout';
+      case 4: return 'Content Blocked';
+      default: return 'Automode Action';
     }
   };
 
   const getActionDescription = (actionType: number) => {
     switch (actionType) {
-      case 1: return 'блокировка сообщения';
-      case 2: return 'отправка предупреждения';
-      case 3: return 'таймаут пользователя';
-      case 4: return 'блокировка контента';
-      default: return 'действие автомода';
+      case 1: return 'message block';
+      case 2: return 'sending a warning';
+      case 3: return 'user timeout';
+      case 4: return 'content block';
+      default: return 'automod action';
     }
   };
 
@@ -373,6 +436,16 @@ const Dashboard: React.FC = () => {
     return () => clearInterval(interval);
   }, [autoRefresh, lastRefreshTime]);
 
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (token && botStatus?.isOnServer) {
+      console.log(`🔄 Reloading data for time range: ${activeTimeRange}`);
+      loadAuditLog(token);
+      loadAlerts(token);
+      loadCommandStats(token);
+    }
+  }, [activeTimeRange, botStatus?.isOnServer]);
+
   const [messageStats, setMessageStats] = useState<{
     totalMessages: number;
     messagesToday: number;
@@ -472,8 +545,6 @@ const Dashboard: React.FC = () => {
     }
   }, [activeTimeRange, commandFilter, botStatus?.isOnServer]);
 
-  const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
-
   const sidebarContext = useContext(SidebarContext);
   const isSidebarCollapsed = sidebarContext?.isCollapsed || false;
 
@@ -535,7 +606,8 @@ const Dashboard: React.FC = () => {
       setRefreshingAudit(true);
       const API_BASE = 'http://localhost:4000/api';
 
-      const response = await fetch(`${API_BASE}/discord/audit-logs?limit=10`, {
+      // Добавь параметр времени в запрос
+      const response = await fetch(`${API_BASE}/discord/audit-logs?limit=50&timeRange=${activeTimeRange}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -735,19 +807,23 @@ const Dashboard: React.FC = () => {
     try {
       setLoadingAlerts(true);
 
-      // Ждем пока botStatus загрузится
       if (!botStatus?.serverId) {
         console.log('⏳ Waiting for bot status to load alerts...');
         return;
       }
 
       const API_BASE = 'http://localhost:3002';
-      const response = await fetch(`${API_BASE}/api/alerts?guildId=${botStatus.serverId}&limit=5`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+
+      // Добавь параметр времени в запрос
+      const response = await fetch(
+        `${API_BASE}/api/alerts?guildId=${botStatus.serverId}&limit=50&timeRange=${activeTimeRange}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         }
-      });
+      );
 
       if (response.ok) {
         const alertsData = await response.json();
@@ -842,6 +918,9 @@ const Dashboard: React.FC = () => {
     );
   }
 
+  const alertsCount = filteredAlerts.length;
+  const activitiesCount = filteredActivities.length;
+
   return (
     <div className={`layout ${styles.layout} ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <Saidbar />
@@ -866,10 +945,13 @@ const Dashboard: React.FC = () => {
                   className={`${styles.timeFilter} ${activeTimeRange === range ? styles.active : ''}`}
                   onClick={() => setActiveTimeRange(range as any)}
                 >
-                  {range}
+                  <div className={styles.timeRangeContent}>
+                    <div className={styles.timeRangeLabel}>{range}</div>
+                  </div>
                 </button>
               ))}
             </div>
+
             <button
               className={styles.refreshBtn}
               onClick={loadDashboardData}
@@ -878,6 +960,7 @@ const Dashboard: React.FC = () => {
             >
               <RefreshCw size={20} className={refreshing ? styles.spinning : ''} />
             </button>
+
             <button className={styles.notificationBtn}>
               <Bell size={20} />
               {notifications > 0 && <span className={styles.notificationBadge}>{notifications}</span>}
@@ -971,7 +1054,9 @@ const Dashboard: React.FC = () => {
             <div className={styles.cardHeader}>
               <h3 className={styles.cardTitle}>
                 Recent Moderation Actions
-                <span className={styles.limitBadge}>Last 10 actions</span>
+                <span className={styles.limitBadge}>
+                  {timeRangeStats[activeTimeRange].auditLogs} ACTIONS • {activeTimeRange.toUpperCase()}
+                </span>
               </h3>
               <div className={styles.headerActions}>
                 <button
@@ -991,8 +1076,8 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
             <div className={styles.activityList}>
-              {recentActivities.length > 0 ? (
-                recentActivities.slice(0, 10).map((activity, index) => (
+              {filteredActivities.length > 0 ? (
+                filteredActivities.slice(0, 10).map((activity, index) => (
                   <div key={activity.id || `activity-${index}`} className={styles.activityItem}>
                     <div className={styles.activityIcon}>
                       {activity.status === 'success' ? (
@@ -1022,8 +1107,8 @@ const Dashboard: React.FC = () => {
               ) : (
                 <div className={styles.emptyState}>
                   <AlertTriangle size={24} />
-                  <p>No moderation actions found</p>
-                  <small>Moderation actions will appear here</small>
+                  <p>No moderation actions in {activeTimeRange}</p>
+                  <small>Try selecting a different time range</small>
                 </div>
               )}
             </div>
@@ -1301,7 +1386,12 @@ const Dashboard: React.FC = () => {
           </div>
           <div className={styles.alertsCard}>
             <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>Active Alerts</h3>
+              <h3 className={styles.cardTitle}>
+                Active Alerts
+                <span className={styles.limitBadge}>
+                  {timeRangeStats[activeTimeRange].alerts} ALERTS • {activeTimeRange.toUpperCase()}
+                </span>
+              </h3>
               <div className={styles.headerActions}>
                 <button
                   className={styles.viewAllBtn}
@@ -1314,15 +1404,12 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
             <div className={styles.alertList}>
-              {alerts.length > 0 ? (
-                alerts.map((alert) => (
+              {filteredAlerts.length > 0 ? (
+                filteredAlerts.map((alert) => (
                   <div key={alert.id} className={styles.alertItem}>
-                    <div className={styles.alertSeverity}>
-                      <div className={`${styles.severityDot} ${styles[alert.severity]}`}></div>
-                    </div>
                     <div className={styles.alertContent}>
                       <div className={styles.alertTitle}>{alert.title}</div>
-                      <div className={styles.alertDescription}>{alert.description}</div>
+
 
                       {/* ДЕТАЛИ АВТОМОДА */}
                       {alert.type === 'automod_triggered' && alert.data && (
@@ -1335,12 +1422,13 @@ const Dashboard: React.FC = () => {
                             <div className={styles.alertHeaderContent}>
                               <div className={styles.alertMainTitle}>DISCORD AUTOMOD</div>
                               <div className={styles.alertSubtitle}>
-                                {alert.data.actions && alert.data.actions.length > 0? (
+                                {alert.data.actions && alert.data.actions.length > 0 ? (
                                   `Measures applied: ${alert.data.actions.map((a: any) => getActionDescription(a.type)).join(', ')}`
                                 ) : (
                                   'Automatic moderation worked'
                                 )}
                               </div>
+                              <div className={styles.alertDescription}>{alert.description}</div>
                             </div>
                           </div>
 
@@ -1367,10 +1455,28 @@ const Dashboard: React.FC = () => {
                                 <span>Channel</span>
                               </div>
                               <div className={styles.cardContent}>
-                                <span className={styles.channelName}>#{alert.data.channel}</span>
+                                <span className={styles.channelName}>
+                                  #{alert.data.channel || 'unknown-channel'}
+                                </span>
+                                <span className={styles.userId}>
+                                  ID: {alert.data.channelId || 'Not available'}
+                                </span>
+
+                                {/* ДЛЯ ОТЛАДКИ - покажи все данные алерта */}
+                                <div style={{
+                                  fontSize: '10px',
+                                  color: '#999',
+                                  marginTop: '5px',
+                                  background: '#f5f5f5',
+                                  padding: '5px',
+                                  borderRadius: '4px',
+                                  display: 'none' // Скрыто по умолчанию
+                                }}
+                                  className="debug-info">
+                                  Alert Data: {JSON.stringify(alert.data, null, 2)}
+                                </div>
                               </div>
                             </div>
-
                             {/* КАРТОЧКА ПРИЧИНЫ */}
                             <div className={styles.detailCard}>
                               <div className={styles.cardHeader}>
@@ -1379,72 +1485,34 @@ const Dashboard: React.FC = () => {
                               </div>
                               <div className={styles.cardContent}>
                                 <span className={styles.reason}>{alert.data.reason}</span>
+                                <span className={styles.userId}>Word: {alert.data.content}</span>
                               </div>
                             </div>
                           </div>
-
-                          {/* СООБЩЕНИЕ */}
-                          <div className={styles.messageCard}>
-                            <div className={styles.cardHeader}>
-                              <FaComment size={14} className={styles.cardIcon} />
-                              <span>Message</span>
-                            </div>
-                            <div className={styles.messageContent}>
-                              "{alert.data.content}"
-                            </div>
-                          </div>
-
-                          {/* ДЕТАЛИ ДЕЙСТВИЙ */}
-                          {alert.data.actions && alert.data.actions.length > 0 && (
-                            <div className={styles.actionsCard}>
-                              <div className={styles.cardHeader}>
-                                <FaShieldAlt size={14} className={styles.cardIcon} />
-                                <span>Actions applied ({alert.data.actions.length})</span>
-                              </div>
-                              <div className={styles.actionsGrid}>
-                                {alert.data.actions.map((action: any, index: number) => (
-                                  <div key={index} className={styles.actionItem}>
-                                    <div className={styles.actionIcon}>
-                                      {getActionIcon(action.type)}
-                                    </div>
-                                    <div className={styles.actionContent}>
-                                      <div className={styles.actionTitle}>
-                                        {getActionTitle(action.type)}
-                                      </div>
-                                      <div className={styles.actionDescription}>
-                                        {getActionDescription(action.type)}
-                                        {action.duration && (
-                                          <span className={styles.duration}> • {action.duration}</span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       )}
-                      <div className={styles.alertTime}>
-                        {new Date(alert.timestamp).toLocaleTimeString()} •
-                        {Math.floor((Date.now() - new Date(alert.timestamp).getTime()) / 60000)} min ago
+                      <div className={styles.alertFooter}>
+                        <div className={styles.alertTime}>
+                          {new Date(alert.timestamp).toLocaleTimeString()} •
+                          {Math.floor((Date.now() - new Date(alert.timestamp).getTime()) / 60000)} min ago
+                        </div>
+                        <div className={styles.alertActions}>
+                          <button
+                            className={styles.alertActionResolve}
+                            onClick={() => resolveAlert(alert.id)}
+                            title="Mark as resolved"
+                          >
+                            Resolve
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <div className={styles.alertActions}>
-                      <button
-                        className={styles.alertActionResolve}
-                        onClick={() => resolveAlert(alert.id)}
-                        title="Mark as resolved"
-                      >
-                        Resolve
-                      </button>
                     </div>
                   </div>
                 ))
               ) : (
                 <div className={styles.emptyState}>
                   <CheckCircle size={24} className={styles.success} />
-                  <p>No active alerts</p>
+                  <p>No alerts in {activeTimeRange}</p>
                   <small>All systems are functioning normally</small>
                 </div>
               )}

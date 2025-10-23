@@ -16,10 +16,12 @@ module.exports = {
                 .setRequired(true)),
 
     async execute(interaction) {
+        const startTime = Date.now(); // ← Начало измерения
         try {
             const targetUser = interaction.options.getUser('user');
             const reason = interaction.options.getString('reason');
-            
+            const responseTime = Date.now() - startTime;
+
             // Сохраняем в базу через Prisma
             await prisma.commandStats.create({
                 data: {
@@ -27,10 +29,22 @@ module.exports = {
                     guildId: interaction.guild.id,
                     userId: targetUser.id,
                     success: true,
-                    executionTime: 0,
+                    executionTime: responseTime,
                     timestamp: new Date()
                 }
             });
+
+            // Также сохраняем в трекер памяти
+            if (global.commandTracker) {
+                global.commandTracker.recordCommand(
+                    'warn',
+                    true,
+                    responseTime,
+                    interaction.guild.id,
+                    targetUser.id
+                );
+            }
+
 
             await interaction.reply({
                 content: `✅ Пользователю ${targetUser} выдано предупреждение по причине: ${reason}`,
@@ -39,7 +53,7 @@ module.exports = {
 
         } catch (error) {
             console.error('Error in warn command:', error);
-            
+
             // Сохраняем ошибку в базу
             await prisma.commandStats.create({
                 data: {

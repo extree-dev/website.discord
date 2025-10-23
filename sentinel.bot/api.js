@@ -775,6 +775,116 @@ app.post('/api/alerts/test', async (req, res) => {
     }
 });
 
+// Эндпоинт для получения статуса бота с мониторингом
+app.get('/api/bot/monitoring', async (req, res) => {
+    try {
+        const client = getClient();
+
+        if (!global.botMonitor) {
+            return res.status(503).json({
+                error: "Bot monitor not initialized",
+                isReady: false
+            });
+        }
+        const monitorStats = await global.botMonitor.getComprehensiveStats();
+        if (!monitorStats || !monitorStats.lastHeartbeat) {
+            return res.status(503).json({
+                error: "Bot monitor data not ready yet",
+                isReady: false
+            });
+        }
+        
+        const apiLatency = global.botMonitor.getApiLatencyStats();
+
+        res.json({
+            success: true,
+            isReady: client.isReady(),
+            totalServers: client.guilds.cache.size,
+            uptime: client.uptime,
+
+            // МЕТРИКИ МОНИТОРИНГА
+            monitoring: {
+                responseTime: {
+                    value: monitorStats.responseTime,
+                    status: monitorStats.responseTime < 100 ? 'optimal' :
+                        monitorStats.responseTime < 500 ? 'normal' : 'slow',
+                    label: 'Response Time',
+                    unit: 'ms'
+                },
+                lastHeartbeat: {
+                    value: monitorStats.lastHeartbeat || 'Never',
+                    status: monitorStats.lastHeartbeat ?
+                        (monitorStats.lastHeartbeat.includes('seconds') ? 'optimal' : 'warning') :
+                        'warning',
+                },
+                apiLatency: {
+                    value: apiLatency.current,
+                    status: apiLatency.current < 100 ? 'optimal' :
+                        apiLatency.current < 300 ? 'normal' : 'high',
+                    label: 'API Latency',
+                    unit: 'ms',
+                    details: {
+                        average: apiLatency.average,
+                        min: apiLatency.min,
+                        max: apiLatency.max
+                    }
+                },
+                overallHealth: monitorStats.overallHealth,
+                guilds: client.guilds.cache.size,
+                commandsTracked: monitorStats.commands
+            },
+
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('❌ Bot monitoring error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Monitoring not available: ' + error.message,
+            isReady: false
+        });
+    }
+});
+
+// Эндпоинт для детальной статистики бота
+app.get('/api/bot/detailed-stats', async (req, res) => {
+    try {
+        const client = getClient();
+
+        if (!global.botMonitor) {
+            return res.status(503).json({ error: "Bot monitor not initialized" });
+        }
+
+        const stats = global.botMonitor.getComprehensiveStats();
+
+        res.json({
+            success: true,
+            data: {
+                performance: {
+                    responseTime: stats.responseTime,
+                    apiLatency: stats.apiLatency,
+                    lastHeartbeat: stats.lastHeartbeat,
+                    uptime: stats.uptime,
+                    healthStatus: stats.overallHealth
+                },
+                usage: {
+                    guilds: stats.guilds,
+                    commandsTracked: stats.commands,
+                    totalUsers: client.guilds.cache.reduce((sum, guild) => sum + guild.memberCount, 0)
+                },
+                system: {
+                    nodeVersion: process.version,
+                    memory: process.memoryUsage(),
+                    uptime: process.uptime()
+                }
+            },
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Запуск API сервера
 function startAPI() {
     server.listen(PORT, () => {

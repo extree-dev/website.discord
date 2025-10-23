@@ -16,6 +16,8 @@ module.exports = {
         .setRequired(true)),
 
   async execute(interaction) {
+    const startTime = Date.now(); // ← Начало измерения
+
     try {
       const targetUser = interaction.options.getUser('user');
       const reason = interaction.options.getString('reason');
@@ -45,6 +47,8 @@ module.exports = {
         }]
       });
 
+      const responseTime = Date.now() - startTime; // ← Конец измерения
+
       // Сохраняем в базу через Prisma
       await prisma.commandStats.create({
         data: {
@@ -52,10 +56,21 @@ module.exports = {
           guildId: interaction.guild.id,
           userId: targetUser.id,
           success: true,
-          executionTime: 0,
+          executionTime: responseTime, // ← Реальное время
           timestamp: new Date()
         }
       });
+
+      // Также сохраняем в трекер памяти
+      if (global.commandTracker) {
+        global.commandTracker.recordCommand(
+          'report',
+          true,
+          responseTime,
+          interaction.guild.id,
+          targetUser.id
+        );
+      }
 
       await interaction.reply({
         content: '✅ Ваша жалоба отправлена модераторам',
@@ -63,6 +78,7 @@ module.exports = {
       });
 
     } catch (error) {
+      const responseTime = Date.now() - startTime;
       console.error('Error in report command:', error);
 
       // Сохраняем ошибку в базу
@@ -72,7 +88,7 @@ module.exports = {
           guildId: interaction.guild.id,
           userId: interaction.user.id,
           success: false,
-          executionTime: 0,
+          executionTime: responseTime,
           error: error.message,
           timestamp: new Date()
         }

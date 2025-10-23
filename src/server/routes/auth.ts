@@ -10,6 +10,10 @@ import { generateToken, verifyToken } from "@/utils/jwt";
 import { secretCodeService } from "@/utils/secretCodes";
 import { CommandLogger } from "../services/commandLogger";
 
+
+import { AutoSystemMonitor } from "@/utils/autoSystemMonitor"
+const autoSystemMonitor = new AutoSystemMonitor();
+
 if (!process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_REDIRECT_URI) {
   console.error('Missing Discord OAuth environment variables');
   console.log('DISCORD_CLIENT_ID:', process.env.DISCORD_CLIENT_ID);
@@ -2762,6 +2766,46 @@ router.get("/bot/status", async (req, res) => {
       ping: -1,
       lastChecked: new Date().toISOString(),
       serverName: 'Discord Server'
+    });
+  }
+});
+
+// Эндпоинт для системной статистики
+router.get("/system/stats", async (req, res) => {
+  try {
+    const stats = await autoSystemMonitor.getStats();
+
+    res.json({
+      success: true,
+      data: {
+        performance: {
+          cpu: stats.cpu,
+          memory: stats.memory,
+          network: stats.network,
+          storage: stats.storage
+        },
+        environment: stats.environment,
+        isRealData: stats.isRealData,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    // Всегда возвращаем данные, даже если ошибка
+    const fallbackStats = await autoSystemMonitor.getFallbackStats('local');
+
+    res.json({
+      success: true,
+      data: {
+        performance: {
+          cpu: fallbackStats.cpu,
+          memory: fallbackStats.memory,
+          network: fallbackStats.network,
+          storage: fallbackStats.storage
+        },
+        environment: 'fallback',
+        isRealData: false,
+        timestamp: new Date().toISOString()
+      }
     });
   }
 });

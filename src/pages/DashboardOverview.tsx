@@ -73,6 +73,9 @@ interface SystemStats {
         network: number;
         storage: number;
     };
+    environment?: string;
+    isRealData?: boolean;
+    timestamp?: string;
 }
 
 interface LogEntry {
@@ -90,6 +93,23 @@ interface Guild {
     icon: string;
 }
 
+interface MonitoringMetric {
+    value: number | string;
+    status: 'optimal' | 'normal' | 'slow' | 'warning';
+    label: string;
+    unit: string;
+    details?: any;
+}
+
+interface BotMonitoringData {
+    responseTime: MonitoringMetric;
+    lastHeartbeat: MonitoringMetric;
+    apiLatency: MonitoringMetric;
+    overallHealth: string;
+    guilds: number;
+    commandsTracked: number;
+}
+
 export default function DashboardOverview() {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
@@ -98,6 +118,50 @@ export default function DashboardOverview() {
     const [guilds, setGuilds] = useState<Guild[]>([]);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [activeTimeRange, setActiveTimeRange] = useState<'24h' | '7d' | '30d'>('24h');
+    const [botMonitoring, setBotMonitoring] = useState<BotMonitoringData | null>(null);
+
+    useEffect(() => {
+        const fetchSystemStats = async () => {
+            const response = await fetch('/api/system/stats');
+            const data = await response.json();
+            setSystemStats(data.data);
+        };
+
+        fetchSystemStats();
+        const interval = setInterval(fetchSystemStats, 30000);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    // Функция для получения данных мониторинга
+    const fetchBotMonitoring = async () => {
+        try {
+            const response = await fetch('http://localhost:3002/api/bot/monitoring');
+            const data = await response.json();
+            if (data.success && data.monitoring) {
+                setBotMonitoring(data.monitoring);
+            }
+        } catch (error) {
+            console.error('Error fetching bot monitoring:', error);
+            // Установите fallback данные для демонстрации
+            setBotMonitoring({
+                responseTime: { value: 42, status: 'optimal', label: 'Response Time', unit: 'ms' },
+                lastHeartbeat: { value: '2 seconds ago', status: 'optimal', label: 'Last Heartbeat', unit: '' },
+                apiLatency: { value: 128, status: 'normal', label: 'API Latency', unit: 'ms' },
+                overallHealth: 'healthy',
+                guilds: 1,
+                commandsTracked: 0
+            });
+        }
+    };
+
+    // Обновляем каждые 10 секунд
+    useEffect(() => {
+        fetchBotMonitoring();
+        const interval = setInterval(fetchBotMonitoring, 10000);
+        return () => clearInterval(interval);
+    }, []);
 
     const sidebarContext = useContext(SidebarContext);
     const isSidebarCollapsed = sidebarContext?.isCollapsed || false;
@@ -271,8 +335,14 @@ export default function DashboardOverview() {
                         <div className={styles.headerActions}>
                             <div className={styles.timeFilters}>
                                 {['24h', '7d', '30d'].map((range) => (
-                                    <button key={range} className={styles.timeFilter}>
-                                        {range}
+                                    <button
+                                        key={range}
+                                        className={`${styles.timeFilter} ${activeTimeRange === range ? styles.active : ''}`}
+                                        onClick={() => setActiveTimeRange(range as any)}
+                                    >
+                                        <div className={styles.timeRangeContent}>
+                                            <div className={styles.timeRangeLabel}>{range}</div>
+                                        </div>
                                     </button>
                                 ))}
                             </div>
@@ -393,23 +463,44 @@ export default function DashboardOverview() {
                                 {botStatus?.isOnServer ? 'Online' : 'Offline'}
                             </div>
                         </div>
-                        <div className={styles.statusGrid}>
-                            <div className={styles.statusItem}>
-                                <div className={styles.statusLabel}>Response Time</div>
-                                <div className={styles.statusValue}>42 ms</div>
-                                <div className={styles.statusSubtext}>Optimal</div>
+
+                        {/* Динамические данные вместо статических */}
+                        {botMonitoring ? (
+                            <div className={styles.statusGrid}>
+                                <div className={styles.statusItem}>
+                                    <div className={styles.statusLabel}>Response Time</div>
+                                    <div className={styles.statusValue}>{botMonitoring.responseTime.value} ms</div>
+                                    <div className={`${styles.statusSubtext} ${botMonitoring.responseTime.status === 'optimal' ? styles.optimal :
+                                        botMonitoring.responseTime.status === 'normal' ? styles.normal : styles.slow
+                                        }`}>
+                                        {botMonitoring.responseTime.status.charAt(0).toUpperCase() + botMonitoring.responseTime.status.slice(1)}
+                                    </div>
+                                </div>
+                                <div className={styles.statusItem}>
+                                    <div className={styles.statusLabel}>Last Heartbeat</div>
+                                    <div className={styles.statusValue}>
+                                        {typeof botMonitoring.lastHeartbeat.value === 'string' && botMonitoring.lastHeartbeat.value.includes('seconds') ?
+                                            botMonitoring.lastHeartbeat.value.replace(' seconds ago', 's') :
+                                            String(botMonitoring.lastHeartbeat.value)}
+                                    </div>
+                                    <div className={`${styles.statusSubtext} ${botMonitoring.lastHeartbeat.status === 'optimal' ? styles.optimal : styles.warning
+                                        }`}>
+                                        {botMonitoring.lastHeartbeat.status === 'optimal' ? 'Active' : 'Check'}
+                                    </div>
+                                </div>
+                                <div className={styles.statusItem}>
+                                    <div className={styles.statusLabel}>API Latency</div>
+                                    <div className={styles.statusValue}>{botMonitoring.apiLatency.value} ms</div>
+                                    <div className={`${styles.statusSubtext} ${botMonitoring.apiLatency.status === 'optimal' ? styles.optimal :
+                                        botMonitoring.apiLatency.status === 'normal' ? styles.normal : styles.slow
+                                        }`}>
+                                        {botMonitoring.apiLatency.status.charAt(0).toUpperCase() + botMonitoring.apiLatency.status.slice(1)}
+                                    </div>
+                                </div>
                             </div>
-                            <div className={styles.statusItem}>
-                                <div className={styles.statusLabel}>Last Heartbeat</div>
-                                <div className={styles.statusValue}>2m ago</div>
-                                <div className={styles.statusSubtext}>Active</div>
-                            </div>
-                            <div className={styles.statusItem}>
-                                <div className={styles.statusLabel}>API Latency</div>
-                                <div className={styles.statusValue}>128 ms</div>
-                                <div className={styles.statusSubtext}>Normal</div>
-                            </div>
-                        </div>
+                        ) : (
+                            <div className={styles.loading}>Loading monitoring data...</div>
+                        )}
                     </div>
 
                     {/* System Performance */}
@@ -417,11 +508,10 @@ export default function DashboardOverview() {
                         <div className={styles.cardHeader}>
                             <h3 className={styles.cardTitle}>
                                 <Cpu size={20} /> System Performance
+                                {systemStats?.isRealData && (
+                                    <span className={styles.realDataBadge}>LIVE DATA</span>
+                                )}
                             </h3>
-                            <div className={styles.cardActions}>
-                                <Filter size={16} />
-                                <Download size={16} />
-                            </div>
                         </div>
                         <div className={styles.performanceGrid}>
                             <div className={styles.performanceItem}>

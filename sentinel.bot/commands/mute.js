@@ -1,6 +1,9 @@
 const { SlashCommandBuilder } = require('discord.js');
+const { PrismaClient } = require('@prisma/client');
 const config = require('../utils/config');
 const logger = require('../utils/logger');
+
+const prisma = new PrismaClient();
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -19,30 +22,83 @@ module.exports = {
         .setDescription('Причина мута')),
 
   async execute(interaction) {
-    const targetUser = interaction.options.getUser('user');
-    const duration = interaction.options.getInteger('duration');
-    const reason = interaction.options.getString('reason') || 'Не указана';
-
-    // Проверка прав
-    if (!interaction.member.permissions.has('MODERATE_MEMBERS')) {
-      return interaction.reply({
-        content: '❌ У вас нет прав для использования этой команды!',
-        ephemeral: true
-      });
-    }
-
-    const muteRole = interaction.guild.roles.cache.get(config.moderation.muteRoleId);
-    if (!muteRole) {
-      return interaction.reply({
-        content: '❌ Роль для мута не найдена!',
-        ephemeral: true
-      });
-    }
+    const startTime = Date.now(); // ← Начало измерения
 
     try {
-      const member = await interaction.guild.members.fetch(targetUser.id);
+      const targetUser = interaction.options.getUser('user');
+      const duration = interaction.options.getInteger('duration');
+      const reason = interaction.options.getString('reason') || 'Не указана';
 
+      // Проверка прав
+      if (!interaction.member.permissions.has('MODERATE_MEMBERS')) {
+        const responseTime = Date.now() - startTime;
+        // Сохраняем попытку без прав
+        await prisma.commandStats.create({
+          data: {
+            command: 'mute',
+            guildId: interaction.guild.id,
+            userId: interaction.user.id,
+            success: false,
+            executionTime: responseTime,
+            error: 'Insufficient permissions',
+            timestamp: new Date()
+          }
+        });
+
+        return interaction.reply({
+          content: '❌ У вас нет прав для использования этой команды!',
+          ephemeral: true
+        });
+      }
+
+      const muteRole = interaction.guild.roles.cache.get(config.moderation.muteRoleId);
+      if (!muteRole) {
+        const responseTime = Date.now() - startTime;
+        await prisma.commandStats.create({
+          data: {
+            command: 'mute',
+            guildId: interaction.guild.id,
+            userId: interaction.user.id,
+            success: false,
+            executionTime: responseTime,
+            error: 'Mute role not found',
+            timestamp: new Date()
+          }
+        });
+
+        return interaction.reply({
+          content: '❌ Роль для мута не найдена!',
+          ephemeral: true
+        });
+      }
+
+      const member = await interaction.guild.members.fetch(targetUser.id);
       await member.roles.add(muteRole, `Мут на ${duration} минут. Причина: ${reason}`);
+
+      const responseTime = Date.now() - startTime; // ← Конец измерения
+
+      // Сохраняем успешное выполнение
+      await prisma.commandStats.create({
+        data: {
+          command: 'mute',
+          guildId: interaction.guild.id,
+          userId: targetUser.id,
+          success: true,
+          executionTime: responseTime,
+          timestamp: new Date()
+        }
+      });
+
+      // Также сохраняем в трекер памяти
+      if (global.commandTracker) {
+        global.commandTracker.recordCommand(
+          'mute',
+          true,
+          responseTime,
+          interaction.guild.id,
+          targetUser.id
+        );
+      }
 
       await interaction.reply({
         content: `🔇 ${targetUser.tag} был замучен на ${duration} минут. Причина: ${reason}`,
@@ -63,8 +119,23 @@ module.exports = {
       }, duration * 60 * 1000);
 
     } catch (error) {
+      const responseTime = Date.now() - startTime;
       logger.error(`Ошибка при выдаче мута: ${error}`);
-      throw error; // Пробрасываем ошибку для трекинга
+
+      // Сохраняем ошибку
+      await prisma.commandStats.create({
+        data: {
+          command: 'mute',
+          guildId: interaction.guild.id,
+          userId: interaction.user.id,
+          success: false,
+          executionTime: responseTime,
+          error: error.message,
+          timestamp: new Date()
+        }
+      });
+
+      throw error;
     }
   }
 };

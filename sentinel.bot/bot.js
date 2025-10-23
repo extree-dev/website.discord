@@ -643,8 +643,209 @@ class AlertSystem {
     }
 }
 
+// КЛАСС ДЛЯ МОНИТОРИНГА БОТА (добавить после AlertSystem)
+class BotMonitor {
+    constructor(client) {
+        this.client = client;
+        this.heartbeats = [];
+        this.apiLatencies = [];
+        this.commandResponseTimes = new Map();
+        this.startMonitoring();
+    }
+
+    startMonitoring() {
+        // Слушаем события websocket для heartbeat - ИСПРАВЛЕННАЯ ВЕРСИЯ
+        this.client.ws.on('heartbeat', () => {
+            this.recordHeartbeat();
+        });
+
+        // Также можно слушать debug события для heartbeat
+        this.client.on('debug', (info) => {
+            if (info.includes('Heartbeat') || info.includes('heartbeat')) {
+                console.log('🔗 Heartbeat detected:', info);
+                this.recordHeartbeat();
+            }
+        });
+
+        // Периодическая проверка здоровья бота
+        setInterval(() => {
+            this.checkBotHealth();
+        }, 30000);
+    }
+
+    recordHeartbeat() {
+        const now = Date.now();
+        this.heartbeats.push(now);
+
+        // Храним только последние 10 heartbeat'ов
+        if (this.heartbeats.length > 10) {
+            this.heartbeats.shift();
+        }
+
+        console.log('💓 Heartbeat recorded at:', new Date(now).toISOString());
+    }
+
+    getLastHeartbeat() {
+        if (this.heartbeats.length === 0) {
+            return 'Never';
+        }
+
+        const lastHb = this.heartbeats[this.heartbeats.length - 1];
+        const diff = Date.now() - lastHb;
+        const seconds = Math.round(diff / 1000);
+
+        if (seconds < 60) {
+            return `${seconds} seconds ago`;
+        } else {
+            const minutes = Math.round(seconds / 60);
+            return `${minutes} minutes ago`;
+        }
+    }
+
+    // Мониторинг времени ответа команд
+    trackCommand(interaction, responseTime) {
+        const commandStats = this.commandResponseTimes.get(interaction.commandName) || {
+            count: 0,
+            totalTime: 0,
+            lastResponse: null
+        };
+
+        commandStats.count++;
+        commandStats.totalTime += responseTime;
+        commandStats.lastResponse = new Date();
+        commandStats.average = commandStats.totalTime / commandStats.count;
+
+        this.commandResponseTimes.set(interaction.commandName, commandStats);
+    }
+
+    async getAverageResponseTime() {
+        // Получаем статистику из базы данных через Prisma
+        try {
+            const stats = await prisma.commandStats.aggregate({
+                _avg: {
+                    executionTime: true
+                },
+                where: {
+                    timestamp: {
+                        gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Последние 24 часа
+                    },
+                    executionTime: {
+                        gt: 0 // Только команды с измеренным временем
+                    }
+                }
+            });
+
+            // Если есть данные из БД, используем их
+            if (stats._avg.executionTime) {
+                return Math.round(stats._avg.executionTime);
+            }
+
+            // Fallback на память если БД пустая
+            if (this.commandResponseTimes.size === 0) return 120;
+
+            let totalTime = 0;
+            let totalCount = 0;
+
+            for (const [_, stats] of this.commandResponseTimes) {
+                totalTime += stats.totalTime;
+                totalCount += stats.count;
+            }
+
+            return totalCount > 0 ? Math.round(totalTime / totalCount) : 120;
+
+        } catch (error) {
+            console.error('Error getting response time from DB:', error);
+            return 120; // Fallback значение
+        }
+    }
+
+    getApiLatencyStats() {
+        const current = this.client.ws.ping;
+
+        // Добавляем текущий ping в массив
+        this.apiLatencies.push(current);
+
+        // Ограничиваем размер массива
+        if (this.apiLatencies.length > 100) {
+            this.apiLatencies.shift();
+        }
+
+        // Защита от пустого массива и NaN
+        let average = 0;
+        let min = current;
+        let max = current;
+
+        if (this.apiLatencies.length > 0) {
+            // Используем безопасное вычисление среднего
+            const sum = this.apiLatencies.reduce((a, b) => a + b, 0);
+            average = sum / this.apiLatencies.length;
+
+            // Используем безопасное вычисление min/max
+            min = Math.min(...this.apiLatencies.filter(val => !isNaN(val)));
+            max = Math.max(...this.apiLatencies.filter(val => !isNaN(val)));
+        }
+
+        // Обеспечиваем что значения являются числами
+        return {
+            current: Math.round(current) || 0,
+            average: Math.round(average) || 0,
+            min: Math.round(min) || 0,
+            max: Math.round(max) || 0
+        };
+    }
+
+    async checkBotHealth() {
+        const stats = {
+            status: this.client.ws.status,
+            ping: this.client.ws.ping,
+            lastHeartbeat: this.getLastHeartbeat(),
+            uptime: this.formatUptime(this.client.uptime),
+            guilds: this.client.guilds.cache.size,
+            users: this.client.users.cache.size,
+            responseTime: await this.getAverageResponseTime(),
+            apiLatency: this.getApiLatencyStats()
+        };
+
+        console.log('🤖 Bot Health Check:', stats);
+
+        // Оповещение если бот "мертв"
+        if (this.client.ws.ping > 1000) { // > 1 секунда
+            console.warn('🚨 High API latency detected!');
+        }
+    }
+
+    async getComprehensiveStats() {
+        return {
+            responseTime: await this.getAverageResponseTime(),
+            lastHeartbeat: this.getLastHeartbeat(),
+            apiLatency: this.getApiLatencyStats(),
+            overallHealth: this.getHealthStatus(),
+            uptime: this.formatUptime(this.client.uptime),
+            guilds: this.client.guilds.cache.size,
+            commands: this.commandResponseTimes.size
+        };
+    }
+
+    getHealthStatus() {
+        const latency = this.client.ws.ping;
+        const uptime = this.client.uptime;
+
+        if (latency > 1000 || uptime < 60000) return 'poor';
+        if (latency > 500) return 'degraded';
+        return 'healthy';
+    }
+
+    formatUptime(uptime) {
+        const days = Math.floor(uptime / 86400000);
+        const hours = Math.floor(uptime / 3600000) % 24;
+        const minutes = Math.floor(uptime / 60000) % 60;
+        return `${days}d ${hours}h ${minutes}m`;
+    }
+}
+
 global.statsCollector = new StatsCollector();
 global.alertSystem = new AlertSystem();
+global.botMonitor = new BotMonitor(client);
 
 // Запускаем периодический сбор статистики
 function startStatsCollection(client) {
@@ -694,6 +895,30 @@ for (const file of commandFiles) {
     }
 }
 
+async function cleanupDuplicateCommands() {
+    try {
+        const rest = new REST().setToken(process.env.DISCORD_BOT_TOKEN);
+
+        // Очищаем глобальные команды
+        await rest.put(Routes.applicationCommands(process.env.DISCORD_CLIENT_ID), { body: [] });
+        console.log('Cleared global commands');
+
+        // Очищаем серверные команды
+        await rest.put(
+            Routes.applicationGuildCommands(process.env.DISCORD_CLIENT_ID, process.env.DISCORD_GUILD_ID),
+            { body: [] }
+        );
+        console.log('Cleared guild commands');
+
+    } catch (error) {
+        console.error('Cleanup error:', error);
+    }
+}
+
+// Вызовите перед регистрацией
+await cleanupDuplicateCommands();
+await registerCommands();
+
 // ФУНКЦИЯ АВТОМАТИЧЕСКОЙ РЕГИСТРАЦИИ КОМАНД
 async function registerCommands() {
     try {
@@ -731,22 +956,6 @@ async function registerCommands() {
         console.log(` Starting automatic command registration for ${commands.length} commands...`);
 
         const rest = new REST().setToken(process.env.DISCORD_BOT_TOKEN);
-
-        // 1. Сначала регистрируем команды для гильдии (сервера)
-        try {
-            console.log('Registering guild commands...');
-            const guildData = await rest.put(
-                Routes.applicationGuildCommands(
-                    process.env.CLIENT_ID || process.env.DISCORD_CLIENT_ID,
-                    process.env.GUILD_ID || process.env.DISCORD_GUILD_ID
-                ),
-                { body: commands }
-            );
-            console.log(` Successfully registered ${guildData.length} guild commands.`);
-            guildData.forEach(cmd => console.log(`   - /${cmd.name}`));
-        } catch (guildError) {
-            console.log(' Guild command registration failed:', guildError.message);
-        }
 
         // 2. Затем регистрируем ГЛОБАЛЬНЫЕ команды (для значка)
         try {

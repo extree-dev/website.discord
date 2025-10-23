@@ -457,7 +457,7 @@ const Dashboard: React.FC = () => {
   const loadCommandStats = async (token: string) => {
     try {
       setLoadingCommands(true);
-      const API_BASE = 'http://localhost:4000/api';
+      const API_BASE = 'http://localhost:3002/api';
       const response = await fetch(`${API_BASE}/discord/command-stats?period=${activeTimeRange}&filter=${commandFilter}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -558,9 +558,10 @@ const Dashboard: React.FC = () => {
         return;
       }
 
-      const API_BASE = 'http://localhost:4000/api';
+      // Используем правильные URL для бот-сервера
+      const BOT_API_BASE = 'http://localhost:3002';
 
-      const botResponse = await fetch(`${API_BASE}/discord/bot-status`, {
+      const botResponse = await fetch(`${BOT_API_BASE}/api/discord/bot-status`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -572,25 +573,26 @@ const Dashboard: React.FC = () => {
         setBotStatus(botData);
 
         if (botData.isOnServer) {
-          // Сначала загружаем основные данные
-          const statsResponse = await fetch(`${API_BASE}/discord/server-stats`, {
+          // Загружаем статистику сервера
+          const statsResponse = await fetch(`${BOT_API_BASE}/api/discord/server-stats`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
+
           if (statsResponse.ok) {
             const statsData = await statsResponse.json();
             setServerStats(statsData);
           }
 
-          // Затем загружаем остальные данные
+          // Загружаем остальные данные
           await Promise.all([
-            loadModeratorStats(token),
             loadAuditLog(token),
             loadRealTimeStats(token)
           ]);
 
-          // И только после этого загружаем алерты
           loadAlerts(token);
         }
+      } else {
+        console.error('❌ Failed to fetch bot status:', botResponse.status);
       }
 
     } catch (error) {
@@ -604,7 +606,7 @@ const Dashboard: React.FC = () => {
   const loadAuditLog = async (token: string) => {
     try {
       setRefreshingAudit(true);
-      const API_BASE = 'http://localhost:4000/api';
+      const API_BASE = 'http://localhost:3002';
 
       // Добавь параметр времени в запрос
       const response = await fetch(`${API_BASE}/discord/audit-logs?limit=50&timeRange=${activeTimeRange}`, {
@@ -644,7 +646,7 @@ const Dashboard: React.FC = () => {
       return;
     }
     try {
-      const API_BASE = 'http://localhost:4000/api';
+      const API_BASE = 'http://localhost:3002/api';
       const response = await fetch(`${API_BASE}/discord/moderator-stats`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -734,7 +736,7 @@ const Dashboard: React.FC = () => {
 
   const loadMemberHistory = async (token: string) => {
     try {
-      const API_BASE = 'http://localhost:4000/api';
+      const API_BASE = 'http://localhost:3002/api';
       const response = await fetch(`${API_BASE}/discord/member-history`, {
         headers: {
           'Authorization': `Bearer ${token}`,

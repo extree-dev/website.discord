@@ -603,13 +603,14 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // В Dashboard.tsx измените loadAuditLog функцию:
   const loadAuditLog = async (token: string) => {
     try {
       setRefreshingAudit(true);
       const API_BASE = 'http://localhost:3002';
 
-      // Добавь параметр времени в запрос
-      const response = await fetch(`${API_BASE}/discord/audit-logs?limit=50&timeRange=${activeTimeRange}`, {
+      // ИСПРАВЛЕННЫЙ URL - добавляем /api
+      const response = await fetch(`${API_BASE}/api/discord/audit-logs?limit=50&timeRange=${activeTimeRange}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -629,15 +630,59 @@ const Dashboard: React.FC = () => {
         setNextRefreshTime(new Date(new Date().getTime() + 60 * 60 * 1000));
         console.log('✅ Audit log loaded with', auditData.recentActivities?.length || 0, 'activities');
       } else {
-        console.log('❌ Audit log failed');
-        setRecentActivities([]);
+        console.log('❌ Audit log failed with status:', response.status);
+        // Временно используем моковые данные
+        setRecentActivities(getMockAuditData());
       }
     } catch (error) {
       console.error('Error loading audit log:', error);
-      setRecentActivities([]);
+      // Временно используем моковые данные
+      setRecentActivities(getMockAuditData());
     } finally {
       setRefreshingAudit(false);
     }
+  };
+
+  // Добавьте временную функцию с моковыми данными
+  const getMockAuditData = (): Activity[] => {
+    return [
+      {
+        id: '1',
+        user: '123456789',
+        userName: 'ModeratorBot',
+        action: 'banned',
+        target: '987654321',
+        targetName: 'SpamUser123',
+        time: '2 hours ago',
+        status: 'success',
+        reason: 'Spam messages',
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        id: '2',
+        user: '123456789',
+        userName: 'AutoMod',
+        action: 'warned',
+        target: '555555555',
+        targetName: 'NewUser456',
+        time: '1 hour ago',
+        status: 'warning',
+        reason: 'Inappropriate language',
+        timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString()
+      },
+      {
+        id: '3',
+        user: '123456780',
+        userName: 'AdminUser',
+        action: 'muted',
+        target: '444444444',
+        targetName: 'NoisyUser789',
+        time: '30 minutes ago',
+        status: 'success',
+        reason: 'Channel spam',
+        timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString()
+      }
+    ];
   };
 
   const loadModeratorStats = async (token: string) => {

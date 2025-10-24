@@ -1,3 +1,4 @@
+"E:\website\website.discord\src\server\routes\auth\discord.controller.ts"
 import express from "express";
 import crypto from "crypto";
 import { DiscordService } from "./services/discord.service";
@@ -6,8 +7,6 @@ import { securityLogger } from "@/utils/securityLogger";
 import { verifyToken } from "@/utils/jwt";
 
 const router = express.Router();
-
-
 
 // Хранение состояний OAuth
 const oauthStates = new Map<string, { ip: string; timestamp: number }>();
@@ -78,6 +77,52 @@ router.get("/bot-status", async (req, res) => {
         res.status(500).json({
             error: "Failed to fetch bot status",
             details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+
+// АУДИТ-ЛОГИ - новый эндпоинт
+router.get("/audit-logs", async (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+        return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+        verifyToken(token);
+
+        const { limit = 50, timeRange = '24h' } = req.query;
+
+        // Запрос к боту на порту 3002 для получения аудит-логов
+        const botResponse = await fetch(`http://localhost:3002/discord/audit-logs?limit=${limit}&timeRange=${timeRange}`, {
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!botResponse.ok) {
+            // Если бот вернул ошибку, возвращаем пустые данные вместо ошибки
+            console.warn('Bot audit logs not available, returning empty data');
+            return res.json({
+                recentActivities: [],
+                total: 0,
+                source: 'fallback',
+                message: 'Audit logs temporarily unavailable'
+            });
+        }
+
+        const auditData = await botResponse.json();
+        res.json(auditData);
+
+    } catch (error) {
+        console.error('Audit logs fetch error:', error);
+        // В случае ошибки возвращаем пустые данные вместо 500 ошибки
+        res.json({
+            recentActivities: [],
+            total: 0,
+            source: 'fallback',
+            message: 'Failed to fetch audit logs'
         });
     }
 });
@@ -192,7 +237,5 @@ router.get("/server-roles", async (req, res) => {
         res.status(500).json({ error: "Failed to fetch server roles" });
     }
 });
-
-
 
 export default router;

@@ -619,7 +619,7 @@ const Dashboard: React.FC = () => {
 
       if (response.ok) {
         const auditData = await response.json();
-        console.log('🔍 DEBUG Audit data:', {
+        console.log('DEBUG Audit data:', {
           total: auditData.total,
           source: auditData.source,
           activitiesCount: auditData.recentActivities?.length

@@ -8,9 +8,9 @@ import 'module-alias/register';
 import { addAlias } from "module-alias";
 import { setupModerationRoutes } from './api/moderation.js'
 import { setupUserRoutes } from "./api/users.js";
+import discordController from "./routes/auth/discord.controller.js"; // ИСПРАВЛЕННЫЙ ПУТЬ
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-
 
 addAlias('@', __dirname);
 
@@ -72,14 +72,17 @@ app.use("/api/register", authLimiter);
 app.use(express.json());
 app.use("/admin", adminRoutes);
 
+// ДОБАВЬТЕ ЭТУ СТРОКУ - подключаем Discord контроллер напрямую
+app.use("/api/oauth", discordController);
+
 app.get("/api/debug", (req, res) => {
   res.json({
     message: "✅ Сервер работает!",
     timestamp: new Date().toISOString(),
     availableRoutes: [
-      "/api/discord/bot-status",
-      "/api/discord/server-stats",
-      "/api/oauth/discord"
+      "/api/oauth/discord",
+      "/api/oauth/discord/callback",
+      "/api/oauth/debug"
     ]
   });
 });
@@ -127,7 +130,6 @@ app.use((req, res, next) => {
   next();
 });
 
-
 app.use("/api", router);
 
 setupModerationRoutes(app)
@@ -135,4 +137,7 @@ setupUserRoutes(app)
 
 const PORT = 4000;
 app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🔗 Discord OAuth: http://localhost:${PORT}/api/oauth/discord`);
+  console.log(`🔄 Callback URL: http://localhost:${PORT}/api/oauth/discord/callback`);
 });

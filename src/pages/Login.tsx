@@ -94,24 +94,39 @@ export const Login: React.FC<LoginProps> = ({
   };
 
   const handleDiscordLogin = async () => {
-    if (isLocked) return; // Блокируем OAuth при локе
+    if (isLocked) return;
 
     setIsDiscordLoading(true);
     setOauthError("");
 
     try {
+      // ИСПРАВЛЕННЫЙ ПУТЬ - используем /api/oauth/discord
       const response = await fetch("http://localhost:4000/api/oauth/discord");
+
+      // Проверяем статус ответа
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Invalid response:', text);
+        throw new Error('Server returned invalid response type');
+      }
+
       const data = await response.json();
 
-      if (!response.ok) {
+      if (!data.success) {
         throw new Error(data.error || "Failed to initiate Discord login");
       }
 
+      console.log('🔗 Redirecting to Discord OAuth:', data.authUrl);
       window.location.href = data.authUrl;
 
     } catch (error) {
-      console.error('Discord OAuth error:', error);
-      setOauthError(error instanceof Error ? error.message : "Discord login failed");
+      console.error('❌ Discord OAuth error:', error);
+      setOauthError(error instanceof Error ? error.message : "Discord authentication service is currently unavailable");
     } finally {
       setIsDiscordLoading(false);
     }

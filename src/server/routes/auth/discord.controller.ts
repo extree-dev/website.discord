@@ -1,4 +1,3 @@
-"E:\website\website.discord\src\server\routes\auth\discord.controller.ts"
 import express from "express";
 import crypto from "crypto";
 import { DiscordService } from "./services/discord.service";
@@ -21,30 +20,123 @@ setInterval(() => {
     }
 }, 5 * 60 * 1000);
 
+console.log('🔧 Discord OAuth Configuration:');
+console.log('- CLIENT_ID:', process.env.DISCORD_CLIENT_ID ? '✓ Set' : '✗ Missing');
+console.log('- REDIRECT_URI:', process.env.DISCORD_REDIRECT_URI);
+console.log('- FRONTEND_URL:', process.env.FRONTEND_URL);
+
 // Инициация OAuth
-router.get("/oauth/discord", (req, res) => {
+router.get("/discord", (req, res) => {
+    try {
+        const clientIP = getClientIP(req);
+        const state = crypto.randomBytes(32).toString('hex');
+
+        // ИСПОЛЬЗУЕМ REDIRECT_URI ИЗ .env
+        const REDIRECT_URI = process.env.DISCORD_REDIRECT_URI || "http://localhost:4000/api/oauth/discord/callback";
+
+        if (!process.env.DISCORD_CLIENT_ID) {
+            throw new Error('DISCORD_CLIENT_ID is not configured');
+        }
+
+        oauthStates.set(state, {
+            ip: clientIP,
+            timestamp: Date.now()
+        });
+
+        const discordParams = new URLSearchParams({
+            client_id: process.env.DISCORD_CLIENT_ID,
+            redirect_uri: REDIRECT_URI,
+            response_type: 'code',
+            scope: 'identify email',
+            state: state,
+        });
+
+        const authUrl = `https://discord.com/api/oauth2/authorize?${discordParams.toString()}`;
+
+        console.log('🎯 OAuth Initiated:');
+        console.log('   Redirect URI:', REDIRECT_URI);
+        console.log('   Client IP:', clientIP);
+
+        res.json({
+            success: true,
+            authUrl: authUrl,
+            state: state
+        });
+
+    } catch (error) {
+        console.error('❌ OAuth initiation error:', error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to initialize OAuth",
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+
+// Callback OAuth
+router.get("/discord/callback", async (req, res) => {
+    const { code, state } = req.query;
     const clientIP = getClientIP(req);
-    const state = crypto.randomBytes(32).toString('hex');
 
-    oauthStates.set(state, {
-        ip: clientIP,
-        timestamp: Date.now()
-    });
+    console.log('🔄 OAuth Callback Received:');
+    console.log('   Code:', code ? '✓ Present' : '✗ Missing');
+    console.log('   State:', state);
+    console.log('   Client IP:', clientIP);
 
-    const discordParams = new URLSearchParams({
-        client_id: process.env.DISCORD_CLIENT_ID!,
-        redirect_uri: process.env.DISCORD_REDIRECT_URI!,
-        response_type: 'code',
-        scope: 'identify email',
-        state: state,
-    });
+    if (!code || typeof code !== 'string') {
+        securityLogger.logSuspiciousActivity('oauth_missing_code', { ip: clientIP, state });
+        return res.redirect(`${process.env.FRONTEND_URL}/login?error=invalid_oauth_request`);
+    }
 
-    const authUrl = `https://discord.com/api/oauth2/authorize?${discordParams.toString()}`;
+    const stateData = oauthStates.get(state as string);
+    if (!stateData) {
+        securityLogger.logSuspiciousActivity('oauth_invalid_state', { ip: clientIP, state });
+        return res.redirect(`${process.env.FRONTEND_URL}/login?error=invalid_state`);
+    }
 
+    oauthStates.delete(state as string);
+
+    try {
+        const result = await DiscordService.handleOAuthCallback(code, clientIP);
+
+        const redirectPath = result.requiresCompletion ? '/complete-profile' : '/dashboard';
+        const redirectUrl = new URL(`${process.env.FRONTEND_URL}${redirectPath}`);
+
+        redirectUrl.searchParams.set('token', result.token);
+        redirectUrl.searchParams.set('userId', result.userId.toString());
+        redirectUrl.searchParams.set('method', 'discord');
+        redirectUrl.searchParams.set('requiresCompletion', result.requiresCompletion.toString());
+
+        console.log('✅ OAuth Success, redirecting to:', redirectUrl.toString());
+
+        return res.redirect(redirectUrl.toString());
+
+    } catch (error) {
+        console.error('❌ Discord OAuth callback error:', error);
+        securityLogger.logError('oauth_discord_callback_error', {
+            error: (error as Error).message,
+            ip: clientIP
+        });
+        return res.redirect(`${process.env.FRONTEND_URL}/login?error=oauth_failed`);
+    }
+});
+
+// Debug endpoint для проверки подключения
+router.get("/debug", (req, res) => {
     res.json({
-        success: true,
-        authUrl: authUrl,
-        state: state
+        message: "✅ Discord OAuth controller is working!",
+        availableEndpoints: [
+            "GET /api/oauth/discord",
+            "GET /api/oauth/discord/callback",
+            "GET /api/oauth/debug"
+        ],
+        env: {
+            hasClientId: !!process.env.DISCORD_CLIENT_ID,
+            hasRedirectUri: !!process.env.DISCORD_REDIRECT_URI,
+            frontendUrl: process.env.FRONTEND_URL,
+            redirectUri: process.env.DISCORD_REDIRECT_URI
+        },
+        timestamp: new Date().toISOString()
     });
 });
 
@@ -236,6 +328,26 @@ router.get("/server-roles", async (req, res) => {
         console.error('Server roles fetch error:', error);
         res.status(500).json({ error: "Failed to fetch server roles" });
     }
+});
+
+// Debug endpoint для проверки подключения
+router.get("/debug", (req, res) => {
+    res.json({
+        message: "Discord controller is working!",
+        availableEndpoints: [
+            "GET /oauth/discord",
+            "GET /oauth/discord/callback",
+            "GET /bot-status",
+            "GET /audit-logs",
+            "GET /server-stats",
+            "GET /server-roles"
+        ],
+        env: {
+            hasClientId: !!process.env.DISCORD_CLIENT_ID,
+            hasRedirectUri: !!process.env.DISCORD_REDIRECT_URI,
+            frontendUrl: process.env.FRONTEND_URL
+        }
+    });
 });
 
 export default router;

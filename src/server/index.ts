@@ -2,13 +2,12 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
-import router from "./routes/auth/index.js";
+import authRouter  from "./routes/auth/index.js";
 import adminRoutes from "./routes/admin.js";
 import 'module-alias/register';
 import { addAlias } from "module-alias";
 import { setupModerationRoutes } from './api/moderation.js'
 import { setupUserRoutes } from "./api/users.js";
-import discordController from "./routes/auth/discord.controller.js"; // ИСПРАВЛЕННЫЙ ПУТЬ
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 
@@ -49,11 +48,9 @@ app.use(helmet({
 }));
 
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 минут
-  max: 1000, // максимум 1000 запросов
-  message: {
-    error: "Too many requests from this IP"
-  },
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
+  message: { error: "Too many requests from this IP" },
   standardHeaders: true,
   legacyHeaders: false
 });
@@ -61,32 +58,38 @@ const globalLimiter = rateLimit({
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  message: {
-    error: "Too many authentication attempts"
-  }
+  message: { error: "Too many authentication attempts" }
 });
 
 app.use(globalLimiter);
 app.use("/api/login", authLimiter);
 app.use("/api/register", authLimiter);
 app.use(express.json());
+
+// ✅ ПОДКЛЮЧАЕМ ТОЛЬКО ГЛАВНЫЙ РОУТЕР
+app.use("/api", authRouter);
+
+// Другие роуты
 app.use("/admin", adminRoutes);
+setupModerationRoutes(app);
+setupUserRoutes(app);
 
-// ДОБАВЬТЕ ЭТУ СТРОКУ - подключаем Discord контроллер напрямую
-app.use("/api/oauth", discordController);
-
+// Debug endpoint
 app.get("/api/debug", (req, res) => {
   res.json({
     message: "✅ Сервер работает!",
     timestamp: new Date().toISOString(),
     availableRoutes: [
-      "/api/oauth/discord",
-      "/api/oauth/discord/callback",
-      "/api/oauth/debug"
+      "/api/auth/discord",
+      "/api/auth/discord/callback",
+      "/api/auth/system/stats",
+      "/api/auth/system/bot/status",
+      "/api/auth/system/bot/servers"
     ]
   });
 });
 
+// Security headers
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
@@ -97,6 +100,7 @@ app.use((req, res, next) => {
   next();
 });
 
+// Environment validation
 const requiredEnvVars = [
   'JWT_SECRET',
   'DISCORD_BOT_TOKEN',
@@ -112,32 +116,26 @@ requiredEnvVars.forEach(envVar => {
   }
 });
 
-// Проверяем длину JWT secret
 if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
   console.error('❌ JWT_SECRET must be at least 32 characters long');
   process.exit(1);
 }
 
+// Production redirect
 app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'production') {
     if (req.headers['x-forwarded-proto'] !== 'https') {
       return res.redirect(`https://${req.headers.host}${req.url}`);
     }
-
-    // HSTS header
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   }
   next();
 });
 
-app.use("/api", router);
-
-setupModerationRoutes(app)
-setupUserRoutes(app)
-
 const PORT = 4000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`🔗 Discord OAuth: http://localhost:${PORT}/api/oauth/discord`);
-  console.log(`🔄 Callback URL: http://localhost:${PORT}/api/oauth/discord/callback`);
+  console.log(`🔗 Discord OAuth: http://localhost:${PORT}/api/auth/discord`);
+  console.log(`🔄 Callback URL: http://localhost:${PORT}/api/auth/discord/callback`);
+  console.log(`📊 System API: http://localhost:${PORT}/api/auth/system/stats`);
 });

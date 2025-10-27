@@ -1,4 +1,4 @@
-// Login.tsx - ОБНОВЛЕННЫЙ С БЛОКИРОВКОЙ ПРИ ЛОКЕ
+// Login.tsx - ОБНОВЛЕННЫЙ С КОРОТКИМИ ПУТЯМИ
 
 import { useState, useEffect } from "react";
 import { FaDiscord } from "react-icons/fa";
@@ -50,7 +50,7 @@ export const Login: React.FC<LoginProps> = ({
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== "http://localhost:5173") return;
+      if (event.origin !== window.location.origin) return;
 
       console.log('Received message from OAuth popup:', event.data);
 
@@ -76,7 +76,7 @@ export const Login: React.FC<LoginProps> = ({
   }, [navigate]);
 
   const handleIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isLocked) return; // Блокируем ввод при локе
+    if (isLocked) return;
     setIdentifier(e.target.value);
     if (errors.identifier || formError) {
       setErrors(prev => ({ ...prev, identifier: undefined }));
@@ -85,7 +85,7 @@ export const Login: React.FC<LoginProps> = ({
   };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isLocked) return; // Блокируем ввод при локе
+    if (isLocked) return;
     setPassword(e.target.value);
     if (errors.password || formError) {
       setErrors(prev => ({ ...prev, password: undefined }));
@@ -100,8 +100,8 @@ export const Login: React.FC<LoginProps> = ({
     setOauthError("");
 
     try {
-      // ИСПРАВЛЕННЫЙ ПУТЬ - используем /api/oauth/discord
-      const response = await fetch("http://localhost:4000/api/oauth/discord");
+      // ✅ КОРОТКИЙ ПУТЬ - /api/auth/discord
+      const response = await fetch("/api/auth/discord");
 
       // Проверяем статус ответа
       if (!response.ok) {
@@ -134,7 +134,7 @@ export const Login: React.FC<LoginProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLocked) return; // Блокируем отправку формы при локе
+    if (isLocked) return;
 
     setErrors({});
     setFormError("");
@@ -157,7 +157,8 @@ export const Login: React.FC<LoginProps> = ({
     setIsLoading(true);
 
     try {
-      const res = await fetch("http://localhost:4000/api/login", {
+      // ✅ КОРОТКИЙ ПУТЬ - /api/login
+      const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier, password }),
@@ -232,7 +233,7 @@ export const Login: React.FC<LoginProps> = ({
                 onChange={handleIdentifierChange}
                 className={`${styles.formInput} ${errors.identifier ? styles.inputError : ''} ${isLocked ? styles.inputDisabled : ''}`}
                 placeholder="Enter your email or username"
-                disabled={isLoading || isDiscordLoading || isLocked} // Добавляем isLocked
+                disabled={isLoading || isDiscordLoading || isLocked}
               />
               {errors.identifier && (
                 <p className={styles.formError}>
@@ -251,13 +252,13 @@ export const Login: React.FC<LoginProps> = ({
                   onChange={handlePasswordChange}
                   className={`${styles.formInput} ${styles.passwordInput} ${errors.password ? styles.inputError : ''} ${isLocked ? styles.inputDisabled : ''}`}
                   placeholder="Enter your password"
-                  disabled={isLoading || isDiscordLoading || isLocked} // Добавляем isLocked
+                  disabled={isLoading || isDiscordLoading || isLocked}
                 />
                 <button
                   type="button"
                   className={styles.passwordToggle}
-                  onClick={() => !isLocked && setShowPassword(!showPassword)} // Блокируем переключение
-                  disabled={isLoading || isDiscordLoading || isLocked} // Добавляем isLocked
+                  onClick={() => !isLocked && setShowPassword(!showPassword)}
+                  disabled={isLoading || isDiscordLoading || isLocked}
                 >
                   {showPassword ? <MdVisibilityOff /> : <MdVisibility />}
                 </button>
@@ -279,7 +280,7 @@ export const Login: React.FC<LoginProps> = ({
             <button
               type="submit"
               className={`${styles.submitButton} ${isLocked ? styles.buttonDisabled : ''}`}
-              disabled={isLoading || isDiscordLoading || isLocked} // Добавляем isLocked
+              disabled={isLoading || isDiscordLoading || isLocked}
             >
               {isLoading ? (
                 <>
@@ -307,7 +308,7 @@ export const Login: React.FC<LoginProps> = ({
               type="button"
               onClick={handleDiscordLogin}
               className={`${styles.discordOauthBtn} ${isLocked ? styles.buttonDisabled : ''}`}
-              disabled={isLoading || isDiscordLoading || isLocked} // Добавляем isLocked
+              disabled={isLoading || isDiscordLoading || isLocked}
             >
               {isDiscordLoading ? (
                 <div className={styles.loadingSpinnerSmall}></div>
@@ -344,7 +345,7 @@ export const Login: React.FC<LoginProps> = ({
       {lockUntil && (
         <LockModal
           message={lockMessage}
-          lockUntil={lockUntil} // Добавляем пропс
+          lockUntil={lockUntil}
           onClose={() => setLockUntil(null)}
         />
       )}

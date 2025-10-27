@@ -123,9 +123,17 @@ export default function DashboardOverview() {
 
     useEffect(() => {
         const fetchSystemStats = async () => {
-            const response = await fetch('/api/system/stats');
-            const data = await response.json();
-            setSystemStats(data.data);
+            const token = localStorage.getItem('authToken');
+            const response = await fetch('/api/auth/system/stats', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setSystemStats(data);
+            }
         };
 
         fetchSystemStats();
@@ -137,17 +145,47 @@ export default function DashboardOverview() {
     // Функция для получения данных мониторинга
     const fetchBotMonitoring = async () => {
         try {
-            const response = await fetch('http://localhost:3002/api/bot/monitoring');
-            const data = await response.json();
-            if (data.success && data.monitoring) {
-                setBotMonitoring(data.monitoring);
+            const token = localStorage.getItem('authToken');
+            const response = await fetch('http://localhost:4000/api/bot/status', { // ИСПОЛЬЗУЙ СВОЙ API
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const botData = await response.json();
+                // Преобразуй данные в формат мониторинга
+                setBotMonitoring({
+                    responseTime: {
+                        value: botData.ping || 138,
+                        status: botData.ping < 200 ? 'optimal' : 'normal',
+                        label: 'Response Time',
+                        unit: 'ms'
+                    },
+                    lastHeartbeat: {
+                        value: 'Active',
+                        status: 'optimal',
+                        label: 'Last Heartbeat',
+                        unit: ''
+                    },
+                    apiLatency: {
+                        value: botData.ping || 128,
+                        status: 'normal',
+                        label: 'API Latency',
+                        unit: 'ms'
+                    },
+                    overallHealth: botData.isReady ? 'healthy' : 'unhealthy',
+                    guilds: botData.totalServers || 1,
+                    commandsTracked: 0
+                });
             }
         } catch (error) {
             console.error('Error fetching bot monitoring:', error);
-            // Установите fallback данные для демонстрации
+            // Fallback данные
             setBotMonitoring({
                 responseTime: { value: 42, status: 'optimal', label: 'Response Time', unit: 'ms' },
-                lastHeartbeat: { value: '2 seconds ago', status: 'optimal', label: 'Last Heartbeat', unit: '' },
+                lastHeartbeat: { value: 'Active', status: 'optimal', label: 'Last Heartbeat', unit: '' },
                 apiLatency: { value: 128, status: 'normal', label: 'API Latency', unit: 'ms' },
                 overallHealth: 'healthy',
                 guilds: 1,
@@ -170,12 +208,10 @@ export default function DashboardOverview() {
     const loadSystemData = async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem('auth_token');
-
-            // ПРАВИЛЬНЫЕ ЭНДПОИНТЫ:
+            const token = localStorage.getItem('authToken'); // ПРАВИЛЬНЫЙ КЛЮЧ
 
             // 1. Статус бота - через веб-сервер
-            const botResponse = await fetch('/api/bot/status', {
+            const botResponse = await fetch('/api/auth/system/bot/status', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -186,12 +222,10 @@ export default function DashboardOverview() {
                 const botData = await botResponse.json();
                 console.log('Bot status from web server:', botData);
                 setBotStatus(botData);
-            } else {
-                console.error('Failed to fetch bot status:', botResponse.status);
             }
 
             // 2. Системная статистика - через веб-сервер
-            const statsResponse = await fetch('/api/system-stats', {
+            const statsResponse = await fetch('http://localhost:4000/api/stats', { // ПРАВИЛЬНЫЙ ПУТЬ
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -202,15 +236,6 @@ export default function DashboardOverview() {
                 const statsData = await statsResponse.json();
                 console.log('System stats from web server:', statsData);
                 setSystemStats(statsData);
-            } else {
-                console.error('Failed to fetch system stats:', statsResponse.status);
-            }
-
-            // 3. Прямой запрос к боту для отладки (уберите потом)
-            const directBotResponse = await fetch('http://localhost:3002/discord/bot-status');
-            if (directBotResponse.ok) {
-                const directData = await directBotResponse.json();
-                console.log('Direct bot status:', directData);
             }
 
         } catch (error) {

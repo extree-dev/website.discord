@@ -10,6 +10,7 @@ import { setupModerationRoutes } from './api/moderation.js'
 import { setupUserRoutes } from "./api/users.js";
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import sysemController from "./routes/auth/system.controller.js"
 
 addAlias('@', __dirname);
 
@@ -65,6 +66,7 @@ app.use(globalLimiter);
 app.use("/api/login", authLimiter);
 app.use("/api/register", authLimiter);
 app.use(express.json());
+app.use("/api", sysemController)
 
 // ✅ ПОДКЛЮЧАЕМ ТОЛЬКО ГЛАВНЫЙ РОУТЕР
 app.use("/api", authRouter);

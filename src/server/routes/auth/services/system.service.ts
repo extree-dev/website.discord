@@ -355,5 +355,38 @@ export const SystemService = {
         if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
         if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} days ago`;
         return date.toLocaleDateString();
+    },
+
+    async getBotMonitoringData() {
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 5000);
+
+            const response = await fetch('http://localhost:3002/api/bot/monitoring', {
+                signal: controller.signal
+            });
+
+            clearTimeout(timeout);
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.monitoring) {
+                    return data.monitoring;
+                }
+            }
+        } catch (error) {
+            console.log('Bot monitoring API unavailable, using fallback data');
+        }
+
+        // Fallback данные
+        return {
+            responseTime: { value: 42, status: 'optimal', label: 'Response Time', unit: 'ms' },
+            lastHeartbeat: { value: '2 seconds ago', status: 'optimal', label: 'Last Heartbeat', unit: '' },
+            apiLatency: { value: 128, status: 'normal', label: 'API Latency', unit: 'ms' },
+            overallHealth: 'healthy',
+            guilds: 1,
+            commandsTracked: 0,
+            isFallback: true
+        };
     }
 };

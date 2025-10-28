@@ -13,7 +13,8 @@ function initializeClient() {
                 GatewayIntentBits.GuildMembers,
                 GatewayIntentBits.GuildModeration,
                 GatewayIntentBits.AutoModerationConfiguration,
-                GatewayIntentBits.AutoModerationExecution
+                GatewayIntentBits.AutoModerationExecution,
+                GatewayIntentBits.GuildPresences,
             ]
         });
     }

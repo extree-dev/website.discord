@@ -150,6 +150,142 @@ router.get("/bot/monitoring", async (req, res) => {
     }
 });
 
+router.get("/bot/guilds", async (req, res) => {
+    try {
+        console.log('Fetching bot guilds...');
+        const guilds = await SystemService.getBotGuilds();
+        console.log('Bot guilds result:', guilds);
+
+        res.json({
+            success: true,
+            guilds,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Bot guilds fetch error:', error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch bot guilds",
+            guilds: []
+        });
+    }
+});
+
+router.get("/bot/logs", async (req, res) => {
+    try {
+        const { limit = 10, type = 'all' } = req.query;
+        console.log('📋 Fetching bot logs, limit:', limit);
+
+        // Используем SystemService для получения логов
+        const logs = await SystemService.getBotLogs(
+            parseInt(limit as string),
+            type as string
+        );
+
+        console.log('✅ Bot logs fetched:', logs.length, 'items');
+
+        res.json({
+            success: true,
+            logs: logs,
+            total: logs.length,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('❌ Bot logs error:', error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch bot logs",
+            logs: []
+        });
+    }
+});
+
+router.get("/discord/users", async (req, res) => {
+    try {
+        const { guildId } = req.query;
+
+        if (!guildId) {
+            return res.status(400).json({
+                success: false,
+                error: "guildId is required"
+            });
+        }
+
+        console.log('📥 Fetching REAL Discord users for guild:', guildId);
+        const users = await SystemService.getRealDiscordUsers(guildId as string);
+
+        res.json({
+            success: true,
+            users: users,
+            total: users.length,
+            source: 'discord-api',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('❌ REAL Discord users error:', error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch REAL Discord users",
+            users: [], // ВОЗВРАЩАЕМ ПУСТОЙ МАССИВ
+            source: 'error'
+        });
+    }
+});
+
+// Диагностика интеграции
+router.get("/discord/diagnostics", async (req, res) => {
+    try {
+        const { guildId } = req.query;
+
+        // Проверяем статус бота
+        const botStatus = await SystemService.getBotStatus();
+
+        // Проверяем доступность API
+        let apiAvailable = false;
+        try {
+            const apiResponse = await fetch('http://localhost:3002/health');
+            apiAvailable = apiResponse.ok;
+        } catch (error) {
+            apiAvailable = false;
+        }
+
+        // Пробуем получить пользователей
+        let users = [];
+        try {
+            const usersResponse = await SystemService.getRealDiscordUsers(guildId as string);
+            users = usersResponse;
+        } catch (error) {
+            users = [];
+        }
+
+        res.json({
+            success: true,
+            diagnostics: {
+                bot: {
+                    status: botStatus.isReady ? 'online' : 'offline',
+                    guilds: botStatus.totalServers,
+                    uptime: botStatus.uptime
+                },
+                api: {
+                    available: apiAvailable,
+                    url: 'http://localhost:3002'
+                },
+                users: {
+                    count: users.length,
+                    source: users.length > 0 ? 'discord-api' : 'fallback'
+                },
+                guildId: guildId,
+                timestamp: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: "Diagnostics failed"
+        });
+    }
+});
+
 // Фолбэк данные для мониторинга
 function getFallbackMonitoring() {
     return {

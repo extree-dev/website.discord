@@ -2,6 +2,47 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+// Добавляем интерфейс User
+interface User {
+    id: string;
+    username: string;
+    discriminator: string;
+    avatar: string;
+    status: 'online' | 'idle' | 'dnd' | 'offline';
+    roles: string[]; // или { id: string, name: string, color: string }[] для расширенной информации
+    joinedAt: string;
+    lastActive: string;
+    warnings: number;
+    isBanned: boolean;
+    isMuted: boolean;
+    // Дополнительные поля для расширенной информации
+    bot?: boolean;
+    activities?: any[];
+    premiumSince?: string;
+    pending?: boolean;
+}
+
+// Вспомогательные функции
+const getLastActive = (member: any): string => {
+    if (member.presence?.status === 'online') return 'Now';
+    if (member.presence?.status === 'idle') return '5m ago';
+    if (member.presence?.status === 'dnd') return '10m ago';
+
+    const lastMessage = member.lastMessage?.createdAt;
+    if (lastMessage) {
+        const diff = Date.now() - lastMessage.getTime();
+        const minutes = Math.floor(diff / 60000);
+        if (minutes < 60) return `${minutes}m ago`;
+        return `${Math.floor(minutes / 60)}h ago`;
+    }
+
+    return 'Unknown';
+};
+
+const isMemberMuted = (member: any): boolean => {
+    return member.voice?.mute || false;
+};
+
 export const SystemService = {
     async getSystemStats() {
         const today = new Date();
@@ -336,7 +377,7 @@ export const SystemService = {
                 targetName: log.targetName,
                 targetType: log.targetType,
                 reason: log.reason,
-                time: this.formatTimeAgo(new Date(log.timestamp)),
+                time: this.formatAuditLogTimeAgo(new Date(log.timestamp)),
                 timestamp: log.timestamp.toISOString(),
                 status: 'success',
                 details: { changes: log.changes, extra: log.extra }
@@ -346,7 +387,7 @@ export const SystemService = {
         }
     },
 
-    formatTimeAgo(date: Date): string {
+    formatAuditLogTimeAgo(date: Date): string {
         const now = new Date();
         const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
@@ -388,5 +429,225 @@ export const SystemService = {
             commandsTracked: 0,
             isFallback: true
         };
+    },
+
+    async getBotGuilds() {
+        const maxRetries = 3;
+        const retryDelay = 2000; // 2 секунды
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                console.log('Calling bot API for guilds...');
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 5000);
+
+                // Используем правильный эндпоинт который есть в api.js
+                const response = await fetch('http://localhost:3002/api/bot-guilds', {
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeout);
+
+                console.log('Bot guilds API response status:', response.status);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Raw bot guilds response:', data);
+
+                    if (data.success && data.data) {
+                        const formattedGuilds = data.data.map((guild: any) => ({
+                            id: guild.id,
+                            name: guild.name,
+                            members: guild.members || guild.memberCount || 0,
+                            enabled: true,
+                            icon: guild.icon || '🏠'
+                        }));
+                        console.log('Formatted guilds from bot:', formattedGuilds);
+                        return formattedGuilds;
+                    }
+                } else {
+                    console.log('Bot guilds API not available, status:', response.status);
+                    const errorText = await response.text();
+                    console.log('Error response:', errorText);
+                }
+            } catch (error) {
+                console.log('Bot guilds API unavailable, error:', error);
+            }
+
+            // Fallback - используем реальные данные из статуса бота
+            console.log('Using fallback guilds data from bot status');
+            try {
+                const statusResponse = await fetch('http://localhost:3002/discord/bot-status');
+                if (statusResponse.ok) {
+                    const statusData = await statusResponse.json();
+                    if (statusData.debug && statusData.debug.guilds) {
+                        return statusData.debug.guilds.map((guild: any) => ({
+                            id: guild.id,
+                            name: guild.name,
+                            members: guild.members || 0,
+                            enabled: true,
+                            icon: '🏠'
+                        }));
+                    }
+                }
+            } catch (statusError) {
+                console.log('Cannot get bot status either:', statusError);
+            }
+
+            // Ultimate fallback
+            return [
+                {
+                    id: "1343586237868544052",
+                    name: "onnei.exe",
+                    members: 10,
+                    enabled: true,
+                    icon: "🏠"
+                }
+            ];
+        }
+    },
+
+    async getBotLogs(limit: number = 10, type: string = 'all') {
+        try {
+            console.log('🔄 Fetching bot logs from API...');
+
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 5000);
+
+            // Запрашиваем логи у бота
+            const response = await fetch('http://localhost:3002/api/bot/logs?limit=' + limit, {
+                signal: controller.signal
+            });
+
+            clearTimeout(timeout);
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('📊 Bot logs API response:', data);
+
+                if (data.success && data.logs) {
+                    // Форматируем логи для фронтенда
+                    const formattedLogs = data.logs.map((log: any) => ({
+                        time: this.formatAuditLogTimeAgo(new Date(log.timestamp)),
+                        type: log.type,
+                        message: log.message,
+                        user: 'System',
+                        timestamp: log.timestamp,
+                        source: log.source || 'bot'
+                    }));
+
+                    console.log('✅ Formatted logs:', formattedLogs.length, 'items');
+                    return formattedLogs;
+                }
+            }
+
+            throw new Error('Bot logs API not available');
+
+        } catch (error) {
+            console.log('❌ Bot logs API unavailable, using fallback:', (error as Error).message);
+            return this.getFallbackLogs(limit);
+        }
+    },
+
+    getFallbackLogs(limit: number) {
+        // Временные fallback логи
+        const fallbackLogs = [
+            {
+                time: "just now",
+                type: "info",
+                message: "Connecting to bot logs...",
+                user: "System",
+                timestamp: new Date().toISOString()
+            },
+            {
+                time: "1m ago",
+                type: "success",
+                message: "Bot started successfully",
+                user: "System",
+                timestamp: new Date(Date.now() - 60000).toISOString()
+            },
+            {
+                time: "2m ago",
+                type: "warn",
+                message: "System event: websocket connected",
+                user: "System",
+                timestamp: new Date(Date.now() - 120000).toISOString()
+            },
+            {
+                time: "3m ago",
+                type: "info",
+                message: "Security monitoring activated",
+                user: "System",
+                timestamp: new Date(Date.now() - 180000).toISOString()
+            }
+        ];
+
+        return fallbackLogs.slice(0, limit);
+    },
+
+    formatLogTimeAgo(date: Date): string {
+        const now = new Date();
+        const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+        if (diffInSeconds < 60) return 'just now';
+        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+        if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+
+        return date.toLocaleDateString();
+    },
+
+    // УДАЛЯЕМ старый метод getRealUsers - он не нужен
+
+    async getRealDiscordUsers(guildId: string): Promise<User[]> {
+        try {
+            console.log('🔄 Fetching REAL Discord users for guild:', guildId);
+
+            const response = await fetch(`http://localhost:3002/api/discord/guild-members?guildId=${guildId}`);
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✅ REAL users fetched:', data.users?.length || 0);
+
+                // Преобразуем статусы в нужный формат
+                const usersWithStatus = data.users.map((user: any) => ({
+                    ...user,
+                    status: this.normalizeStatus(user.status),
+                    lastActive: this.getLastActiveFromStatus(user.status, user.lastActive)
+                }));
+
+                return usersWithStatus;
+            } else {
+                throw new Error('Bot API not available');
+            }
+        } catch (error) {
+            console.error('❌ Failed to fetch REAL users:', error);
+            return [];
+        }
+    },
+
+    // Вспомогательные методы для работы со статусами
+    normalizeStatus(discordStatus: string): 'online' | 'idle' | 'dnd' | 'offline' {
+        const statusMap: { [key: string]: 'online' | 'idle' | 'dnd' | 'offline' } = {
+            'online': 'online',
+            'idle': 'idle',
+            'dnd': 'dnd',
+            'offline': 'offline',
+            'invisible': 'offline'
+        };
+
+        return statusMap[discordStatus] || 'offline';
+    },
+
+    // Определяем последнюю активность на основе статуса
+    getLastActiveFromStatus(status: string, currentLastActive: string): string {
+        if (status === 'online') return 'Now';
+        if (status === 'idle') return '5m ago';
+        if (status === 'dnd') return '10m ago';
+
+        // Для офлайн используем переданное значение или по умолчанию
+        return currentLastActive || 'Unknown';
     }
+
+    // УДАЛЯЕМ private метод - он не нужен для реальных данных
 };

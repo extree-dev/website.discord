@@ -35,12 +35,13 @@ interface User {
     discriminator: string;
     avatar: string;
     status: 'online' | 'idle' | 'dnd' | 'offline';
-    roles: string[];
+    roles: (string | { id: string; name: string; color: string })[]; // Обновленный тип
     joinedAt: string;
     lastActive: string;
     warnings: number;
     isBanned: boolean;
     isMuted: boolean;
+    bot?: boolean;
 }
 
 export default function Users() {
@@ -60,94 +61,37 @@ export default function Users() {
 
     // Mock data
     useEffect(() => {
-        const mockUsers: User[] = [
-            {
-                id: '1',
-                username: 'alex_dev',
-                discriminator: '1234',
-                avatar: '',
-                status: 'online',
-                roles: ['Admin', 'Moderator'],
-                joinedAt: '2024-01-15',
-                lastActive: '2 min ago',
-                warnings: 0,
-                isBanned: false,
-                isMuted: false
-            },
-            {
-                id: '2',
-                username: 'maria_mod',
-                discriminator: '5678',
-                avatar: '',
-                status: 'idle',
-                roles: ['Moderator'],
-                joinedAt: '2024-02-20',
-                lastActive: '1 hour ago',
-                warnings: 1,
-                isBanned: false,
-                isMuted: false
-            },
-            {
-                id: '3',
-                username: 'john_doe',
-                discriminator: '9012',
-                avatar: '',
-                status: 'dnd',
-                roles: ['VIP'],
-                joinedAt: '2024-03-10',
-                lastActive: '5 min ago',
-                warnings: 0,
-                isBanned: false,
-                isMuted: true
-            },
-            {
-                id: '4',
-                username: 'sarah_connor',
-                discriminator: '3456',
-                avatar: '',
-                status: 'offline',
-                roles: ['Member'],
-                joinedAt: '2024-04-05',
-                lastActive: '2 days ago',
-                warnings: 3,
-                isBanned: true,
-                isMuted: false
-            },
-            {
-                id: '5',
-                username: 'mike_tech',
-                discriminator: '7890',
-                avatar: '',
-                status: 'online',
-                roles: ['Developer', 'Moderator'],
-                joinedAt: '2024-01-08',
-                lastActive: 'Just now',
-                warnings: 0,
-                isBanned: false,
-                isMuted: false
+        console.log('🔍 VITE_GUILD_ID:', import.meta.env.VITE_GUILD_ID);
+        console.log('🔍 All env vars:', import.meta.env);
+        const fetchUsers = async () => {
+            setIsLoading(true);
+            try {
+                // Для Vite используем import.meta.env
+                const guildId = import.meta.env.VITE_GUILD_ID || '1343586237868544052';
+
+                console.log('🔄 Fetching users for guild:', guildId);
+                const response = await fetch(`/api/auth/system/discord/users?guildId=${guildId}`);
+                const data = await response.json();
+
+                if (data.success && data.users && data.users.length > 0) {
+                    console.log('✅ Real Discord users loaded:', data.users.length);
+                    setUsers(data.users);
+                    setFilteredUsers(data.users);
+                } else {
+                    console.log('❌ No real users available');
+                    setUsers([]);
+                    setFilteredUsers([]);
+                }
+            } catch (error) {
+                console.error('❌ Error fetching real users:', error);
+                setUsers([]);
+                setFilteredUsers([]);
+            } finally {
+                setIsLoading(false);
             }
-        ];
+        };
 
-        // Add more mock users
-        for (let i = 6; i <= 25; i++) {
-            mockUsers.push({
-                id: i.toString(),
-                username: `user_${i}`,
-                discriminator: (1000 + i).toString(),
-                avatar: '',
-                status: ['online', 'idle', 'dnd', 'offline'][Math.floor(Math.random() * 4)] as any,
-                roles: [['Member'], ['VIP'], ['Member', 'VIP']][Math.floor(Math.random() * 3)],
-                joinedAt: `2024-${Math.floor(Math.random() * 12) + 1}-${Math.floor(Math.random() * 28) + 1}`,
-                lastActive: `${Math.floor(Math.random() * 24)} hours ago`,
-                warnings: Math.floor(Math.random() * 5),
-                isBanned: Math.random() > 0.9,
-                isMuted: Math.random() > 0.8
-            });
-        }
-
-        setUsers(mockUsers);
-        setFilteredUsers(mockUsers);
-        setIsLoading(false);
+        fetchUsers();
     }, []);
 
     // Filter users
@@ -199,17 +143,25 @@ export default function Users() {
     };
 
     const getStatusIcon = (status: string) => {
-        switch (status) {
-            case 'online': return <div className={styles.statusOnline} />;
-            case 'idle': return <div className={styles.statusIdle} />;
-            case 'dnd': return <div className={styles.statusDnd} />;
-            case 'offline': return <div className={styles.statusOffline} />;
-            default: return <div className={styles.statusOffline} />;
-        }
+        return null; // Просто возвращаем null вместо точек
     };
 
-    const getRoleIcon = (role: string) => {
-        switch (role) {
+
+    const getStatusText = (status: string, lastActive: string) => {
+        const statusText = {
+            'online': 'Online',
+            'idle': 'Idle',
+            'dnd': 'Do Not Disturb',
+            'offline': 'Offline'
+        }[status] || 'Offline';
+
+        return `${statusText} • ${lastActive}`;
+    };
+
+    const getRoleIcon = (role: string | any) => {
+        const roleName = typeof role === 'string' ? role : role.name;
+
+        switch (roleName) {
             case 'Admin': return <Crown size={14} />;
             case 'Moderator': return <Shield size={14} />;
             case 'Developer': return <Star size={14} />;
@@ -218,8 +170,10 @@ export default function Users() {
         }
     };
 
-    const getRoleColor = (role: string) => {
-        switch (role) {
+    const getRoleColor = (role: string | any): string => {
+        const roleName = typeof role === 'string' ? role : role.name;
+
+        switch (roleName) {
             case 'Admin': return '#ef4444';
             case 'Moderator': return '#f59e0b';
             case 'Developer': return '#3b82f6';
@@ -443,22 +397,27 @@ export default function Users() {
 
                                 <div className={styles.tableCell + ' ' + styles.rolesCell}>
                                     <div className={styles.roles}>
-                                        {user.roles.map((role, index) => (
-                                            <span
-                                                key={index}
-                                                className={styles.roleBadge}
-                                                style={{ backgroundColor: getRoleColor(role) }}
-                                            >
-                                                {getRoleIcon(role)}
-                                                {role}
-                                            </span>
-                                        ))}
+                                        {user.roles.map((role, index) => {
+                                            // Обрабатываем как строку, так и объект
+                                            const roleName = typeof role === 'string' ? role : role.name;
+                                            const roleColor = typeof role === 'string' ? getRoleColor(role) : role.color;
+
+                                            return (
+                                                <span
+                                                    key={index}
+                                                    className={styles.roleBadge}
+                                                    style={{ backgroundColor: roleColor }}
+                                                >
+                                                    {getRoleIcon(roleName)}
+                                                    {roleName}
+                                                </span>
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
                                 <div className={styles.tableCell + ' ' + styles.statusCell}>
                                     <div className={styles.status}>
-                                        {getStatusIcon(user.status)}
                                         <span className={styles.statusText}>
                                             {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
                                         </span>

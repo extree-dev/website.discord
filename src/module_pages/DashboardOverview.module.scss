@@ -13,14 +13,13 @@
   padding: 2rem;
   min-height: 100vh;
   overflow-x: hidden;
-  // Улучшенный transition
   transition: margin-left 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: margin-left; // Оптимизация
+  will-change: margin-left;
 
   @include tablet {
     margin-left: 0;
     padding: 1.5rem;
-    transition: margin-left 0.3s ease; // Более быстрый transition на мобильных
+    transition: margin-left 0.3s ease;
   }
 
   @include mobile {
@@ -37,7 +36,7 @@
 .headerContent {
   display: flex;
   justify-content: space-between;
-
+  align-items: flex-start;
 
   @include tablet {
     flex-direction: column;
@@ -76,13 +75,9 @@
   gap: 1rem;
   animation: waveIn 0.8s ease-out 0.2s both;
 
-  // Если нужно центрировать в рамках своего пространства
-  margin-left: auto; // прижимает к правому краю
-  margin-right: auto; // центрирует если есть свободное пространство
-
   @include mobile {
     width: 100%;
-    justify-content: center; // центрируем на мобильных
+    justify-content: center;
     margin: 0;
   }
 }
@@ -123,14 +118,11 @@
   z-index: 1;
   backdrop-filter: blur(10px);
 
-  // Активное состояние
   &.active {
     background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%);
     color: #ffffff;
     border: 1px solid rgba(99, 102, 241, 0.3);
-    box-shadow:
-      0 4px 12px rgba(99, 102, 241, 0.15),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 
     &::before {
       content: '';
@@ -143,7 +135,6 @@
     }
   }
 
-  // Ховер состояние для неактивных кнопок
   &:hover:not(.active) {
     background: rgba(255, 255, 255, 0.08);
     color: rgba(255, 255, 255, 0.9);
@@ -151,18 +142,15 @@
     transform: translateY(-1px);
   }
 
-  // Анимация при переключении
   &:active {
     transform: scale(0.98);
   }
 
-  // Градиентный эффект для текста в активном состоянии
   &.active {
     text-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
   }
 }
 
-// Анимация появления
 @keyframes filterSlideIn {
   0% {
     opacity: 0;
@@ -179,7 +167,6 @@
   animation: filterSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-// Индикатор выбранного периода
 .timeFilter.active::after {
   content: '';
   position: absolute;
@@ -193,7 +180,6 @@
   box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
 }
 
-// Адаптивность
 @include tablet {
   .timeFilters {
     width: 100%;
@@ -222,14 +208,12 @@
   }
 }
 
-// Состояние загрузки
 .timeFilter:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none !important;
 }
 
-// Интеграция с существующими анимациями
 .timeFilter {
   @for $i from 1 through 3 {
     &:nth-child(#{$i}) {
@@ -424,6 +408,13 @@
 
 .logsCard {
   animation-delay: 0.7s;
+  position: relative;
+  overflow: hidden;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  }
 }
 
 .cardHeader {
@@ -431,7 +422,6 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
-  text-align: center;
 }
 
 .cardTitle {
@@ -442,6 +432,79 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.cardTitleWithIcon {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.titleIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  color: white;
+}
+
+.liveBadge {
+  display: flex;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  padding: 0.8rem;
+  border-radius: 24px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  line-height: 1;
+  text-align: center;
+}
+
+.livePulse {
+  width: 6px;
+  height: 6px;
+  background: #10b981;
+  border-radius: 50%;
+  animation: livePulse 2s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes livePulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0);
+  }
+
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.refreshLogsBtn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    transform: rotate(90deg);
+  }
 }
 
 .statusIndicator {
@@ -468,21 +531,6 @@
   &.offline {
     background: #ef4444;
     box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
-  }
-}
-
-.cardActions {
-  display: flex;
-  gap: 0.75rem;
-  color: #888;
-
-  svg {
-    cursor: pointer;
-    transition: color 0.3s ease;
-
-    &:hover {
-      color: #ffffff;
-    }
   }
 }
 
@@ -628,6 +676,8 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
   transition: background 0.3s ease;
   animation: waveIn 0.5s ease-out both;
+  min-height: 84px; // ← ДОБАВИТЬ
+  box-sizing: border-box; // ← ДОБАВИТЬ
 
   @for $i from 1 through 10 {
     &:nth-child(#{$i}) {
@@ -686,7 +736,7 @@
   gap: 0.5rem;
   padding: 0.5rem 1rem;
   border: none;
-  border-radius: 20px;
+  border-radius: 24px;
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
@@ -725,95 +775,253 @@
   border-radius: 50%;
 }
 
-// Logs
-.viewAllBtn {
-  background: transparent;
-  border: none;
-  color: #6366f1;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 0.875rem;
-
-  &:hover {
-    color: #8b5cf6;
-  }
-}
-
-.logsList {
+// Enhanced System Logs Styles
+.singleLogContainer {
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.3s ease;
+  animation: _waveIn_1yn8k_1 0.5s ease-out both;
+  min-height: 84px; // ← ДОБАВИТЬ
+  box-sizing: border-box; // ← ДОБАВИТЬ
 }
 
-.logItem {
+.singleLogItem {
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
-  padding: 1rem;
-  border-radius: 24px;
-  transition: background 0.3s ease;
-  animation: waveIn 0.5s ease-out both;
+  gap: 16px;
+  width: 100%;
+  position: relative;
+  animation: slideInUp 0.3s ease-out;
+}
 
-  @for $i from 1 through 10 {
-    &:nth-child(#{$i}) {
-      animation-delay: #{0.7 + ($i * 0.1)}s;
-    }
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  &.error {
-    border-left: 4px solid #ef4444;
-    background: rgba(239, 68, 68, 0.05);
-  }
-
-  &.warn {
-    border-left: 4px solid #f59e0b;
-    background: rgba(245, 158, 11, 0.05);
-  }
-
-  &.info {
-    border-left: 4px solid #3b82f6;
-    background: rgba(59, 130, 246, 0.05);
-  }
-
-  &.success {
-    border-left: 4px solid #10b981;
-    background: rgba(16, 185, 129, 0.05);
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-.logIcon {
+.logIconWrapper {
   flex-shrink: 0;
-  margin-top: 2px;
 }
 
-.logContent {
+.logIconBackground {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+// Log Types Colors
+.singleLogItem.success .logIconBackground {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.singleLogItem.error .logIconBackground {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.singleLogItem.warn .logIconBackground {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.singleLogItem.info .logIconBackground {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+// Log Content
+.singleLogContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  gap: 16px;
+}
+
+.logMainContent {
   flex: 1;
 }
 
 .logMessage {
-  color: #ffffff;
+  font-size: 15px;
   font-weight: 500;
-  margin-bottom: 0.25rem;
+  color: #ffffff;
+  line-height: 1.4;
+  margin-bottom: 8px;
 }
 
 .logMeta {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  font-size: 0.75rem;
+  gap: 16px;
+  font-size: 12px;
   color: #888;
 }
 
-.logTime {
-  font-weight: 600;
+.logTime,
+.logUser {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.logUser {
-  font-family: 'Courier New', monospace;
+.userDot {
+  width: 4px;
+  height: 4px;
+  background: #888;
+  border-radius: 50%;
+}
+
+// Log Type Badge
+.logTypeBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.badgeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.singleLogItem.success .badgeDot {
+  background: #22c55e;
+}
+
+.singleLogItem.error .badgeDot {
+  background: #ef4444;
+}
+
+.singleLogItem.warn .badgeDot {
+  background: #f59e0b;
+}
+
+.singleLogItem.info .badgeDot {
+  background: #3b82f6;
+}
+
+@keyframes slideProgress {
+  0% {
+    width: 0%;
+  }
+
+  100% {
+    width: 100%;
+  }
+}
+
+// No Logs State
+.noLogs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.noLogsIcon {
+  color: #888;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.noLogsText h4 {
+  font-size: 16px;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.noLogsText p {
+  font-size: 13px;
+  color: #666;
+}
+
+// Log Status
+.logStatus {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  font-size: 12px;
+  color: #888;
+}
+
+.statusLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.connectionStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: statusPulse 2s infinite;
+}
+
+@keyframes statusPulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.updateInfo {
+  color: #666;
+}
+
+.lastUpdate {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #666;
+  font-size: 11px;
 }
 
 // Quick Actions
@@ -1032,4 +1240,41 @@
   border-radius: 12px;
   font-size: 0.7rem;
   margin-left: 8px;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: #666;
+  text-align: center;
+
+  svg {
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+}
+
+.retryBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 0.5rem 1rem;
+  color: #888;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
 }

@@ -843,6 +843,138 @@ class BotMonitor {
     }
 }
 
+// КЛАСС ДЛЯ СИСТЕМНОГО ЛОГГИРОВАНИЯ
+class BotLogger {
+    constructor() {
+        this.logs = [];
+        this.maxLogs = 1000; // Максимум хранимых логов
+        this.prisma = new PrismaClient();
+    }
+
+    // 📝 ДОБАВЛЕНИЕ ЛОГА
+    addLog(type, message, details = {}) {
+        const logEntry = {
+            id: Date.now() + Math.random().toString(36).substr(2, 9),
+            type: type, // 'info', 'error', 'warn', 'success'
+            message: message,
+            details: details,
+            timestamp: new Date(),
+            source: 'bot'
+        };
+
+        console.log(`📝 [${type.toUpperCase()}] ${message}`);
+
+        // Добавляем в память
+        this.logs.unshift(logEntry);
+        
+        // Ограничиваем размер
+        if (this.logs.length > this.maxLogs) {
+            this.logs = this.logs.slice(0, this.maxLogs);
+        }
+
+        // Сохраняем в базу данных
+        this.saveToDatabase(logEntry);
+
+        return logEntry;
+    }
+
+    // 💾 СОХРАНЕНИЕ В БАЗУ ДАННЫХ
+    async saveToDatabase(logEntry) {
+        try {
+            await this.prisma.botLog.create({
+                data: {
+                    type: logEntry.type,
+                    message: logEntry.message,
+                    details: logEntry.details,
+                    source: logEntry.source,
+                    timestamp: logEntry.timestamp
+                }
+            });
+        } catch (error) {
+            console.error('❌ Error saving log to database:', error);
+        }
+    }
+
+    // 📊 ПОЛУЧЕНИЕ ЛОГОВ
+    getLogs(limit = 50, type = 'all') {
+        let filteredLogs = this.logs;
+        
+        if (type !== 'all') {
+            filteredLogs = this.logs.filter(log => log.type === type);
+        }
+        
+        return filteredLogs.slice(0, limit);
+    }
+
+    // 🔄 ЗАПУСК/ПЕРЕЗАГРУЗКА БОТА
+    logBotStart() {
+        return this.addLog('success', 'Bot started successfully', {
+            version: '1.0.0',
+            nodeVersion: process.version,
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    // ❌ ОШИБКИ ВЫПОЛНЕНИЯ КОМАНД
+    logCommandError(commandName, error, userId, guildId) {
+        return this.addLog('error', `Command failed: /${commandName}`, {
+            command: commandName,
+            error: error.message,
+            userId: userId,
+            guildId: guildId,
+            stack: error.stack
+        });
+    }
+
+    // 🎤 ПОДКЛЮЧЕНИЕ К ГОЛОСОВЫМ КАНАЛАМ
+    logVoiceConnection(action, channelId, guildId) {
+        return this.addLog('info', `Voice channel ${action}`, {
+            action: action, // 'join', 'leave', 'switch'
+            channelId: channelId,
+            guildId: guildId,
+            type: 'voice'
+        });
+    }
+
+    // ⚠️ СИСТЕМНЫЕ СОБЫТИЯ (RATE LIMITS, API ERRORS)
+    logSystemEvent(eventType, details) {
+        return this.addLog('warn', `System event: ${eventType}`, {
+            event: eventType,
+            ...details
+        });
+    }
+
+    // 🤖 СТАТУС БОТА
+    logBotStatus(status, details = {}) {
+        return this.addLog('info', `Bot status: ${status}`, {
+            status: status,
+            ...details
+        });
+    }
+
+    // 🧹 ОЧИСТКА СТАРЫХ ЛОГОВ
+    async cleanupOldLogs(days = 7) {
+        try {
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - days);
+
+            await this.prisma.botLog.deleteMany({
+                where: {
+                    timestamp: {
+                        lt: cutoffDate
+                    }
+                }
+            });
+
+            console.log(`🧹 Cleaned up logs older than ${days} days`);
+        } catch (error) {
+            console.error('Error cleaning up old logs:', error);
+        }
+    }
+}
+
+
+global.botLogger = new BotLogger();
 global.statsCollector = new StatsCollector();
 global.alertSystem = new AlertSystem();
 global.botMonitor = new BotMonitor(client);

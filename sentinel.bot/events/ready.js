@@ -8,27 +8,55 @@ module.exports = {
     console.log(`✅ Sentinel запущен как ${client.user.tag}`);
 
     try {
-      // 1. УСТАНАВЛИВАЕМ СТАТУС БОТА
-      client.user.setActivity('За порядком', { type: 'WATCHING' });
-
-      // 2. ЗАПУСКАЕМ МОНИТОРИНГ БЕЗОПАСНОСТИ
-      startSecurityMonitoring(client);
-
-      // 3. ПРОВЕРЯЕМ НАСТРОЙКИ СЕРВЕРА
-      await checkServerSecurity(client);
-
-      // 4. ЗАПУСКАЕМ СБОР СТАТИСТИКИ
-      if (global.statsCollector) {
-        const guild = client.guilds.cache.get(process.env.GUILD_ID);
-        if (guild) {
-          global.statsCollector.saveServerStats(guild);
+      // 🔧 ДАЕМ ВРЕМЯ НА ПОЛНУЮ ИНИЦИАЛИЗАЦИЮ
+      setTimeout(async () => {
+        // ЛОГИРУЕМ ЗАПУСК БОТА
+        if (global.botLogger) {
+          global.botLogger.logBotStart();
         }
-      }
 
-      console.log('🛡️ Система мониторинга безопасности активирована');
+        // 1. УСТАНАВЛИВАЕМ СТАТУС БОТА (ПОСЛЕ ПОЛНОЙ ИНИЦИАЛИЗАЦИИ)
+        if (client.user) {
+          client.user.setActivity('За порядком', { type: 'WATCHING' });
+        }
+
+        // 2. ЗАПУСКАЕМ МОНИТОРИНГ БЕЗОПАСНОСТИ
+        startSecurityMonitoring(client);
+
+        // 3. ПРОВЕРЯЕМ НАСТРОЙКИ СЕРВЕРА
+        await checkServerSecurity(client);
+
+        // 4. ЗАПУСКАЕМ СБОР СТАТИСТИКИ
+        if (global.statsCollector) {
+          const guild = client.guilds.cache.get(process.env.GUILD_ID);
+          if (guild) {
+            await global.statsCollector.saveServerStats(guild);
+          }
+        }
+
+        // ЛОГИРУЕМ СТАТУС БОТА
+        if (global.botLogger) {
+          global.botLogger.logBotStatus('ready', {
+            guilds: client.guilds.cache.size,
+            users: client.users.cache.size,
+            ping: client.ws.ping,
+            uptime: client.uptime
+          });
+        }
+
+        console.log('🛡️ Система мониторинга безопасности активирована');
+        console.log(`📊 Загружено серверов: ${client.guilds.cache.size}`);
+
+      }, 3000); // 🔧 3 секунды на инициализацию
 
     } catch (error) {
       console.error('Error in ready event:', error);
+      if (global.botLogger) {
+        global.botLogger.logSystemEvent('ready_error', {
+          error: error.message,
+          stack: error.stack
+        });
+      }
     }
   },
 };
@@ -54,8 +82,22 @@ function startSecurityMonitoring(client) {
       // 4. ПЕРИОДИЧЕСКАЯ ОЧИСТКА КЭША
       cleanupOldCache();
 
+      // ЛОГИРУЕМ УСПЕШНУЮ ПРОВЕРКУ
+      if (global.botLogger) {
+        global.botLogger.addLog('info', 'Security monitoring check completed', {
+          guild: guild.name,
+          members: guild.memberCount
+        });
+      }
+
     } catch (error) {
       console.error('Error in security monitoring:', error);
+      if (global.botLogger) {
+        global.botLogger.logSystemEvent('security_monitoring_error', {
+          error: error.message,
+          guildId: process.env.GUILD_ID
+        });
+      }
     }
   }, 5 * 60 * 1000); // Каждые 5 минут
 }
@@ -80,6 +122,11 @@ async function checkServerSecurity(client) {
 
     console.log('📊 Настройки безопасности:', securityCheck);
 
+    // ЛОГИРУЕМ НАСТРОЙКИ СЕРВЕРА
+    if (global.botLogger) {
+      global.botLogger.addLog('info', 'Server security settings checked', securityCheck);
+    }
+
     // Создаем начальный алерт с информацией о сервере
     if (global.alertSystem) {
       await global.alertSystem.createAlert('system_startup', 'low', {
@@ -98,6 +145,12 @@ async function checkServerSecurity(client) {
 
   } catch (error) {
     console.error('Error checking server security:', error);
+    if (global.botLogger) {
+      global.botLogger.logSystemEvent('security_check_error', {
+        error: error.message,
+        guildId: process.env.GUILD_ID
+      });
+    }
   }
 }
 

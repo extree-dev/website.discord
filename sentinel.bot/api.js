@@ -1071,6 +1071,197 @@ app.get('/api/discord/audit-logs', async (req, res) => {
     }
 });
 
+// ЭНДПОИНТ ДЛЯ ЛОГОВ БОТА
+app.get('/api/bot/logs', async (req, res) => {
+    try {
+        const { limit = 20, type = 'all' } = req.query;
+
+        if (!global.botLogger) {
+            return res.status(503).json({
+                success: false,
+                error: "Bot logger not initialized"
+            });
+        }
+
+        const logs = global.botLogger.getLogs(parseInt(limit), type);
+
+        // Форматируем для фронтенда
+        const formattedLogs = logs.map(log => ({
+            time: formatTimeAgo(log.timestamp),
+            type: log.type,
+            message: log.message,
+            user: 'System',
+            timestamp: log.timestamp.toISOString(),
+            source: 'bot',
+            details: log.details
+        }));
+
+        res.json({
+            success: true,
+            logs: formattedLogs,
+            total: formattedLogs.length,
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('❌ Bot logs error:', error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch bot logs"
+        });
+    }
+});
+
+// Эндпоинт для получения участников с реальными статусами
+app.get('/api/discord/guild-members', async (req, res) => {
+    try {
+        const { guildId } = req.query;
+
+        if (!guildId) {
+            return res.status(400).json({ error: "guildId is required" });
+        }
+
+        const client = getClient();
+        const guild = client.guilds.cache.get(guildId);
+
+        if (!guild) {
+            return res.status(404).json({
+                error: "Guild not found",
+                availableGuilds: client.guilds.cache.map(g => ({ id: g.id, name: g.name }))
+            });
+        }
+
+        // ВАЖНО: Загружаем участников С PRESENCE ДАННЫМИ
+        console.log('🔄 Fetching members with presence data...');
+        await guild.members.fetch({ withPresences: true }); // ← КЛЮЧЕВОЙ ПАРАМЕТР
+
+        console.log(`✅ Fetched ${guild.members.cache.size} members with statuses`);
+
+        // Проверяем какие статусы есть
+        const statusCount = {
+            online: 0,
+            idle: 0,
+            dnd: 0,
+            offline: 0
+        };
+
+        const members = Array.from(guild.members.cache.values()).map(member => {
+            const user = member.user;
+            const presence = member.presence;
+
+            // РЕАЛЬНЫЙ СТАТУС ИЗ DISCORD
+            const discordStatus = presence?.status || 'offline';
+            statusCount[discordStatus]++;
+
+            // ДЕБАГ ИНФОРМАЦИЯ
+            console.log(`👤 ${user.username}: ${discordStatus}`, {
+                activities: presence?.activities?.length || 0,
+                clientStatus: presence?.clientStatus
+            });
+
+            return {
+                id: user.id,
+                username: user.username,
+                discriminator: user.discriminator,
+                avatar: user.displayAvatarURL({ size: 64 }),
+                status: discordStatus, // РЕАЛЬНЫЙ СТАТУС
+                activities: presence?.activities?.map(activity => ({
+                    name: activity.name,
+                    type: activity.type,
+                    details: activity.details,
+                    state: activity.state
+                })) || [],
+                roles: member.roles.cache
+                    .filter(role => role.name !== '@everyone')
+                    .map(role => ({
+                        id: role.id,
+                        name: role.name,
+                        color: role.hexColor
+                    })),
+                joinedAt: member.joinedAt?.toISOString() || new Date().toISOString(),
+                lastActive: getLastActiveFromPresence(presence, member),
+                warnings: 0,
+                isBanned: false,
+                isMuted: member.voice.mute || false,
+                bot: user.bot,
+                // ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ ДЛЯ ДЕБАГА
+                _debug: {
+                    presence: !!presence,
+                    status: discordStatus,
+                    activityCount: presence?.activities?.length || 0
+                }
+            };
+        });
+
+        console.log('📊 Status distribution:', statusCount);
+
+        res.json({
+            success: true,
+            users: members,
+            total: members.length,
+            statusStats: statusCount,
+            guild: {
+                id: guild.id,
+                name: guild.name,
+                memberCount: guild.memberCount
+            },
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('❌ Guild members error:', error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch guild members",
+            details: error.message
+        });
+    }
+});
+
+// УЛУЧШЕННАЯ ФУНКЦИЯ ДЛЯ ОПРЕДЕЛЕНИЯ АКТИВНОСТИ
+function getLastActiveFromPresence(presence, member) {
+    // Если пользователь онлайн - сейчас активен
+    if (presence?.status === 'online') return 'Now';
+
+    // Если есть активность (играет, стримит) - показываем что делает
+    if (presence?.activities.length > 0) {
+        const activity = presence.activities[0];
+        switch (activity.type) {
+            case 0: // Playing
+                return `Playing ${activity.name}`;
+            case 1: // Streaming
+                return `Streaming ${activity.name}`;
+            case 2: // Listening
+                return `Listening to ${activity.name}`;
+            case 3: // Watching
+                return `Watching ${activity.name}`;
+            case 4: // Custom
+                return activity.state || 'Custom status';
+            case 5: // Competing
+                return `Competing in ${activity.name}`;
+        }
+    }
+
+    // По статусу
+    if (presence?.status === 'idle') return '5m ago';
+    if (presence?.status === 'dnd') return '10m ago';
+
+    // По последнему сообщению
+    const lastMessage = member.lastMessage?.createdAt;
+    if (lastMessage) {
+        const diff = Date.now() - lastMessage.getTime();
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+
+        if (minutes < 60) return `${minutes}m ago`;
+        if (hours < 24) return `${hours}h ago`;
+        return `${days}d ago`;
+    }
+
+    return 'Unknown';
+}
+
 // Вспомогательная функция для мок-данных команд
 function getMockCommandStats(filter) {
     const baseStats = [

@@ -114,12 +114,65 @@ export default function DashboardOverview() {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
     const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
-    const [logs, setLogs] = useState<LogEntry[]>([]);
+    const [latestLog, setLatestLog] = useState<LogEntry | null>(null);
     const [guilds, setGuilds] = useState<Guild[]>([]);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
     const [activeTimeRange, setActiveTimeRange] = useState<'24h' | '7d' | '30d'>('24h');
     const [botMonitoring, setBotMonitoring] = useState<BotMonitoringData | null>(null);
+    const [guildsLoading, setGuildsLoading] = useState(false);
+
+    // Функция загрузки серверов
+    const loadBotGuilds = async () => {
+        try {
+            setGuildsLoading(true);
+            const token = localStorage.getItem('auth_token');
+
+            const response = await fetch('/api/bot/guilds', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            console.log('Guilds response status:', response.status); // Логируем статус
+            console.log('Guilds response headers:', response.headers); // Логируем заголовки
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Guilds API response:', data); // Логируем полный ответ
+
+                if (data.success) {
+                    console.log('Loaded guilds:', data.guilds); // Логируем конкретно серверы
+                    setGuilds(data.guilds);
+                }
+            } else {
+                console.warn('Failed to fetch bot guilds, status:', response.status);
+                const errorText = await response.text();
+                console.warn('Error response:', errorText);
+            }
+        } catch (error) {
+            console.error('Error loading bot guilds:', error);
+        } finally {
+            setGuildsLoading(false);
+        }
+    };
+
+    // Загружаем серверы при монтировании
+    useEffect(() => {
+        loadBotGuilds();
+    }, []);
+
+    // Обновляем функцию toggle (если нужно реальное управление)
+    const toggleGuildStatus = async (guildId: string) => {
+        // Если нужно реальное управление - делаем API запрос
+        // Пока оставляем локальное переключение для демо
+        setGuilds(prev =>
+            prev.map(g =>
+                g.id === guildId ? { ...g, enabled: !g.enabled } : g
+            )
+        );
+    };
 
     useEffect(() => {
         const fetchSystemStats = async () => {
@@ -172,15 +225,21 @@ export default function DashboardOverview() {
             setLoading(true);
             const token = localStorage.getItem('auth_token');
 
-            // ПРАВИЛЬНЫЕ ЭНДПОИНТЫ:
-
-            // 1. Статус бота - через веб-сервер
-            const botResponse = await fetch('/api/bot/status', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
+            // Параллельные запросы
+            const [botResponse, statsResponse] = await Promise.all([
+                fetch('/api/bot/status', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }),
+                fetch('/api/system-stats', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+            ]);
 
             if (botResponse.ok) {
                 const botData = await botResponse.json();
@@ -188,15 +247,16 @@ export default function DashboardOverview() {
                 setBotStatus(botData);
             } else {
                 console.error('Failed to fetch bot status:', botResponse.status);
+                // Fallback для статуса бота
+                setBotStatus({
+                    isOnServer: false,
+                    totalServers: 0,
+                    isReady: false,
+                    uptime: 0,
+                    ping: -1,
+                    lastChecked: new Date().toISOString()
+                });
             }
-
-            // 2. Системная статистика - через веб-сервер
-            const statsResponse = await fetch('/api/system-stats', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
 
             if (statsResponse.ok) {
                 const statsData = await statsResponse.json();
@@ -221,22 +281,54 @@ export default function DashboardOverview() {
     };
 
     // Загрузка системных логов
-    const loadSystemLogs = async (token: string) => {
+    const loadSystemLogs = async () => {
         try {
-            const API_BASE = 'http://localhost:3002';
-            // Здесь можно добавить эндпоинт для системных логов
-            // Пока используем моковые данные
-            setLogs([
-                { time: "2m ago", type: "success", message: "Bot started successfully", user: "System" },
-                { time: "5m ago", type: "error", message: "/ban failed — Missing Permissions", user: "@Admin" },
-                { time: "12m ago", type: "warn", message: "Rate limit warning — /ping", user: "@Moderator" },
-                { time: "1h ago", type: "success", message: "Auto-moderation rule triggered", user: "System" },
-                { time: "2h ago", type: "info", message: "Scheduled backup completed", user: "System" }
-            ]);
+            const token = localStorage.getItem('auth_token');
+            console.log('🔄 Loading latest system log...');
+
+            // Загружаем только 1 последний лог
+            const response = await fetch('/api/bot/logs?limit=1', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('📋 Latest log response:', data);
+
+                if (data.success && data.logs && data.logs.length > 0) {
+                    const latest = data.logs[0];
+                    console.log('✅ Setting latest log:', latest.message);
+                    setLatestLog(latest);
+                    return;
+                }
+            } else {
+                console.warn('❌ Failed to fetch latest log, status:', response.status);
+            }
         } catch (error) {
-            console.error('Error loading logs:', error);
+            console.error('❌ Error loading latest log:', error);
         }
+
+        // Fallback
+        setLatestLog({
+            time: "just now",
+            type: "info",
+            message: "Waiting for system logs...",
+            user: "System"
+        });
     };
+
+    useEffect(() => {
+        // Загружаем сразу при монтировании
+        loadSystemLogs();
+
+        // Обновляем каждые 5 секунд
+        const interval = setInterval(loadSystemLogs, 5000);
+
+        return () => clearInterval(interval);
+    }, []);
 
     // Загрузка списка серверов
     const loadGuilds = async (token: string) => {
@@ -263,14 +355,6 @@ export default function DashboardOverview() {
     useEffect(() => {
         loadSystemData();
     }, []);
-
-    const toggleGuildStatus = (id: string) => {
-        setGuilds(prev =>
-            prev.map(g =>
-                g.id === id ? { ...g, enabled: !g.enabled } : g
-            )
-        );
-    };
 
     const getLogTypeClass = (type: string) => {
         switch (type) {
@@ -575,56 +659,117 @@ export default function DashboardOverview() {
                             <h3 className={styles.cardTitle}>
                                 <Globe size={20} /> Connected Servers
                             </h3>
-                            <span className={styles.guildCount}>{guilds.length} servers</span>
+                            <div className={styles.headerRight}>
+                                <button
+                                    onClick={loadBotGuilds}
+                                    disabled={guildsLoading}
+                                    className={styles.refreshBtn}
+                                >
+                                    <RefreshCw size={14} className={guildsLoading ? styles.loading : ''} />
+                                </button>
+                            </div>
                         </div>
-                        <div className={styles.guildsList}>
-                            {guilds.map((guild) => (
-                                <div key={guild.id} className={styles.guildItem}>
-                                    <div className={styles.guildInfo}>
-                                        <div className={styles.guildIcon}>{guild.icon}</div>
-                                        <div className={styles.guildDetails}>
-                                            <div className={styles.guildName}>{guild.name}</div>
-                                            <div className={styles.guildStats}>
-                                                <span>{guild.members.toLocaleString()} members</span>
-                                                <span className={styles.guildId}>#{guild.id.slice(-6)}</span>
+
+                        {guildsLoading ? (
+                            <div className={styles.loading}>Loading servers...</div>
+                        ) : (
+                            <div className={styles.guildsList}>
+                                {guilds.length > 0 ? (
+                                    guilds.map((guild) => (
+                                        <div key={guild.id} className={styles.guildItem}>
+                                            <div className={styles.guildInfo}>
+                                                {guild.icon.startsWith('http') ? (
+                                                    <img src={guild.icon} alt={guild.name} className={styles.guildIcon} />
+                                                ) : (
+                                                    <div className={styles.guildIcon}>{guild.icon}</div>
+                                                )}
+                                                <div className={styles.guildDetails}>
+                                                    <div className={styles.guildName}>{guild.name}</div>
+                                                    <div className={styles.guildStats}>
+                                                        <span>{guild.members.toLocaleString()} members</span>
+                                                        <span className={styles.guildId}>#{guild.id.slice(-6)}</span>
+                                                    </div>
+                                                </div>
                                             </div>
+                                            <button
+                                                className={`${styles.guildToggle} ${guild.enabled ? styles.enabled : styles.disabled}`}
+                                                onClick={() => toggleGuildStatus(guild.id)}
+                                            >
+                                                <div className={styles.toggleIndicator}></div>
+                                                {guild.enabled ? 'Enabled' : 'Disabled'}
+                                            </button>
                                         </div>
+                                    ))
+                                ) : (
+                                    <div className={styles.emptyState}>
+                                        <Globe size={32} />
+                                        <p>No servers found</p>
+                                        <button onClick={loadBotGuilds} className={styles.retryBtn}>
+                                            Retry
+                                        </button>
                                     </div>
-                                    <button
-                                        className={`${styles.guildToggle} ${guild.enabled ? styles.enabled : styles.disabled}`}
-                                        onClick={() => toggleGuildStatus(guild.id)}
-                                    >
-                                        <div className={styles.toggleIndicator}></div>
-                                        {guild.enabled ? 'Enabled' : 'Disabled'}
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* System Logs */}
                     <div className={styles.logsCard}>
                         <div className={styles.cardHeader}>
-                            <h3 className={styles.cardTitle}>
-                                <AlertTriangle size={20} /> System Logs
-                            </h3>
-                            <button className={styles.viewAllBtn}>View All</button>
+                            <div className={styles.cardTitleWithIcon}>
+                                <h3 className={styles.cardTitle}>
+                                    System Logs
+                                </h3>
+                                <div className={styles.liveBadge}>
+                                    <div className={styles.livePulse}></div>
+                                    LIVE
+                                </div>
+                            </div>
                         </div>
-                        <div className={styles.logsList}>
-                            {logs.map((log, index) => (
-                                <div key={index} className={`${styles.logItem} ${getLogTypeClass(log.type)}`}>
-                                    <div className={styles.logIcon}>
-                                        {getLogIcon(log.type)}
+
+                        <div className={styles.singleLogContainer}>
+                            {latestLog ? (
+                                <div className={`${styles.singleLogItem} ${getLogTypeClass(latestLog.type)}`}>
+                                    <div className={styles.logIconWrapper}>
+                                        <div className={styles.logIconBackground}>
+                                            {getLogIcon(latestLog.type)}
+                                        </div>
                                     </div>
-                                    <div className={styles.logContent}>
-                                        <div className={styles.logMessage}>{log.message}</div>
-                                        <div className={styles.logMeta}>
-                                            <span className={styles.logTime}>{log.time}</span>
-                                            <span className={styles.logUser}>{log.user}</span>
+
+                                    <div className={styles.singleLogContent}>
+                                        <div className={styles.logMainContent}>
+                                            <div className={styles.logMessage}>
+                                                {latestLog.message}
+                                            </div>
+                                            <div className={styles.logMeta}>
+                                                <span className={styles.logTime}>
+                                                    <Clock size={12} />
+                                                    {latestLog.time}
+                                                </span>
+                                                <span className={styles.logUser}>
+                                                    <span className={styles.userDot}></span>
+                                                    {latestLog.user}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className={styles.logTypeBadge}>
+                                            <span className={styles.badgeDot}></span>
+                                            {latestLog.type.toUpperCase()}
                                         </div>
                                     </div>
                                 </div>
-                            ))}
+                            ) : (
+                                <div className={styles.noLogs}>
+                                    <div className={styles.noLogsIcon}>
+                                        <MessageCircle size={32} />
+                                    </div>
+                                    <div className={styles.noLogsText}>
+                                        <h4>No logs available</h4>
+                                        <p>Waiting for system activity...</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

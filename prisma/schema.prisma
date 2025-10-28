@@ -268,3 +268,15 @@ model BotCommand {
 
   @@map("bot_commands")
 }
+
+model BotLog {
+  id        Int      @id @default(autoincrement())
+  type      String   // 'info', 'error', 'warn', 'success'
+  message   String
+  details   Json?
+  source    String   @default("bot")
+  timestamp DateTime @default(now())
+  
+  @@index([timestamp])
+  @@index([type])
+}

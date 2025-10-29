@@ -186,6 +186,8 @@
     gap: 1.5rem;
     margin-bottom: 2rem;
     align-items: center;
+    position: relative; // Добавляем
+    z-index: 100; // Добавляем
 
     @include tablet {
         flex-direction: column;
@@ -237,32 +239,328 @@
     display: flex;
     gap: 1rem;
     align-items: center;
+    position: relative; // Добавляем
 
     @include mobile {
         flex-direction: column;
+        width: 100%;
+    }
+}
+
+.roleIndicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &.all {
+        background: #888;
+        opacity: 0.6;
+    }
+
+    &.Admin {
+        background: #ef4444;
+    }
+
+    &.Moderator {
+        background: #8b5cf6;
+    }
+
+    &.Developer {
+        background: #3b82f6;
+    }
+
+    &.VIP {
+        background: #f59e0b;
+    }
+
+    &.Member {
+        background: #22c55e;
+    }
+}
+
+.roleOptionIndicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.selectContainer {
+    position: relative;
+    min-width: 160px;
+
+    @include mobile {
+        width: 100%;
     }
 }
 
 .filterSelect {
+    width: 100%;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 24px;
+    border-radius: 16px;
+    padding: 0.75rem 3rem 0.75rem 1rem;
+    color: #ffffff;
+    font-size: 0.875rem;
+    cursor: pointer;
+    backdrop-filter: blur(20px);
+    transition: all 0.3s ease;
+    appearance: none;
+    position: relative;
+    z-index: 2;
+
+    // Градиентная обводка при фокусе
+    &:focus {
+        outline: none;
+        border-color: rgba(99, 102, 241, 0.5);
+        box-shadow:
+            0 0 0 3px rgba(99, 102, 241, 0.1),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    // Ховер эффект
+    &:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    // Стили для опций
+    option {
+        background: #1a1a1a;
+        color: #ffffff;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+        &:last-child {
+            border-bottom: none;
+        }
+
+        &:hover {
+            background: rgba(99, 102, 241, 0.2);
+        }
+
+        &:checked {
+            background: rgba(99, 102, 241, 0.3);
+        }
+    }
+}
+
+.selectArrow {
+    width: 16px;
+    height: 16px;
+    color: #888;
+    transition: transform 0.3s ease;
+    flex-shrink: 0;
+
+    &.rotated {
+        transform: rotate(180deg);
+        color: #6366f1;
+    }
+}
+
+.statusIndicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    // Цвета для разных статусов
+    &.all {
+        background: #888;
+        opacity: 0.6;
+    }
+
+    &.online {
+        background: #22c55e;
+    }
+
+    &.idle {
+        background: #f59e0b;
+    }
+
+    &.dnd {
+        background: #ef4444;
+    }
+
+    &.offline {
+        background: #6b7280;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.customDropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(26, 26, 26, 0.98);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    z-index: 1000;
+    animation: slideDown 0.2s ease;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: -6px;
+        left: 1.5rem;
+        width: 12px;
+        height: 12px;
+        background: inherit;
+        border: inherit;
+        border-bottom: none;
+        border-right: none;
+        transform: rotate(45deg);
+    }
+}
+
+.optionContent {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    min-height: 20px;
+    align-self: stretch; // Добавьте это!
+}
+
+.dropdownOption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; // Добавьте это!
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+    min-height: 44px; // Увеличьте высоту!
+    box-sizing: border-box; // Добавьте это!
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    &.active {
+        background: rgba(99, 102, 241, 0.2);
+        color: #6366f1;
+    }
+}
+
+.optionIndicator,
+.roleOptionIndicator {
+    width: 10px; // Увеличьте немного
+    height: 10px; // Увеличьте немного
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin: 0;
+    align-self: center; // Добавьте это!
+}
+
+.optionText {
+    flex: 1;
+    transition: color 0.2s ease;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    min-height: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    align-self: center; // Добавьте это!
+    line-height: 1;
+}
+
+.optionText span {
+    flex: 1;
+    transition: color 0.2s ease;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    min-height: 20px;
+    font-size: 1.875rem;
+    font-weight: 500;
+    align-self: center; // Добавьте это!
+}
+
+.optionIndicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &.online {
+        background: #22c55e;
+    }
+
+    &.idle {
+        background: #f59e0b;
+    }
+
+    &.dnd {
+        background: #ef4444;
+    }
+
+    &.offline {
+        background: #6b7280;
+    }
+
+    &.all {
+        background: transparent;
+        border: 1px solid #888;
+    }
+}
+
+.dropdownTrigger {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
     padding: 0.75rem 1rem;
     color: #ffffff;
     font-size: 0.875rem;
     cursor: pointer;
     backdrop-filter: blur(20px);
     transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.15);
+    }
 
     &:focus {
         outline: none;
         border-color: rgba(99, 102, 241, 0.5);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
     }
+}
 
-    option {
-        background: #1a1a1a;
-        color: #ffffff;
-    }
+.selectedValue {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    line-height: 1;
 }
 
 .filterBtn {
@@ -977,5 +1275,599 @@
 
     p {
         font-size: 0.875rem;
+    }
+}
+
+// More Filters Container
+.moreFiltersContainer {
+    position: relative;
+}
+
+.filterBtn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 0.75rem 1rem;
+    color: #888;
+    font-size: 0.875rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(20px);
+    position: relative;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+    }
+
+    &.active {
+        background: rgba(99, 102, 241, 0.1);
+        border-color: rgba(99, 102, 241, 0.3);
+        color: #6366f1;
+    }
+}
+
+// More Filters Dropdown
+.moreFiltersDropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 320px;
+    background: rgba(26, 26, 26, 0.98);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    margin-top: 0.5rem;
+    padding: 1.5rem;
+    z-index: 9999;
+    animation: slideDown 0.2s ease;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: -6px;
+        right: 1.5rem;
+        width: 12px;
+        height: 12px;
+        background: inherit;
+        border: inherit;
+        border-bottom: none;
+        border-right: none;
+        transform: rotate(45deg);
+    }
+}
+
+.filtersHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+    h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #ffffff;
+        margin: 0;
+    }
+}
+
+.clearAllBtn {
+    background: none;
+    border: none;
+    color: #6366f1;
+    font-size: 0.875rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+
+    &:hover {
+        background: rgba(99, 102, 241, 0.1);
+    }
+}
+
+.filterSection {
+    margin-bottom: 1.5rem;
+
+    h4 {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #ffffff;
+        margin: 0 0 1rem 0;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+}
+
+.checkboxGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.checkboxLabel {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #ffffff;
+    transition: color 0.2s ease;
+
+    &:hover {
+        color: #6366f1;
+    }
+}
+
+.filterCheckbox {
+    display: none;
+
+    &:checked+.checkboxCustom {
+        background: #6366f1;
+        border-color: #6366f1;
+
+        &::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) rotate(45deg);
+            width: 4px;
+            height: 8px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+        }
+    }
+}
+
+.checkboxCustom {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    background: transparent;
+    position: relative;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.inputGroup {
+    margin-bottom: 1rem;
+
+    label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #ffffff;
+        margin-bottom: 0.5rem;
+    }
+}
+
+.dateInput,
+.selectInput {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.75rem;
+    color: #ffffff;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+
+    &:focus {
+        outline: none;
+        border-color: rgba(99, 102, 241, 0.5);
+        background: rgba(255, 255, 255, 0.08);
+    }
+}
+
+.dateInput {
+    &::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        opacity: 0.6;
+        cursor: pointer;
+    }
+}
+
+.selectInput {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23888'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px;
+}
+
+.filterActions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.applyBtn {
+    flex: 1;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+    }
+}
+
+.cancelBtn {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    color: #ffffff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+}
+
+// Адаптивность
+@include mobile {
+    .moreFiltersDropdown {
+        width: 280px;
+        right: -50%;
+        transform: translateX(50%);
+    }
+
+    .filterActions {
+        flex-direction: column;
+    }
+}
+
+// Last Active Container
+.lastActiveContainer {
+    position: relative;
+    margin-bottom: 1rem;
+
+    label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #ffffff;
+        margin-bottom: 0.5rem;
+    }
+}
+
+// Стили для триггера внутри More Filters
+.moreFiltersDropdown .dropdownTrigger {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    color: #ffffff;
+    font-size: 0.875rem;
+    cursor: pointer;
+    backdrop-filter: blur(20px);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    &:focus {
+        outline: none;
+        border-color: rgba(99, 102, 241, 0.5);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+}
+
+// Стили для дропдауна внутри More Filters
+.moreFiltersDropdown .customDropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(26, 26, 26, 0.98);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    margin-top: 0.25rem;
+    padding: 0.5rem;
+    z-index: 10000;
+    animation: slideDown 0.2s ease;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: -6px;
+        left: 1.5rem;
+        width: 12px;
+        height: 12px;
+        background: inherit;
+        border: inherit;
+        border-bottom: none;
+        border-right: none;
+        transform: rotate(45deg);
+    }
+}
+
+// Стили для опций внутри More Filters
+.moreFiltersDropdown .dropdownOption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+    min-height: 40px;
+    box-sizing: border-box;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    &.active {
+        background: rgba(99, 102, 241, 0.15);
+
+        .optionText {
+            color: #6366f1;
+            font-weight: 600;
+        }
+    }
+}
+
+.moreFiltersDropdown .optionContent {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    min-height: 20px;
+}
+
+.moreFiltersDropdown .optionText {
+    flex: 1;
+    transition: color 0.2s ease;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    min-height: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.moreFiltersDropdown .checkIcon {
+    width: 16px;
+    height: 16px;
+    color: #6366f1;
+    flex-shrink: 0;
+}
+
+// Calendar Container
+.calendarContainer {
+    position: relative;
+}
+
+.dateInputTrigger {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    color: #ffffff;
+    font-size: 0.875rem;
+    cursor: pointer;
+    backdrop-filter: blur(20px);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+}
+
+// Calendar Dropdown
+.calendarDropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 280px;
+    background: rgba(26, 26, 26, 0.98);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    margin-top: 0.5rem;
+    padding: 1rem;
+    z-index: 10000;
+    animation: slideDown 0.2s ease;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: -6px;
+        left: 1.5rem;
+        width: 12px;
+        height: 12px;
+        background: inherit;
+        border: inherit;
+        border-bottom: none;
+        border-right: none;
+        transform: rotate(45deg);
+    }
+}
+
+// Calendar Header
+.calendarHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.calendarNavButton {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 0.5rem;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    svg {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+.calendarTitle {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #ffffff;
+    text-align: center;
+    flex: 1;
+}
+
+// Calendar Week Days
+.calendarWeekDays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+}
+
+.weekDay {
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #888;
+    padding: 0.5rem 0;
+    text-transform: uppercase;
+}
+
+// Calendar Days
+.calendarDays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.25rem;
+}
+
+.calendarDayEmpty {
+    height: 36px;
+}
+
+.calendarDay {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: scale(1.05);
+    }
+
+    &.calendarDayToday {
+        background: rgba(99, 102, 241, 0.2);
+        color: #6366f1;
+        font-weight: 600;
+    }
+
+    &.calendarDaySelected {
+        background: #6366f1;
+        color: white;
+        font-weight: 600;
+        transform: scale(1.05);
+    }
+}
+
+// Calendar Actions
+.calendarActions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.calendarActionBtn {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    color: #ffffff;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    &:last-child {
+        background: rgba(99, 102, 241, 0.2);
+        border-color: rgba(99, 102, 241, 0.3);
+        color: #6366f1;
+
+        &:hover {
+            background: rgba(99, 102, 241, 0.3);
+        }
+    }
+}
+
+// Адаптивность
+@include mobile {
+    .calendarDropdown {
+        width: 260px;
+        left: -50%;
+        transform: translateX(-50%);
     }
 }

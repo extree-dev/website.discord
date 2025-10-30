@@ -342,6 +342,38 @@ router.get("/discord/ban-stats", async (req, res) => {
     }
 });
 
+// Эндпоинт для получения каналов через Express API
+router.get("/discord/channels", async (req, res) => {
+    try {
+        const { guildId } = req.query;
+
+        if (!guildId) {
+            return res.status(400).json({
+                success: false,
+                error: "guildId is required"
+            });
+        }
+
+        // Проксируем запрос к API бота
+        const response = await fetch(`http://localhost:3002/api/discord/channels?guildId=${guildId}`);
+
+        if (response.ok) {
+            const data = await response.json();
+            res.json(data);
+        } else {
+            throw new Error(`Bot API returned ${response.status}`);
+        }
+
+    } catch (error) {
+        console.error('Channels fetch error:', error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch channels",
+            channels: []
+        });
+    }
+});
+
 // Фолбэк данные для мониторинга
 function getFallbackMonitoring() {
     return {

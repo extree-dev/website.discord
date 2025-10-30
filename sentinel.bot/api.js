@@ -1397,6 +1397,585 @@ app.get('/api/ban-stats', async (req, res) => {
     }
 });
 
+// Эндпоинт для получения списка каналов сервера
+app.get('/api/discord/channels', async (req, res) => {
+    try {
+        const { guildId } = req.query;
+
+        if (!guildId) {
+            return res.status(400).json({
+                success: false,
+                error: "guildId is required"
+            });
+        }
+
+        const client = getClient();
+        const guild = client.guilds.cache.get(guildId);
+
+        if (!guild) {
+            return res.status(404).json({
+                success: false,
+                error: "Guild not found",
+                guildId: guildId,
+                availableGuilds: client.guilds.cache.map(g => ({ id: g.id, name: g.name }))
+            });
+        }
+
+        // Получаем всех участников сервера
+        await guild.members.fetch();
+        const totalMembers = guild.memberCount;
+
+        // Получаем все каналы сервера
+        await guild.channels.fetch();
+
+        const channels = Array.from(guild.channels.cache.values()).map(channel => {
+            // Пропускаем категории
+            if (channel.type === 4) {
+                return null;
+            }
+
+            // Вычисляем количество участников с доступом к каналу
+            const accessibleMembers = calculateAccessibleMembers(channel, guild);
+            const isPrivate = isChannelPrivate(channel);
+
+            // Собираем информацию о разрешениях для отладки
+            const permissionInfo = {
+                everyone: channel.permissionOverwrites.cache.get(guild.id) ? {
+                    allow: Array.from(channel.permissionOverwrites.cache.get(guild.id).allow),
+                    deny: Array.from(channel.permissionOverwrites.cache.get(guild.id).deny)
+                } : null,
+                roles: Array.from(channel.permissionOverwrites.cache.values())
+                    .filter(ow => ow.type === 0 && ow.id !== guild.id)
+                    .map(ow => ({
+                        id: ow.id,
+                        name: guild.roles.cache.get(ow.id)?.name || 'Unknown',
+                        allow: Array.from(ow.allow),
+                        deny: Array.from(ow.deny)
+                    })),
+                users: Array.from(channel.permissionOverwrites.cache.values())
+                    .filter(ow => ow.type === 1)
+                    .map(ow => ({
+                        id: ow.id,
+                        username: guild.members.cache.get(ow.id)?.user?.username || 'Unknown',
+                        allow: Array.from(ow.allow),
+                        deny: Array.from(ow.deny)
+                    }))
+            };
+
+            return {
+                id: channel.id,
+                name: channel.name,
+                type: channel.type,
+                parent_id: channel.parentId,
+                permission_overwrites: permissionInfo,
+                topic: channel.topic || null,
+                nsfw: channel.nsfw || false,
+                position: channel.position,
+                created: channel.createdAt?.toISOString() || new Date().toISOString(),
+                // РЕАЛЬНОЕ количество участников с доступом
+                accessible_members: accessibleMembers,
+                is_private: isPrivate,
+                member_access_percentage: Math.round((accessibleMembers / totalMembers) * 100),
+                total_members: totalMembers
+            };
+        }).filter(channel => channel !== null); // Убираем категории
+
+        console.log(`✅ API Discord Channels: ${channels.length} channels for guild ${guild.name}`);
+
+        res.json({
+            success: true,
+            channels: channels,
+            total: channels.length,
+            guild: {
+                id: guild.id,
+                name: guild.name,
+                total_members: totalMembers
+            },
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('❌ API Discord Channels Error:', error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch Discord channels",
+            details: error.message,
+            channels: getFallbackChannels()
+        });
+    }
+});
+
+// Эндпоинт для получения детальной информации о конкретном канале
+app.get('/api/discord/channels/:channelId', async (req, res) => {
+    try {
+        const { channelId } = req.params;
+        const { guildId } = req.query;
+
+        if (!guildId) {
+            return res.status(400).json({ error: "guildId is required" });
+        }
+
+        const client = getClient();
+        const guild = client.guilds.cache.get(guildId);
+
+        if (!guild) {
+            return res.status(404).json({ error: "Guild not found" });
+        }
+
+        const channel = guild.channels.cache.get(channelId);
+
+        if (!channel) {
+            return res.status(404).json({ error: "Channel not found" });
+        }
+
+        const channelData = {
+            id: channel.id,
+            name: channel.name,
+            type: channel.type,
+            parent_id: channel.parentId,
+            permission_overwrites: channel.permissionOverwrites.cache.map(overwrite => ({
+                id: overwrite.id,
+                type: overwrite.type,
+                allow: overwrite.allow.bitfield.toString(),
+                deny: overwrite.deny.bitfield.toString()
+            })),
+            topic: channel.topic || null,
+            nsfw: channel.nsfw || false,
+            position: channel.position,
+            created: channel.createdAt.toISOString(),
+            last_message_id: channel.lastMessageId,
+            rate_limit_per_user: channel.rateLimitPerUser || 0,
+            bitrate: channel.bitrate || null,
+            user_limit: channel.userLimit || null,
+            rtc_region: channel.rtcRegion || null,
+            video_quality_mode: channel.videoQualityMode || null,
+            // Дополнительная информация для текстовых каналов
+            ...(channel.type === 0 && {
+                last_pin_timestamp: channel.lastPinTimestamp?.toISOString() || null
+            }),
+            // Дополнительная информация для голосовых каналов
+            ...(channel.type === 2 && {
+                bitrate: channel.bitrate,
+                user_limit: channel.userLimit,
+                rtc_region: channel.rtcRegion,
+                video_quality_mode: channel.videoQualityMode
+            })
+        };
+
+        res.json({
+            success: true,
+            channel: channelData,
+            guild: {
+                id: guild.id,
+                name: guild.name
+            },
+            generatedAt: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('❌ Channel details fetch error:', error);
+        res.status(500).json({
+            error: "Failed to fetch channel details",
+            details: error.message
+        });
+    }
+});
+
+// Эндпоинт для создания нового канала
+app.post('/api/discord/channels', async (req, res) => {
+    try {
+        const { guildId, name, type, parentId, topic, nsfw, rateLimitPerUser } = req.body;
+
+        if (!guildId || !name || type === undefined) {
+            return res.status(400).json({ error: "guildId, name and type are required" });
+        }
+
+        const client = getClient();
+        const guild = client.guilds.cache.get(guildId);
+
+        if (!guild) {
+            return res.status(404).json({ error: "Guild not found" });
+        }
+
+        const channelData = {
+            name: name,
+            type: type,
+            parent: parentId || null,
+            topic: topic || null,
+            nsfw: nsfw || false,
+            rateLimitPerUser: rateLimitPerUser || 0
+        };
+
+        const channel = await guild.channels.create(channelData);
+
+        console.log(`✅ Created channel #${channel.name} in guild ${guild.name}`);
+
+        res.json({
+            success: true,
+            channel: {
+                id: channel.id,
+                name: channel.name,
+                type: channel.type,
+                parent_id: channel.parentId,
+                topic: channel.topic,
+                nsfw: channel.nsfw,
+                position: channel.position,
+                created: channel.createdAt.toISOString()
+            },
+            message: `Channel #${channel.name} created successfully`
+        });
+
+    } catch (error) {
+        console.error('❌ Channel creation error:', error);
+        res.status(500).json({
+            error: "Failed to create channel",
+            details: error.message
+        });
+    }
+});
+
+// Эндпоинт для обновления канала
+app.patch('/api/discord/channels/:channelId', async (req, res) => {
+    try {
+        const { channelId } = req.params;
+        const { guildId, name, topic, nsfw, rateLimitPerUser, parentId, position } = req.body;
+
+        if (!guildId) {
+            return res.status(400).json({ error: "guildId is required" });
+        }
+
+        const client = getClient();
+        const guild = client.guilds.cache.get(guildId);
+
+        if (!guild) {
+            return res.status(404).json({ error: "Guild not found" });
+        }
+
+        const channel = guild.channels.cache.get(channelId);
+
+        if (!channel) {
+            return res.status(404).json({ error: "Channel not found" });
+        }
+
+        const updateData = {};
+        if (name !== undefined) updateData.name = name;
+        if (topic !== undefined) updateData.topic = topic;
+        if (nsfw !== undefined) updateData.nsfw = nsfw;
+        if (rateLimitPerUser !== undefined) updateData.rateLimitPerUser = rateLimitPerUser;
+        if (parentId !== undefined) updateData.parent = parentId;
+        if (position !== undefined) updateData.position = position;
+
+        const updatedChannel = await channel.edit(updateData);
+
+        console.log(`✅ Updated channel #${updatedChannel.name} in guild ${guild.name}`);
+
+        res.json({
+            success: true,
+            channel: {
+                id: updatedChannel.id,
+                name: updatedChannel.name,
+                type: updatedChannel.type,
+                parent_id: updatedChannel.parentId,
+                topic: updatedChannel.topic,
+                nsfw: updatedChannel.nsfw,
+                position: updatedChannel.position,
+                rate_limit_per_user: updatedChannel.rateLimitPerUser
+            },
+            message: `Channel #${updatedChannel.name} updated successfully`
+        });
+
+    } catch (error) {
+        console.error('❌ Channel update error:', error);
+        res.status(500).json({
+            error: "Failed to update channel",
+            details: error.message
+        });
+    }
+});
+
+// Эндпоинт для удаления канала
+app.delete('/api/discord/channels/:channelId', async (req, res) => {
+    try {
+        const { channelId } = req.params;
+        const { guildId } = req.query;
+
+        if (!guildId) {
+            return res.status(400).json({ error: "guildId is required" });
+        }
+
+        const client = getClient();
+        const guild = client.guilds.cache.get(guildId);
+
+        if (!guild) {
+            return res.status(404).json({ error: "Guild not found" });
+        }
+
+        const channel = guild.channels.cache.get(channelId);
+
+        if (!channel) {
+            return res.status(404).json({ error: "Channel not found" });
+        }
+
+        const channelName = channel.name;
+        await channel.delete();
+
+        console.log(`✅ Deleted channel #${channelName} from guild ${guild.name}`);
+
+        res.json({
+            success: true,
+            message: `Channel #${channelName} deleted successfully`,
+            deletedChannel: {
+                id: channelId,
+                name: channelName
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Channel deletion error:', error);
+        res.status(500).json({
+            error: "Failed to delete channel",
+            details: error.message
+        });
+    }
+});
+
+// Эндпоинт для получения статистики по каналам
+app.get('/api/discord/channels', async (req, res) => {
+    try {
+        const { guildId } = req.query;
+
+        if (!guildId) {
+            return res.status(400).json({
+                success: false,
+                error: "guildId is required"
+            });
+        }
+
+        const client = getClient();
+        const guild = client.guilds.cache.get(guildId);
+
+        if (!guild) {
+            return res.status(404).json({
+                success: false,
+                error: "Guild not found",
+                guildId: guildId,
+                availableGuilds: client.guilds.cache.map(g => ({ id: g.id, name: g.name }))
+            });
+        }
+
+        // Получаем всех участников сервера
+        await guild.members.fetch();
+        const totalMembers = guild.memberCount;
+
+        // Получаем все каналы сервера
+        await guild.channels.fetch();
+
+        const channels = Array.from(guild.channels.cache.values()).map(channel => {
+            // Вычисляем количество участников с доступом к каналу
+            const accessibleMembers = this.calculateAccessibleMembers(channel, guild);
+
+            return {
+                id: channel.id,
+                name: channel.name,
+                type: channel.type,
+                parent_id: channel.parentId,
+                permission_overwrites: Array.from(channel.permissionOverwrites.cache.values()).map(overwrite => ({
+                    id: overwrite.id,
+                    type: overwrite.type,
+                    allow: overwrite.allow.bitfield?.toString() || '0',
+                    deny: overwrite.deny.bitfield?.toString() || '0'
+                })),
+                topic: channel.topic || null,
+                nsfw: channel.nsfw || false,
+                position: channel.position,
+                created: channel.createdAt?.toISOString() || new Date().toISOString(),
+                // ДОБАВЛЯЕМ РЕАЛЬНОЕ КОЛИЧЕСТВО УЧАСТНИКОВ
+                accessible_members: accessibleMembers,
+                is_private: this.isChannelPrivate(channel),
+                member_access_percentage: Math.round((accessibleMembers / totalMembers) * 100)
+            };
+        });
+
+        console.log(`✅ API Discord Channels: ${channels.length} channels for guild ${guild.name}`);
+
+        res.json({
+            success: true,
+            channels: channels,
+            total: channels.length,
+            guild: {
+                id: guild.id,
+                name: guild.name,
+                total_members: totalMembers
+            },
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('❌ API Discord Channels Error:', error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch Discord channels",
+            details: error.message,
+            channels: getFallbackChannels()
+        });
+    }
+});
+
+function calculateAccessibleMembers(channel, guild) {
+    try {
+        console.log(`🔍 Calculating access for channel: ${channel.name} (${channel.id})`);
+
+        // Если канал публичный (нет специальных разрешений), все участники имеют доступ
+        if (channel.permissionOverwrites.cache.size === 0) {
+            console.log(`✅ Channel ${channel.name} is public - all ${guild.memberCount} members have access`);
+            return guild.memberCount;
+        }
+
+        // Получаем overwrite для @everyone
+        const everyoneOverwrite = channel.permissionOverwrites.cache.get(guild.id);
+
+        // Если @everyone запрещен просмотр, канал приватный
+        if (everyoneOverwrite && everyoneOverwrite.deny.has('ViewChannel')) {
+            console.log(`🔒 Channel ${channel.name} is private - counting explicit access`);
+            return countMembersWithExplicitAccess(channel, guild);
+        }
+
+        // Если @everyone разрешен просмотр или нет overwrite, все имеют доступ
+        // но нужно вычесть тех, кому явно запрещен доступ
+        if (!everyoneOverwrite || everyoneOverwrite.allow.has('ViewChannel')) {
+            console.log(`🌐 Channel ${channel.name} has @everyone access - calculating exclusions`);
+            return countMembersWithAccessIncludingExclusions(channel, guild);
+        }
+
+        // Fallback
+        return Math.floor(guild.memberCount * 0.5);
+
+    } catch (error) {
+        console.error('Error calculating accessible members:', error);
+        return Math.floor(guild.memberCount * 0.5);
+    }
+}
+
+function countMembersWithAccessIncludingExclusions(channel, guild) {
+    const membersWithAccess = new Set();
+
+    // Сначала добавляем всех участников
+    guild.members.cache.forEach(member => {
+        membersWithAccess.add(member.id);
+    });
+
+    // Убираем тех, кому явно запрещен доступ
+    const denyOverwrites = channel.permissionOverwrites.cache.filter(ow =>
+        ow.deny.has('ViewChannel')
+    );
+
+    for (const [overwriteId, overwrite] of denyOverwrites) {
+        if (overwrite.type === 0) { // Role
+            const role = guild.roles.cache.get(overwriteId);
+            if (role) {
+                role.members.forEach(member => {
+                    membersWithAccess.delete(member.id);
+                });
+                console.log(`➖ Removed ${role.members.size} members from role ${role.name}`);
+            }
+        } else if (overwrite.type === 1) { // Member
+            membersWithAccess.delete(overwriteId);
+            console.log(`➖ Removed user ${overwriteId}`);
+        }
+    }
+
+    console.log(`📊 Channel ${channel.name}: ${membersWithAccess.size} members after exclusions`);
+    return membersWithAccess.size;
+}
+
+
+// Функция для подсчета участников с явными разрешениями
+function countMembersWithExplicitAccess(channel, guild) {
+    const membersWithAccess = new Set();
+
+    console.log(`🔎 Checking explicit access for ${channel.name}:`);
+
+    // Проверяем overwrites для ролей с разрешением ViewChannel
+    const allowRoleOverwrites = channel.permissionOverwrites.cache.filter(ow =>
+        ow.type === 0 && ow.allow.has('ViewChannel') // Type 0 = role, allow ViewChannel
+    );
+
+    console.log(`🎯 Found ${allowRoleOverwrites.size} roles with ViewChannel access`);
+
+    for (const [roleId, overwrite] of allowRoleOverwrites) {
+        const role = guild.roles.cache.get(roleId);
+        if (role) {
+            console.log(`👥 Role ${role.name} has ${role.members.size} members`);
+            role.members.forEach(member => {
+                membersWithAccess.add(member.id);
+            });
+        }
+    }
+
+    // Проверяем overwrites для пользователей с разрешением ViewChannel
+    const allowUserOverwrites = channel.permissionOverwrites.cache.filter(ow =>
+        ow.type === 1 && ow.allow.has('ViewChannel') // Type 1 = member, allow ViewChannel
+    );
+
+    console.log(`👤 Found ${allowUserOverwrites.size} users with explicit ViewChannel access`);
+
+    for (const [userId, overwrite] of allowUserOverwrites) {
+        const member = guild.members.cache.get(userId);
+        if (member) {
+            membersWithAccess.add(member.id);
+            console.log(`✅ Added user ${member.user.username}`);
+        }
+    }
+
+    // Убираем тех, кому явно запрещен доступ (даже если у них есть доступ через роль)
+    const denyOverwrites = channel.permissionOverwrites.cache.filter(ow =>
+        ow.deny.has('ViewChannel')
+    );
+
+    for (const [overwriteId, overwrite] of denyOverwrites) {
+        if (overwrite.type === 0) { // Role
+            const role = guild.roles.cache.get(overwriteId);
+            if (role) {
+                role.members.forEach(member => {
+                    membersWithAccess.delete(member.id);
+                });
+                console.log(`🚫 Removed ${role.members.size} members from denied role ${role.name}`);
+            }
+        } else if (overwrite.type === 1) { // Member
+            membersWithAccess.delete(overwriteId);
+            console.log(`🚫 Removed user ${overwriteId}`);
+        }
+    }
+
+    console.log(`📊 Channel ${channel.name}: ${membersWithAccess.size} members with explicit access`);
+
+    // Детальная информация для отладки
+    if (membersWithAccess.size > 0) {
+        const sampleMembers = Array.from(membersWithAccess).slice(0, 3);
+        console.log(`🔍 Sample members with access:`, sampleMembers);
+    }
+
+    return membersWithAccess.size > 0 ? membersWithAccess.size : 1; // Минимум 1
+}
+
+// Функция для определения приватности канала
+function isChannelPrivate(channel) {
+    const guild = channel.guild;
+    const everyoneOverwrite = channel.permissionOverwrites.cache.get(guild.id);
+
+    // Если есть overwrite для @everyone с deny ViewChannel - канал приватный
+    if (everyoneOverwrite && everyoneOverwrite.deny.has('ViewChannel')) {
+        return true;
+    }
+
+    // Если есть какие-то overwrites (кроме @everyone), канал может быть приватным
+    const hasOtherOverwrites = channel.permissionOverwrites.cache.some(ow =>
+        ow.id !== guild.id && (ow.allow.has('ViewChannel') || ow.deny.has('ViewChannel'))
+    );
+
+    return hasOtherOverwrites;
+}
+
 // УЛУЧШЕННАЯ ФУНКЦИЯ ДЛЯ ОПРЕДЕЛЕНИЯ АКТИВНОСТИ
 function getLastActiveFromPresence(presence, member) {
     // Если пользователь онлайн - сейчас активен

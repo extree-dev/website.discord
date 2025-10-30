@@ -1218,6 +1218,185 @@ app.get('/api/discord/guild-members', async (req, res) => {
     }
 });
 
+// Эндпоинт для получения забаненных пользователей
+app.get('/api/banned-users', async (req, res) => {
+    try {
+        const { guildId, limit = 50, activeOnly = true } = req.query;
+
+        if (!guildId) {
+            return res.status(400).json({ error: "guildId is required" });
+        }
+
+        let whereClause = {
+            guildId: guildId
+        };
+
+        // Если нужны только активные баны
+        if (activeOnly === 'true') {
+            whereClause.unbannedAt = null;
+        }
+
+        const bannedUsers = await prisma.bannedUser.findMany({
+            where: whereClause,
+            take: parseInt(limit),
+            orderBy: { bannedAt: 'desc' },
+            select: {
+                id: true,
+                discordId: true,
+                username: true,
+                discriminator: true,
+                avatar: true,
+                reason: true,
+                bannedAt: true,
+                bannedBy: true,
+                bannedByUsername: true,
+                deleteDays: true,
+                unbannedAt: true,
+                unbannedBy: true,
+                unbannedByUsername: true,
+                unbanReason: true
+            }
+        });
+
+        // Форматируем данные для фронтенда
+        const formattedUsers = bannedUsers.map(user => ({
+            id: user.discordId,
+            username: user.username,
+            discriminator: user.discriminator,
+            avatar: user.avatar ?
+                `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png` : null,
+            reason: user.reason,
+            bannedAt: user.bannedAt.toISOString(),
+            bannedBy: user.bannedByUsername,
+            deleteDays: user.deleteDays,
+            isBanned: !user.unbannedAt, // активный бан
+            unbannedAt: user.unbannedAt?.toISOString(),
+            unbannedBy: user.unbannedByUsername,
+            unbanReason: user.unbanReason
+        }));
+
+        res.json({
+            success: true,
+            bannedUsers: formattedUsers,
+            total: formattedUsers.length,
+            activeBans: formattedUsers.filter(u => u.isBanned).length,
+            generatedAt: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('Banned users fetch error:', error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch banned users",
+            details: error.message
+        });
+    }
+});
+
+// Эндпоинт для получения статистики банов
+app.get('/api/ban-stats', async (req, res) => {
+    try {
+        const { guildId, period = '30d' } = req.query;
+
+        if (!guildId) {
+            return res.status(400).json({ error: "guildId is required" });
+        }
+
+        const periodDate = new Date();
+        switch (period) {
+            case '7d':
+                periodDate.setDate(periodDate.getDate() - 7);
+                break;
+            case '30d':
+                periodDate.setDate(periodDate.getDate() - 30);
+                break;
+            case '90d':
+                periodDate.setDate(periodDate.getDate() - 90);
+                break;
+            default:
+                periodDate.setDate(periodDate.getDate() - 30);
+        }
+
+        // Общая статистика
+        const totalBans = await prisma.bannedUser.count({
+            where: { guildId: guildId }
+        });
+
+        const activeBans = await prisma.bannedUser.count({
+            where: {
+                guildId: guildId,
+                unbannedAt: null
+            }
+        });
+
+        const recentBans = await prisma.bannedUser.count({
+            where: {
+                guildId: guildId,
+                bannedAt: { gte: periodDate }
+            }
+        });
+
+        // Статистика по дням
+        const dailyBans = await prisma.bannedUser.groupBy({
+            by: ['bannedAt'],
+            where: {
+                guildId: guildId,
+                bannedAt: { gte: periodDate }
+            },
+            _count: {
+                id: true
+            },
+            orderBy: {
+                bannedAt: 'asc'
+            }
+        });
+
+        // Топ модераторов
+        const topModerators = await prisma.bannedUser.groupBy({
+            by: ['bannedByUsername'],
+            where: {
+                guildId: guildId,
+                bannedAt: { gte: periodDate }
+            },
+            _count: {
+                id: true
+            },
+            orderBy: {
+                _count: {
+                    id: 'desc'
+                }
+            },
+            take: 5
+        });
+
+        res.json({
+            success: true,
+            stats: {
+                totalBans,
+                activeBans,
+                recentBans,
+                period: period,
+                dailyBans: dailyBans.map(day => ({
+                    date: day.bannedAt.toISOString().split('T')[0],
+                    count: day._count.id
+                })),
+                topModerators: topModerators.map(mod => ({
+                    username: mod.bannedByUsername,
+                    bans: mod._count.id
+                }))
+            },
+            generatedAt: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('Ban stats fetch error:', error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch ban statistics"
+        });
+    }
+});
+
 // УЛУЧШЕННАЯ ФУНКЦИЯ ДЛЯ ОПРЕДЕЛЕНИЯ АКТИВНОСТИ
 function getLastActiveFromPresence(presence, member) {
     // Если пользователь онлайн - сейчас активен

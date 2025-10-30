@@ -44,6 +44,21 @@ interface User {
     bot?: boolean;
 }
 
+interface BannedUser {
+    id: string;
+    username: string;
+    discriminator: string;
+    avatar: string | null;
+    reason: string;
+    bannedAt: string;
+    bannedBy: string;
+    deleteDays: number;
+    isBanned: boolean;
+    unbannedAt: string | null;
+    unbannedBy: string | null;
+    unbanReason: string | null;
+}
+
 export default function Users() {
     const [users, setUsers] = useState<User[]>([]);
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -77,6 +92,25 @@ export default function Users() {
         { value: 'offline', label: 'Offline', displayLabel: 'Offline', color: '#6b7280' }
     ];
 
+    const [bannedUsers, setBannedUsers] = useState<BannedUser[]>([]);
+    const guildId = import.meta.env.VITE_GUILD_ID || '1343586237868544052';
+    const fetchBannedUsers = async () => {
+        try {
+            const response = await fetch(`/api/auth/system/discord/banned-users?guildId=${guildId}`);
+            if (response.ok) {
+                const data = await response.json();
+                setBannedUsers(data.bannedUsers || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch banned users:', error);
+        }
+    };
+
+    // Вызови эту функцию при загрузке компонента
+    useEffect(() => {
+        fetchBannedUsers();
+    }, [guildId]);
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (!(event.target as Element).closest(`.${styles.selectContainer}`)) {
@@ -90,11 +124,13 @@ export default function Users() {
 
     const roleOptions = [
         { value: 'all', label: 'All Roles', displayLabel: 'All', color: '#888' },
-        { value: 'Admin', label: 'Admin', displayLabel: 'Admin', color: '#ef4444' },
-        { value: 'Moderator', label: 'Moderator', displayLabel: 'Moderator', color: '#8b5cf6' },
-        { value: 'Developer', label: 'Developer', displayLabel: 'Developer', color: '#3b82f6' },
-        { value: 'VIP', label: 'VIP', displayLabel: 'VIP', color: '#f59e0b' },
-        { value: 'Member', label: 'Member', displayLabel: 'Member', color: '#22c55e' }
+        { value: 'Chief Administrator', label: 'Chief Administrator', displayLabel: 'Chief Administrator', color: '#ff0000' },
+        { value: 'Senior Moderator', label: 'Senior Moderator', displayLabel: 'Senior Moderator', color: '#a9c9ff' },
+        { value: 'Moderator', label: 'Moderator', displayLabel: 'Moderator', color: '#594480' },
+        { value: 'Booster', label: 'Booster', displayLabel: 'Booster', color: '#d90ae4' },
+        { value: 'Unverified', label: 'Unverified', displayLabel: 'Unverified', color: '#f1c40f' },
+        { value: 'Friends', label: 'Friends', displayLabel: 'Friends', color: '#369876' },
+        { value: 'Bot Developer', label: 'Bot Developer', displayLabel: 'Bot Developer', color: '#d4843d' },
     ];
 
     // Обновите обработчик клика вне области
@@ -284,14 +320,72 @@ export default function Users() {
             filtered = filtered.filter(user => user.status === statusFilter);
         }
 
-        // Role filter
+        // Role filter - ОБНОВЛЕННЫЙ КОД
         if (roleFilter !== 'all') {
-            filtered = filtered.filter(user => user.roles.includes(roleFilter));
+            filtered = filtered.filter(user => {
+                // Проверяем есть ли у пользователя выбранная роль
+                return user.roles.some(role => {
+                    const roleName = typeof role === 'string' ? role : role.name;
+                    return roleName === roleFilter;
+                });
+            });
+        }
+
+        // Additional filters from More Filters
+        if (filters.hasWarnings) {
+            filtered = filtered.filter(user => user.warnings > 0);
+        }
+
+        if (filters.isBanned) {
+            filtered = filtered.filter(user => user.isBanned);
+        }
+
+        if (filters.isMuted) {
+            filtered = filtered.filter(user => user.isMuted);
+        }
+
+        if (filters.isBot) {
+            filtered = filtered.filter(user => user.bot);
+        }
+
+        // Date filter
+        if (filters.joinedDate) {
+            const selectedDate = new Date(filters.joinedDate);
+            filtered = filtered.filter(user => new Date(user.joinedAt) >= selectedDate);
+        }
+
+        // Last Active filter
+        if (filters.lastActive) {
+            const now = new Date();
+            let cutoffDate = new Date();
+
+            switch (filters.lastActive) {
+                case 'day':
+                    cutoffDate.setDate(now.getDate() - 1);
+                    break;
+                case 'week':
+                    cutoffDate.setDate(now.getDate() - 7);
+                    break;
+                case 'month':
+                    cutoffDate.setMonth(now.getMonth() - 1);
+                    break;
+                case '3months':
+                    cutoffDate.setMonth(now.getMonth() - 3);
+                    break;
+            }
+
+            // Note: This is a simplified implementation - you might need to adjust
+            // based on how lastActive is stored in your user data
+            filtered = filtered.filter(user => {
+                // Assuming lastActive is a string like "2h ago", "1d ago", etc.
+                // You might need a more sophisticated parser based on your data structure
+                return true; // Placeholder - implement based on your lastActive format
+            });
         }
 
         setFilteredUsers(filtered);
         setCurrentPage(1);
-    }, [searchQuery, statusFilter, roleFilter, users]);
+    }, [searchQuery, statusFilter, roleFilter, users, filters]); // Добавили filters в зависимости
 
     // Pagination
     const indexOfLastUser = currentPage * usersPerPage;
@@ -335,10 +429,13 @@ export default function Users() {
         const roleName = typeof role === 'string' ? role : role.name;
 
         switch (roleName) {
-            case 'Admin': return <Crown size={14} />;
+            case 'Chief Administrator': return <Crown size={14} />;
+            case 'Senior Moderator': return <Shield size={14} />;
             case 'Moderator': return <Shield size={14} />;
-            case 'Developer': return <Star size={14} />;
-            case 'VIP': return <Star size={14} />;
+            case 'Booster': return <Star size={14} />;
+            case 'Bot Developer': return <Star size={14} />;
+            case 'Unverified': return <User size={14} />;
+            case 'Friends': return <User size={14} />;
             default: return <User size={14} />;
         }
     };
@@ -347,10 +444,13 @@ export default function Users() {
         const roleName = typeof role === 'string' ? role : role.name;
 
         switch (roleName) {
-            case 'Admin': return '#ef4444';
-            case 'Moderator': return '#f59e0b';
-            case 'Developer': return '#3b82f6';
-            case 'VIP': return '#8b5cf6';
+            case 'Chief Administrator': return '#ff0000';
+            case 'Senior Moderator': return '#a9c9ff';
+            case 'Moderator': return '#594480';
+            case 'Booster': return '#d90ae4';
+            case 'Bot Developer': return '#d4843d';
+            case 'Unverified': return '#f1c40f';
+            case 'Friends': return '#369876';
             default: return '#6b7280';
         }
     };
@@ -420,7 +520,7 @@ export default function Users() {
                             <Ban size={20} />
                         </div>
                         <div className={styles.statContent}>
-                            <h3>{users.filter(u => u.isBanned).length}</h3>
+                            <h3>{bannedUsers.filter(u => u.isBanned).length}</h3>
                             <p>Banned Users</p>
                         </div>
                     </div>
@@ -813,7 +913,7 @@ export default function Users() {
                                                 setIsMoreFiltersOpen(false);
                                             }}
                                         >
-                                            Apply Filters
+                                            Apply
                                         </button>
                                         <button
                                             className={styles.cancelBtn}
@@ -876,8 +976,6 @@ export default function Users() {
                             <div className={styles.tableCell + ' ' + styles.rolesCell}>Roles</div>
                             <div className={styles.tableCell + ' ' + styles.statusCell}>Status</div>
                             <div className={styles.tableCell + ' ' + styles.joinedCell}>Joined</div>
-                            <div className={styles.tableCell + ' ' + styles.warningsCell}>Warnings</div>
-                            <div className={styles.tableCell + ' ' + styles.actionsCell}>Actions</div>
                         </div>
 
                         {currentUsers.map((user) => (
@@ -914,7 +1012,6 @@ export default function Users() {
                                 <div className={styles.tableCell + ' ' + styles.rolesCell}>
                                     <div className={styles.roles}>
                                         {user.roles.map((role, index) => {
-                                            // Обрабатываем как строку, так и объект
                                             const roleName = typeof role === 'string' ? role : role.name;
                                             const roleColor = typeof role === 'string' ? getRoleColor(role) : role.color;
 
@@ -947,68 +1044,6 @@ export default function Users() {
                                     <div className={styles.lastActive}>
                                         <Clock size={12} />
                                         {user.lastActive}
-                                    </div>
-                                </div>
-
-                                <div className={styles.tableCell + ' ' + styles.warningsCell}>
-                                    <div className={styles.warnings}>
-                                        {user.warnings > 0 ? (
-                                            <span className={styles.warningCount}>
-                                                {user.warnings} warning{user.warnings !== 1 ? 's' : ''}
-                                            </span>
-                                        ) : (
-                                            <span className={styles.noWarnings}>No warnings</span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className={styles.tableCell + ' ' + styles.actionsCell}>
-                                    <div className={styles.actions}>
-                                        <button
-                                            className={styles.iconBtn}
-                                            onClick={() => handleAction('view', user.id)}
-                                            title="View Profile"
-                                        >
-                                            <Eye size={16} />
-                                        </button>
-                                        <button
-                                            className={styles.iconBtn}
-                                            onClick={() => handleAction('message', user.id)}
-                                            title="Send Message"
-                                        >
-                                            <MessageCircle size={16} />
-                                        </button>
-                                        <button
-                                            className={styles.iconBtn}
-                                            onClick={() => handleAction('edit', user.id)}
-                                            title="Edit User"
-                                        >
-                                            <Edit size={16} />
-                                        </button>
-                                        {user.isBanned ? (
-                                            <button
-                                                className={styles.iconBtn}
-                                                onClick={() => handleAction('unban', user.id)}
-                                                title="Unban User"
-                                            >
-                                                <CheckCircle size={16} />
-                                            </button>
-                                        ) : (
-                                            <button
-                                                className={styles.iconBtn + ' ' + styles.danger}
-                                                onClick={() => handleAction('ban', user.id)}
-                                                title="Ban User"
-                                            >
-                                                <Ban size={16} />
-                                            </button>
-                                        )}
-                                        <button
-                                            className={styles.iconBtn + ' ' + styles.danger}
-                                            onClick={() => handleAction('delete', user.id)}
-                                            title="Remove User"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
                                     </div>
                                 </div>
                             </div>

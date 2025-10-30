@@ -280,3 +280,28 @@ model BotLog {
   @@index([timestamp])
   @@index([type])
 }
+
+model BannedUser {
+  id        Int      @id @default(autoincrement())
+  discordId String   @db.VarChar(255)
+  username  String   @db.VarChar(255)
+  discriminator String @db.VarChar(10)
+  avatar    String?  @db.VarChar(255)
+  guildId   String   @db.VarChar(255)
+  reason    String   @db.Text
+  bannedAt  DateTime @default(now())
+  bannedBy  String   @db.VarChar(255)
+  bannedByUsername String @db.VarChar(255)
+  deleteDays Int     @default(0)
+  
+  // Для разбана
+  unbannedAt     DateTime?
+  unbannedBy     String?   @db.VarChar(255)
+  unbannedByUsername String? @db.VarChar(255)
+  unbanReason    String?   @db.Text
+
+  @@index([discordId])
+  @@index([guildId])
+  @@index([bannedAt])
+  @@map("banned_users")
+}

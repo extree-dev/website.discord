@@ -286,6 +286,62 @@ router.get("/discord/diagnostics", async (req, res) => {
     }
 });
 
+router.get("/discord/banned-users", async (req, res) => {
+    try {
+        const { guildId } = req.query;
+
+        if (!guildId) {
+            return res.status(400).json({
+                success: false,
+                error: "guildId is required"
+            });
+        }
+
+        const bannedUsers = await SystemService.getBannedUsers(guildId as string);
+
+        res.json({
+            success: true,
+            bannedUsers: bannedUsers,
+            total: bannedUsers.length,
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch banned users"
+        });
+    }
+});
+
+// Статистика банов
+router.get("/discord/ban-stats", async (req, res) => {
+    try {
+        const { guildId } = req.query;
+
+        if (!guildId) {
+            return res.status(400).json({
+                success: false,
+                error: "guildId is required"
+            });
+        }
+
+        const banStats = await SystemService.getBanStats(guildId as string);
+
+        res.json({
+            success: true,
+            stats: banStats,
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch ban statistics"
+        });
+    }
+});
+
 // Фолбэк данные для мониторинга
 function getFallbackMonitoring() {
     return {

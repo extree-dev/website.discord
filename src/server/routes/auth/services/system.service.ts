@@ -647,7 +647,35 @@ export const SystemService = {
 
         // Для офлайн используем переданное значение или по умолчанию
         return currentLastActive || 'Unknown';
-    }
+    },
 
-    // УДАЛЯЕМ private метод - он не нужен для реальных данных
+    async getBannedUsers(guildId: string) {
+        try {
+            const response = await fetch(`http://localhost:3002/api/banned-users?guildId=${guildId}&activeOnly=true`);
+
+            if (response.ok) {
+                const data = await response.json();
+                return data.bannedUsers || [];
+            }
+            throw new Error('Banned users API not available');
+        } catch (error) {
+            console.error('Failed to fetch banned users:', error);
+            return [];
+        }
+    },
+
+    async getBanStats(guildId: string) {
+        try {
+            const response = await fetch(`http://localhost:3002/api/ban-stats?guildId=${guildId}`);
+
+            if (response.ok) {
+                const data = await response.json();
+                return data.stats || {};
+            }
+            throw new Error('Ban stats API not available');
+        } catch (error) {
+            console.error('Failed to fetch ban stats:', error);
+            return {};
+        }
+    }
 };

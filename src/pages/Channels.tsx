@@ -224,17 +224,18 @@ const useDiscordChannels = (guildId: string) => {
             const serverInfo = await channelService.getServerInfo(guildId);
             const totalMembers = serverInfo?.members?.total || 100;
 
+            console.log('📨 === RAW API RESPONSE ===');
+            console.log('Discord channels from API:', discordChannels);
+            console.log('Server info:', serverInfo);
+
             const { channels: transformedChannels, categories: transformedCategories } =
                 transformDiscordChannels(discordChannels, totalMembers);
 
             setChannels(transformedChannels);
             setCategories(transformedCategories);
 
-            console.log('📁 Категории:', transformedCategories);
-            transformedCategories.forEach((cat: Category) => {
-                const catChannels = transformedChannels.filter(ch => ch.categoryId === cat.id);
-                console.log(`   ${cat.name}: ${catChannels.length} каналов`);
-            });
+            console.log('📁 Final categories:', transformedCategories);
+            console.log('📊 Final channels count:', transformedChannels.length);
 
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to fetch channels';
@@ -315,30 +316,108 @@ const transformDiscordChannels = (discordChannels: any[], totalMembers: number):
     const categories: Category[] = [];
     const channels: Channel[] = [];
 
-    discordChannels.forEach(channel => {
-        if (channel.type === 4) {
+    console.log('🔍 === RAW DATA FROM DISCORD API ===');
+    console.log('Total channels received:', discordChannels.length);
+
+    // МАППИНГ ID КАТЕГОРИЙ НА РЕАЛЬНЫЕ НАЗВАНИЯ
+    const categoryMapping: { [key: string]: string } = {
+        '1395038124693786654': 'Welcome',
+        '1395039857532993679': 'News',
+        '1375390145317961778': 'New Rooms',
+        '1375390437153439824': 'Admin',
+        '1375390652744859688': 'Team A',
+        '1375400470998155375': 'AFK',
+        '1376910233930305617': 'Voice Channels'
+    };
+
+    // Сначала найдем ВСЕ parent_id чтобы создать категории
+    const parentIds = new Set<string>();
+
+    discordChannels.forEach((channel: any) => {
+        if (channel.parent_id && typeof channel.parent_id === 'string') {
+            parentIds.add(channel.parent_id);
+        }
+    });
+
+    console.log('📁 Found parent IDs (potential categories):', Array.from(parentIds));
+
+    // Создаем категории для каждого parent_id с РЕАЛЬНЫМИ названиями
+    parentIds.forEach((parentId: string) => {
+        const realCategoryName = categoryMapping[parentId];
+
+        if (realCategoryName) {
+            // Используем реальное название из маппинга
             categories.push({
-                id: channel.id,
-                name: channel.name,
+                id: parentId,
+                name: realCategoryName,
                 type: 'category',
-                position: channel.position || 0
+                position: 0 // Можно добавить логику для позиций если нужно
             });
+            console.log(`✅ Created real category: ${realCategoryName} (${parentId})`);
+        } else {
+            // Ищем канал с этим ID чтобы получить название категории
+            const parentChannel = discordChannels.find((c: any) => c.id === parentId);
+
+            if (parentChannel) {
+                // Если нашли канал с таким ID, используем его как категорию
+                categories.push({
+                    id: parentChannel.id,
+                    name: parentChannel.name,
+                    type: 'category',
+                    position: parentChannel.position || 0
+                });
+                console.log(`✅ Created category from existing channel: ${parentChannel.name}`);
+            } else {
+                // Если не нашли, создаем категорию с generic именем
+                categories.push({
+                    id: parentId,
+                    name: `Category ${parentId.slice(-4)}`,
+                    type: 'category',
+                    position: 0
+                });
+                console.log(`🆕 Created generic category for ID: ${parentId}`);
+            }
+        }
+    });
+
+    // Теперь обрабатываем каналы
+    discordChannels.forEach((channel: any) => {
+        // Пропускаем каналы которые мы использовали как категории
+        if (parentIds.has(channel.id)) {
+            console.log(`⏩ Skipping channel used as category: ${channel.name}`);
             return;
         }
 
         let categoryName = 'Uncategorized';
         let categoryId = '';
 
-        if (channel.parent_id) {
-            const parentCategory = discordChannels.find((c: any) => c.id === channel.parent_id);
+        if (channel.parent_id && typeof channel.parent_id === 'string') {
+            const parentCategory = categories.find(c => c.id === channel.parent_id);
             if (parentCategory) {
                 categoryName = parentCategory.name;
                 categoryId = parentCategory.id;
+                console.log(`📁 Channel ${channel.name} belongs to category: ${categoryName}`);
+            } else {
+                console.log(`❌ Parent category not found for channel ${channel.name}, parent_id: ${channel.parent_id}`);
+                // Используем реальное название из маппинга если есть
+                categoryName = categoryMapping[channel.parent_id] || `Category ${channel.parent_id.slice(-4)}`;
             }
+        } else {
+            console.log(`🚫 Channel ${channel.name} has no parent_id`);
         }
 
         const channelType: 'text' | 'voice' = channel.type === 2 ? 'voice' : 'text';
-        const isPrivate = channel.name.includes('🔩') || channel.permission_overwrites?.length > 0;
+        const isPrivate = channel.name.includes('🔩') ||
+            channel.permission_overwrites?.length > 0 ||
+            (channel.member_access_percentage && channel.member_access_percentage < 100);
+
+        // Вычисляем количество участников
+        let memberCount = 9; // fallback
+        if (channel.accessible_members) {
+            memberCount = channel.accessible_members;
+        } else if (channel.member_access_percentage) {
+            memberCount = Math.floor(totalMembers * channel.member_access_percentage / 100);
+        }
 
         channels.push({
             id: channel.id,
@@ -347,15 +426,42 @@ const transformDiscordChannels = (discordChannels: any[], totalMembers: number):
             category: categoryName,
             categoryId: categoryId,
             parent_id: channel.parent_id,
-            members: channel.accessible_members || 9,
+            members: memberCount,
             isPrivate: isPrivate,
             notifications: 'all',
-            description: channel.topic || `${channel.name} channel`,
+            description: channel.topic || `${channelType} channel for ${channel.name}`,
             lastActivity: 'Now',
+            _debug: {
+                accessPercentage: channel.member_access_percentage || 100,
+                permissionCount: channel.permission_overwrites?.length || 0,
+                totalMembers: totalMembers
+            }
         });
     });
 
-    categories.sort((a, b) => a.position - b.position);
+    console.log('📊 === TRANSFORMATION RESULTS ===');
+    console.log('Categories found:', categories.length);
+    console.log('Channels found:', channels.length);
+    console.log('Categories:', categories.map(c => `${c.name} (${c.id})`));
+
+    const channelsByCategory = channels.reduce((acc, ch) => {
+        acc[ch.category] = (acc[ch.category] || 0) + 1;
+        return acc;
+    }, {} as { [key: string]: number });
+
+    console.log('Channels by category:', channelsByCategory);
+
+    // Сортируем категории в логическом порядке
+    const categoryOrder = ['Welcome', 'News', 'New Rooms', 'Voice Channels', 'AFK', 'Admin', 'Team A'];
+    categories.sort((a, b) => {
+        const indexA = categoryOrder.indexOf(a.name);
+        const indexB = categoryOrder.indexOf(b.name);
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return (a.position || 0) - (b.position || 0);
+    });
+
     return { channels, categories };
 };
 

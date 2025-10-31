@@ -1767,41 +1767,111 @@ app.get('/api/discord/channels', async (req, res) => {
         await guild.members.fetch();
         const totalMembers = guild.memberCount;
 
-        // Получаем все каналы сервера
+        // Получаем все каналы сервера (ВКЛЮЧАЯ КАТЕГОРИИ)
         await guild.channels.fetch();
 
+        console.log('🔍 DEBUG ALL CHANNELS FROM DISCORD:');
+        guild.channels.cache.forEach(channel => {
+            console.log(`📋 ${channel.name} (ID: ${channel.id}) - Type: ${channel.type} - Parent: ${channel.parentId}`);
+        });
+
+        // Подсчитаем типы каналов
+        const channelTypes = {
+            categories: guild.channels.cache.filter(c => c.type === 4).size,
+            text: guild.channels.cache.filter(c => c.type === 0).size,
+            voice: guild.channels.cache.filter(c => c.type === 2).size,
+            announcement: guild.channels.cache.filter(c => c.type === 5).size,
+            total: guild.channels.cache.size
+        };
+        console.log('📊 Channel types breakdown:', channelTypes);
+
         const channels = Array.from(guild.channels.cache.values()).map(channel => {
+            // ВОЗВРАЩАЕМ КАТЕГОРИИ ТОЖЕ!
+            if (channel.type === 4) {
+                return {
+                    id: channel.id,
+                    name: channel.name,
+                    type: 4, // Категория
+                    parent_id: null,
+                    permission_overwrites: Array.from(channel.permissionOverwrites.cache.values()).map(overwrite => ({
+                        id: overwrite.id,
+                        type: overwrite.type,
+                        allow: overwrite.allow.bitfield?.toString() || '0',
+                        deny: overwrite.deny.bitfield?.toString() || '0'
+                    })),
+                    topic: null,
+                    nsfw: false,
+                    position: channel.position,
+                    created: channel.createdAt?.toISOString() || new Date().toISOString(),
+                    // ДОБАВЛЯЕМ ФЛАГ ЧТО ЭТО КАТЕГОРИЯ
+                    is_category: true,
+                    category_name: channel.name,
+                    category_id: channel.id,
+                    // Для категорий тоже считаем доступ
+                    accessible_members: totalMembers, // Категории видны всем
+                    is_private: false,
+                    member_access_percentage: 100,
+                    total_members: totalMembers
+                };
+            }
+
             // Вычисляем количество участников с доступом к каналу
-            const accessibleMembers = this.calculateAccessibleMembers(channel, guild);
+            const accessibleMembers = calculateAccessibleMembers(channel, guild);
+            const isPrivate = isChannelPrivate(channel);
+
+            // Собираем информацию о разрешениях для отладки
+            const permissionInfo = {
+                everyone: channel.permissionOverwrites.cache.get(guild.id) ? {
+                    allow: Array.from(channel.permissionOverwrites.cache.get(guild.id).allow),
+                    deny: Array.from(channel.permissionOverwrites.cache.get(guild.id).deny)
+                } : null,
+                roles: Array.from(channel.permissionOverwrites.cache.values())
+                    .filter(ow => ow.type === 0 && ow.id !== guild.id)
+                    .map(ow => ({
+                        id: ow.id,
+                        name: guild.roles.cache.get(ow.id)?.name || 'Unknown',
+                        allow: Array.from(ow.allow),
+                        deny: Array.from(ow.deny)
+                    })),
+                users: Array.from(channel.permissionOverwrites.cache.values())
+                    .filter(ow => ow.type === 1)
+                    .map(ow => ({
+                        id: ow.id,
+                        username: guild.members.cache.get(ow.id)?.user?.username || 'Unknown',
+                        allow: Array.from(ow.allow),
+                        deny: Array.from(ow.deny)
+                    }))
+            };
 
             return {
                 id: channel.id,
                 name: channel.name,
                 type: channel.type,
                 parent_id: channel.parentId,
-                permission_overwrites: Array.from(channel.permissionOverwrites.cache.values()).map(overwrite => ({
-                    id: overwrite.id,
-                    type: overwrite.type,
-                    allow: overwrite.allow.bitfield?.toString() || '0',
-                    deny: overwrite.deny.bitfield?.toString() || '0'
-                })),
+                permission_overwrites: permissionInfo,
                 topic: channel.topic || null,
                 nsfw: channel.nsfw || false,
                 position: channel.position,
                 created: channel.createdAt?.toISOString() || new Date().toISOString(),
-                // ДОБАВЛЯЕМ РЕАЛЬНОЕ КОЛИЧЕСТВО УЧАСТНИКОВ
+                // РЕАЛЬНОЕ количество участников с доступом
                 accessible_members: accessibleMembers,
-                is_private: this.isChannelPrivate(channel),
-                member_access_percentage: Math.round((accessibleMembers / totalMembers) * 100)
+                is_private: isPrivate,
+                member_access_percentage: Math.round((accessibleMembers / totalMembers) * 100),
+                total_members: totalMembers
             };
-        });
+        }); // УБИРАЕМ .filter(channel => channel !== null) - возвращаем ВСЕ каналы включая категории
 
-        console.log(`✅ API Discord Channels: ${channels.length} channels for guild ${guild.name}`);
+        console.log(`✅ API Discord Channels: ${channels.length} channels (INCLUDING CATEGORIES) for guild ${guild.name}`);
+
+        // Логируем сколько категорий найдено
+        const categoriesCount = channels.filter(ch => ch.type === 4).length;
+        console.log(`📁 Categories found: ${categoriesCount}`);
 
         res.json({
             success: true,
             channels: channels,
             total: channels.length,
+            categories_count: categoriesCount,
             guild: {
                 id: guild.id,
                 name: guild.name,

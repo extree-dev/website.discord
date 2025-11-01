@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useContext, useCallback, useMemo, useRef } from "react";
 import Saidbar from "../components/Saidbar.js";
 import styles from "../module_pages/Channels.module.scss";
 import {
@@ -19,7 +19,8 @@ import {
     CheckCircle,
     XCircle,
     Volume2,
-    VolumeX
+    VolumeX,
+    X
 } from "lucide-react";
 import { SidebarContext } from "@/App.js";
 
@@ -545,36 +546,6 @@ const ChannelCard: React.FC<ChannelCardProps> = React.memo(({
                     {channel.isPrivate ? <Lock size={16} /> : <Eye size={16} />}
                     {channel.isPrivate ? 'Private' : 'Public'}
                 </button>
-
-                <div className={styles.notificationControl}>
-                    <button className={styles.controlBtn}>
-                        {getNotificationIcon(channel.notifications)}
-                        {channel.notifications}
-                    </button>
-                    <div className={styles.notificationDropdown}>
-                        <button
-                            className={`${styles.notificationOption} ${channel.notifications === 'all' ? styles.active : ''}`}
-                            onClick={() => onNotificationChange(channel.id, 'all')}
-                        >
-                            <Bell size={14} />
-                            All Messages
-                        </button>
-                        <button
-                            className={`${styles.notificationOption} ${channel.notifications === 'mentions' ? styles.active : ''}`}
-                            onClick={() => onNotificationChange(channel.id, 'mentions')}
-                        >
-                            <Volume2 size={14} />
-                            Mentions Only
-                        </button>
-                        <button
-                            className={`${styles.notificationOption} ${channel.notifications === 'none' ? styles.active : ''}`}
-                            onClick={() => onNotificationChange(channel.id, 'none')}
-                        >
-                            <BellOff size={14} />
-                            Mute
-                        </button>
-                    </div>
-                </div>
             </div>
 
             <div className={styles.channelStatus}>
@@ -701,6 +672,50 @@ const Channels: React.FC = () => {
 
     const { channels, categories, loading, error, updateChannel, refetch } = useDiscordChannels(guildId);
 
+    // Состояния для выпадающего меню фильтров
+    const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+    const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+    const filterDropdownRef = useRef<HTMLDivElement>(null);
+
+    const availableFilters = useMemo(() => {
+        return [
+            { id: 'text', label: 'Text Channels', icon: <Hash size={16} /> },
+            { id: 'voice', label: 'Voice Channels', icon: <Volume2 size={16} /> },
+            { id: 'private', label: 'Private Channels', icon: <Lock size={16} /> },
+            { id: 'public', label: 'Public Channels', icon: <Eye size={16} /> }
+        ];
+    }, []);
+
+    const handleFilterToggle = useCallback((filterId: string) => {
+        setSelectedFilters(prev =>
+            prev.includes(filterId)
+                ? prev.filter(id => id !== filterId)
+                : [...prev, filterId]
+        );
+    }, []);
+
+    const removeFilter = useCallback((filterId: string) => {
+        setSelectedFilters(prev => prev.filter(id => id !== filterId));
+    }, []);
+
+    const clearAllFilters = useCallback(() => {
+        setSelectedFilters([]);
+    }, []);
+
+    // Закрытие выпадающего меню при клике вне его
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
+                setIsFilterDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
     const channelsByCategory = useMemo(() => {
         const grouped: { [categoryName: string]: Channel[] } = {};
 
@@ -716,10 +731,6 @@ const Channels: React.FC = () => {
         return grouped;
     }, [channels, categories]);
 
-    const filterCategories = useMemo(() => {
-        return ['all', ...categories.map((cat: Category) => cat.name), ...(channelsByCategory['Uncategorized'] ? ['Uncategorized'] : [])];
-    }, [categories, channelsByCategory]);
-
     const {
         searchTerm,
         setSearchTerm,
@@ -728,6 +739,28 @@ const Channels: React.FC = () => {
         categories: filterCats,
         filteredChannels
     } = useChannelFilters(channels);
+
+    // Фильтрация с учетом выбранных фильтров
+    const finalFilteredChannels = useMemo(() => {
+        if (selectedFilters.length === 0) return filteredChannels;
+
+        return filteredChannels.filter(channel => {
+            return selectedFilters.some((filter: string) => {
+                switch (filter) {
+                    case 'text':
+                        return channel.type === 'text';
+                    case 'voice':
+                        return channel.type === 'voice';
+                    case 'private':
+                        return channel.isPrivate;
+                    case 'public':
+                        return !channel.isPrivate;
+                    default:
+                        return true;
+                }
+            });
+        });
+    }, [filteredChannels, selectedFilters]);
 
     const handleNotificationChange = useCallback((channelId: string, level: 'all' | 'mentions' | 'none') => {
         updateChannel(channelId, { notifications: level });
@@ -744,9 +777,24 @@ const Channels: React.FC = () => {
             const matchesSearch = channel.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 channel.description?.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesCategory = selectedCategory === 'all' || selectedCategory === channel.category;
-            return matchesSearch && matchesCategory;
+            const matchesCustomFilters = selectedFilters.length === 0 || selectedFilters.some((filter: string) => {
+                switch (filter) {
+                    case 'text':
+                        return channel.type === 'text';
+                    case 'voice':
+                        return channel.type === 'voice';
+                    case 'private':
+                        return channel.isPrivate;
+                    case 'public':
+                        return !channel.isPrivate;
+                    default:
+                        return true;
+                }
+            });
+
+            return matchesSearch && matchesCategory && matchesCustomFilters;
         });
-    }, [searchTerm, selectedCategory]);
+    }, [searchTerm, selectedCategory, selectedFilters]);
 
     if (loading) {
         return (
@@ -801,23 +849,62 @@ const Channels: React.FC = () => {
                         />
                     </div>
 
-                    <div className={styles.categoryFilters}>
-                        {filterCategories.map((category: string) => (
+                    <div className={styles.viewControls} ref={filterDropdownRef}>
+                        <div className={`${styles.filterDropdown} ${isFilterDropdownOpen ? styles.open : ''}`}>
                             <button
-                                key={category}
-                                className={`${styles.categoryFilter} ${selectedCategory === category ? styles.active : ''}`}
-                                onClick={() => setSelectedCategory(category)}
+                                className={styles.filterToggle}
+                                onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
                             >
-                                {category.charAt(0).toUpperCase() + category.slice(1)}
+                                <Filter size={20} />
+                                <span>Filter</span>
                             </button>
-                        ))}
-                    </div>
 
-                    <div className={styles.viewControls}>
-                        <Filter size={20} />
-                        <span>Filter</span>
+                            {isFilterDropdownOpen && (
+                                <div className={styles.filterDropdownMenu}>
+                                    <div className={styles.filterDropdownHeader}>
+                                        <h4>Filter Channels</h4>
+                                    </div>
+
+                                    <div className={styles.filterOptions}>
+                                        {availableFilters.map(filter => (
+                                            <label key={filter.id} className={styles.filterOption}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedFilters.includes(filter.id)}
+                                                    onChange={() => handleFilterToggle(filter.id)}
+                                                />
+                                                <span className={styles.filterCheckmark}></span>
+                                                <span className={styles.filterIcon}>{filter.icon}</span>
+                                                <span className={styles.filterLabel}>{filter.label}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
+
+                {/* Отображение выбранных фильтров */}
+                {selectedFilters.length > 0 && (
+                    <div className={styles.activeFilters}>
+                        {selectedFilters.map((filterId: string) => {
+                            const filter = availableFilters.find((f: any) => f.id === filterId);
+                            return filter ? (
+                                <span key={filterId} className={styles.activeFilter}>
+                                    {filter.icon}
+                                    {filter.label}
+                                    <button
+                                        onClick={() => removeFilter(filterId)}
+                                        className={styles.removeFilterBtn}
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </span>
+                            ) : null;
+                        })}
+                    </div>
+                )}
 
                 <section className={styles.channelsSection}>
                     {categories.map((category: Category) => {
@@ -826,12 +913,6 @@ const Channels: React.FC = () => {
 
                         return (
                             <div key={category.id} className={styles.categorySection}>
-                                <h2 className={styles.categoryTitle}>
-                                    {category.name}
-                                    <span className={styles.channelCount}>
-                                        {categoryChannels.length} channels
-                                    </span>
-                                </h2>
                                 <div className={styles.channelsGrid}>
                                     {categoryChannels.map((channel) => (
                                         <ChannelCard
@@ -852,12 +933,6 @@ const Channels: React.FC = () => {
 
                         return (
                             <div className={styles.categorySection}>
-                                <h2 className={styles.categoryTitle}>
-                                    Uncategorized
-                                    <span className={styles.channelCount}>
-                                        {uncategorizedChannels.length} channels
-                                    </span>
-                                </h2>
                                 <div className={styles.channelsGrid}>
                                     {uncategorizedChannels.map((channel) => (
                                         <ChannelCard

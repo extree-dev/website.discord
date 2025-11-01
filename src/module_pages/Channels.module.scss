@@ -12,6 +12,8 @@
     padding: 2rem;
     margin-left: 280px;
     overflow-x: hidden;
+    position: relative; // Добавьте это
+    z-index: 1; // Добавьте это
 }
 
 // Header
@@ -21,6 +23,8 @@
     align-items: center;
     margin-bottom: 2rem;
     animation: morphIn 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) both;
+    position: relative; // Добавьте это
+    z-index: 10; // Добавьте это
 
     &__left {
         flex: 1;
@@ -63,11 +67,39 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+
+    // Легкий стеклянный эффект поверх градиента
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(to bottom,
+                rgba(255, 255, 255, 0.15) 0%,
+                rgba(255, 255, 255, 0.05) 50%,
+                transparent 100%);
+        border-radius: 24px;
+        z-index: 1;
+    }
+
+    .btnContent {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        position: relative;
+        z-index: 2;
+    }
 
     &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+        box-shadow:
+            0 10px 25px rgba(99, 102, 241, 0.4),
+            0 0 0 1px rgba(255, 255, 255, 0.1);
     }
 }
 
@@ -75,9 +107,11 @@
 .controls {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
+    gap: 3.5rem;
     margin-bottom: 2rem;
     animation: floatIn 0.7s ease-out 0.3s both;
+    position: relative; // Добавьте это
+    z-index: 100; // Увеличьте z-index
 }
 
 .searchBox {
@@ -152,6 +186,8 @@
     font-size: 0.875rem;
     cursor: pointer;
     transition: color 0.3s ease;
+    position: relative; // Убедитесь, что это есть
+    z-index: 1000; // Увеличьте z-index
 
     &:hover {
         color: #ffffff;
@@ -164,6 +200,8 @@
     grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
     gap: 1.5rem;
     margin-bottom: 2rem;
+    position: relative; // Добавьте это
+    z-index: 1; // Убедитесь, что это ниже чем у выпадающего меню
 }
 
 .channelCard {
@@ -176,6 +214,7 @@
     position: relative;
     overflow: hidden;
     animation: floatIn 0.7s ease-out both;
+    z-index: 1; // Убедитесь, что это ниже чем у выпадающего меню
 
     &::before {
         content: '';
@@ -211,7 +250,7 @@
     width: 40px;
     height: 40px;
     background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    border-radius: 10px;
+    border-radius: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -325,14 +364,14 @@
     background: rgba(30, 30, 30, 0.95);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+    border-radius: 24px;
     padding: 0.5rem;
     margin-top: 0.5rem;
     opacity: 0;
     visibility: hidden;
     transform: translateY(-10px);
     transition: all 0.3s ease;
-    z-index: 10;
+    z-index: 10000; // Увеличьте z-index
 }
 
 .notificationOption {
@@ -393,6 +432,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1.5rem;
+    z-index: 1; // Убедитесь, что это ниже чем у выпадающего меню
 }
 
 .statCard {
@@ -511,6 +551,341 @@
     }
 }
 
+// ОСНОВНЫЕ ИСПРАВЛЕНИЯ ДЛЯ ВЫПАДАЮЩЕГО МЕНЮ
+.viewControls {
+    position: relative;
+    z-index: 1000; // Увеличьте z-index
+
+    .filterDropdown {
+        position: relative;
+        z-index: 1001; // Добавьте это
+
+        &.open {
+            .filterToggle {
+                background: rgba(99, 102, 241, 0.2);
+                color: #6366f1;
+                border-color: rgba(99, 102, 241, 0.3);
+            }
+
+            .filterDropdownMenu {
+                opacity: 1;
+                visibility: visible;
+                transform: translateY(0);
+            }
+        }
+
+        .filterToggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            color: #888;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(20px);
+            font-weight: 600;
+            z-index: 1002; // Увеличьте z-index
+            position: relative; // Добавьте это
+
+            &:hover {
+                background: rgba(255, 255, 255, 0.1);
+                border-color: rgba(255, 255, 255, 0.2);
+            }
+
+            .filterBadge {
+                background: #6366f1;
+                color: white;
+                border-radius: 50%;
+                width: 20px;
+                height: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 11px;
+                font-weight: 700;
+                box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+            }
+        }
+
+        .filterDropdownMenu {
+            position: absolute;
+            top: 100%;
+            right: -4.5rem;
+            margin-top: 15px;
+            background: rgba(20, 20, 20, 0.84); // Увеличена непрозрачность
+            backdrop-filter: blur(40px); // Увеличено размытие
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px;
+            padding: 16px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            z-index: 9999; // ОСТАВЬТЕ 9999
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+
+
+            .filterDropdownHeader {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 12px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+                h4 {
+                    margin: 0;
+                    flex: 1;
+                    font-size: 14px;
+                    font-weight: 700;
+                    color: #ffffff;
+                }
+
+                .clearAllBtn {
+                    background: none;
+                    border: none;
+                    color: #6366f1;
+                    font-size: 12px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    padding: 4px 8px;
+                    border-radius: 24px;
+                    transition: all 0.2s ease;
+
+                    &:hover {
+                        background: rgba(99, 102, 241, 0.1);
+                    }
+                }
+            }
+
+            .filterOptions {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+
+                .filterOption {
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                    padding: 16px 20px;
+                    border-radius: 20px;
+                    cursor: pointer;
+                    transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+                    background: rgba(255, 255, 255, 0.03);
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    backdrop-filter: blur(25px);
+
+                    &:hover {
+                        background: rgba(255, 255, 255, 0.06);
+                        border-color: rgba(255, 255, 255, 0.12);
+                        transform: translateY(-2px);
+                        box-shadow:
+                            0 12px 40px rgba(0, 0, 0, 0.25),
+                            0 0 0 1px rgba(255, 255, 255, 0.05);
+                    }
+
+                    input {
+                        display: none;
+                    }
+
+                    .filterCheckmark {
+                        width: 52px;
+                        height: 28px;
+                        background: linear-gradient(135deg,
+                                rgba(255, 255, 255, 0.05) 0%,
+                                rgba(255, 255, 255, 0.02) 50%,
+                                rgba(0, 0, 0, 0.05) 100%);
+                        border: 1px solid rgba(255, 255, 255, 0.15);
+                        border-radius: 24px;
+                        display: flex;
+                        align-items: center;
+                        padding: 3px;
+                        transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+                        position: relative;
+                        flex-shrink: 0;
+                        backdrop-filter: blur(30px);
+                        box-shadow:
+                            inset 3px 3px 6px rgba(0, 0, 0, 0.2),
+                            inset -3px -3px 6px rgba(255, 255, 255, 0.05),
+                            0 4px 20px rgba(0, 0, 0, 0.15);
+
+                        &::after {
+                            content: '';
+                            width: 20px;
+                            height: 20px;
+                            background: linear-gradient(135deg,
+                                    rgba(255, 255, 255, 0.9) 0%,
+                                    rgba(255, 255, 255, 0.7) 100%);
+                            border-radius: 50%;
+                            transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+                            box-shadow:
+                                2px 2px 4px rgba(0, 0, 0, 0.3),
+                                -1px -1px 3px rgba(255, 255, 255, 0.1);
+                        }
+                    }
+
+                    input:checked+.filterCheckmark {
+                        background: linear-gradient(135deg,
+                                rgba(99, 102, 241, 0.3) 0%,
+                                rgba(139, 92, 246, 0.2) 100%);
+                        border-color: rgba(99, 102, 241, 0.4);
+                        box-shadow:
+                            inset 2px 2px 4px rgba(0, 0, 0, 0.2),
+                            inset -2px -2px 4px rgba(99, 102, 241, 0.1),
+                            0 6px 25px rgba(99, 102, 241, 0.3);
+
+                        &::after {
+                            transform: translateX(24px);
+                            background: linear-gradient(135deg,
+                                    rgba(99, 102, 241, 0.9) 0%,
+                                    rgba(139, 92, 246, 0.7) 100%);
+                            box-shadow:
+                                2px 2px 6px rgba(0, 0, 0, 0.4),
+                                -1px -1px 4px rgba(255, 255, 255, 0.2);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+.activeFilters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 20px 0;
+    padding: 12px 0;
+    animation: floatIn 0.5s ease-out;
+    position: relative; // Добавьте это
+    z-index: 1; // Добавьте это
+
+    .activeFilter {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px 6px 10px;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: white;
+        border-radius: 24px;
+        font-weight: 500;
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        line-height: 1;
+
+        .removeFilterBtn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            cursor: pointer;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            flex-shrink: 0;
+            backdrop-filter: blur(15px);
+            box-shadow:
+                0 2px 8px rgba(0, 0, 0, 0.1),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+
+            padding: 1px;
+
+            // Простой крестик
+            &::before,
+            &::after {
+                content: '';
+                position: absolute;
+                width: 8px;
+                height: 1.5px;
+                background: rgba(255, 255, 255, 0.8);
+                border-radius: 1px;
+                transition: all 0.3s ease;
+            }
+
+            &::before {
+                transform: rotate(45deg);
+            }
+
+            &::after {
+                transform: rotate(-45deg);
+            }
+
+            &:hover {
+                background: rgba(107, 122, 255, 0.2);
+                border-color: rgba(107, 122, 255, 0.2);
+                transform: scale(1.12);
+                box-shadow:
+                    0 4px 16px rgba(107, 122, 255, 0.2),
+                    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+
+                &::before,
+                &::after {
+                    background: white;
+                    width: 9px;
+                    box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
+                }
+            }
+        }
+    }
+}
+
+/* Добавьте в ваш Channels.module.scss */
+.warningBanner {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 24px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    position: relative; // Добавьте это
+    z-index: 1; // Добавьте это
+}
+
+.warningContent {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    gap: 16px;
+}
+
+.warningContent span {
+    color: #856404;
+    flex: 1;
+}
+
+.channelDebug {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: #888;
+    margin: 8px 0;
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 24px;
+
+    span {
+        font-family: 'Courier New', monospace;
+    }
+}
+
+.categorySection {
+    margin-bottom: 2rem;
+    position: relative; // Добавьте это
+    z-index: 1; // Добавьте это
+}
+
+.channelCount {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: normal;
+}
+
 // Responsive Design
 @include tablet {
     .main {
@@ -575,61 +950,4 @@
         flex-direction: column;
         text-align: center;
     }
-}
-
-/* Добавьте в ваш Channels.module.scss */
-.warningBanner {
-    background: #fff3cd;
-    border: 1px solid #ffeaa7;
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 20px;
-}
-
-.warningContent {
-    display: flex;
-    justify-content: between;
-    align-items: center;
-    gap: 16px;
-}
-
-.warningContent span {
-    color: #856404;
-    flex: 1;
-}
-
-.channelDebug {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
-    color: #888;
-    margin: 8px 0;
-    padding: 4px 8px;
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 4px;
-
-    span {
-        font-family: 'Courier New', monospace;
-    }
-}
-
-.categorySection {
-    margin-bottom: 2rem;
-}
-
-.categoryTitle {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.channelCount {
-    font-size: 0.875rem;
-    color: #6b7280;
-    font-weight: normal;
 }
